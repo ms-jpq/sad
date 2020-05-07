@@ -2,11 +2,9 @@ use aho_corasick::{AhoCorasick, AhoCorasickBuilder};
 use clap::Clap;
 use either::Either::{self, *};
 use regex::{Regex, RegexBuilder};
-use std::borrow::Cow;
 use std::collections::HashSet;
-use std::process;
+use std::path::PathBuf;
 
-mod options;
 
 #[derive(Debug, Clap)]
 pub struct Arguments {
@@ -14,7 +12,7 @@ pub struct Arguments {
   replace: String,
 
   #[clap(short, long)]
-  input: Vec<String>,
+  input: Vec<PathBuf>,
 
   #[clap(short = "0")]
   nul_delim: bool,
