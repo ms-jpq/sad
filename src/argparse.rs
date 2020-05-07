@@ -5,26 +5,25 @@ use regex::{Regex, RegexBuilder};
 use std::collections::HashSet;
 use std::path::PathBuf;
 
-
 #[derive(Debug, Clap)]
 pub struct Arguments {
-  pattern: String,
-  replace: String,
+  pub pattern: String,
+  pub replace: String,
 
   #[clap(short, long)]
-  input: Vec<PathBuf>,
+  pub input: Vec<PathBuf>,
 
   #[clap(short = "0")]
-  nul_delim: bool,
+  pub nul_delim: bool,
 
   #[clap(short, long)]
-  commit: bool,
+  pub commit: bool,
 
   #[clap(short, long)]
-  exact: bool,
+  pub exact: bool,
 
   #[clap(short, long)]
-  flags: Option<String>,
+  pub flags: Option<String>,
 }
 
 #[derive(Debug)]
@@ -97,4 +96,3 @@ fn p_regex(pattern: &str, flags: &HashSet<String>) -> Result<Regex, regex::Error
   }
   re.build()
 }
-

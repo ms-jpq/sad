@@ -8,8 +8,9 @@ edition = "2018"
 
 [dependencies]
 either = "1"
-clap = "3.0.0-beta.1"
-tokio = { version = "0.2", features = ["full"] }
+futures = "0.3"
+async-std = "1"
+clap = { version = "3.0.0-beta.1", features = ["wrap_help"] }
 regex = "1"
 aho-corasick = "0.7"
 difference = "2"
