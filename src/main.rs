@@ -86,13 +86,9 @@ fn stream_stdout(receiver: Receiver<SadResult<String>>) -> JoinHandle<()> {
   task::spawn(async move {
     while let Some(res) = receiver.recv().await {
       match res {
-        Ok(print) => {
-          stdout.write(print.as_bytes()).await.unwrap();
-        }
-        Err(err) => {
-          stderr.write(format!("{}", err).as_bytes()).await.unwrap();
-        }
-      }
+        Ok(print) => stdout.write(print.as_bytes()).await.unwrap(),
+        Err(err) => stderr.write(format!("{}", err).as_bytes()).await.unwrap(),
+      };
     }
     let (o, e) = join(stdout.flush(), stderr.flush()).await;
     o.unwrap();
@@ -107,7 +103,6 @@ fn main() {
     Ok(opts) => {
       let (intermediary, displaced_receiver) = stream_displace(opts, path_receiver);
       let writer = stream_stdout(displaced_receiver);
-
       task::block_on(async {
         join3(reader, writer, intermediary).await;
       })
