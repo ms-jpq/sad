@@ -34,7 +34,7 @@ pub enum Action {
 pub struct Options {
   pub pattern: Either<AhoCorasick, Regex>,
   pub replace: String,
-  pub commit: Action,
+  pub action: Action,
 }
 
 impl Options {
@@ -55,7 +55,7 @@ impl Options {
       }
     };
 
-    let commit = if args.commit {
+    let action = if args.commit {
       Action::Write
     } else {
       Action::Diff
@@ -64,7 +64,7 @@ impl Options {
     Ok(Options {
       pattern,
       replace: args.replace,
-      commit,
+      action,
     })
   }
 }

@@ -1,13 +1,8 @@
-use super::argparse::Options;
+use super::argparse::{Action, Options};
 use super::errors::*;
 use async_std::{fs, path::PathBuf};
 use difference::{Changeset, Difference};
-use either::Either::{self, *};
-
-pub struct Displaced {
-  pub path: String,
-  pub failure: Either<String, Failure>,
-}
+use either::Either::*;
 
 async fn replace(path: &PathBuf, opts: &Options) -> SadResult<(String, String)> {
   let before = fs::read_to_string(path).await.halp()?;
@@ -31,19 +26,14 @@ fn diff(before: &str, after: &str) -> String {
   diff
 }
 
-pub async fn displace(path: PathBuf, opts: &Options) -> Displaced {
-  let name = String::from(path.to_string_lossy());
-  match replace(&path, opts).await {
-    Ok((before, after)) => {
-      let diffs = diff(&before, &after);
-      Displaced {
-        path: name,
-        failure: Left(diffs),
-      }
+pub async fn displace(path: PathBuf, opts: &Options) -> SadResult<String> {
+  let (before, after) = replace(&path, opts).await?;
+  let print = match opts.action {
+    Action::Diff => diff(&before, &after),
+    Action::Write => {
+      fs::write(&path, after).await.halp()?;
+      String::from(path.to_string_lossy())
     }
-    Err(err) => Displaced {
-      path: name,
-      failure: Right(err),
-    },
-  }
+  };
+  Ok(print)
 }
