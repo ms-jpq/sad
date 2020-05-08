@@ -73,7 +73,7 @@ impl Options {
 fn p_aho_corasick(pattern: &str, flags: &HashSet<String>) -> SadResult<AhoCorasick> {
   let mut ac = AhoCorasickBuilder::new();
   for flag in flags {
-    match &flag[..] {
+    match flag.as_str() {
       "i" => ac.ascii_case_insensitive(true),
       _ => return Err(Failure::Regex(String::from("Invalid flags"))),
     };
@@ -84,7 +84,7 @@ fn p_aho_corasick(pattern: &str, flags: &HashSet<String>) -> SadResult<AhoCorasi
 fn p_regex(pattern: &str, flags: &HashSet<String>) -> SadResult<Regex> {
   let mut re = RegexBuilder::new(pattern);
   for flag in flags {
-    match &flag[..] {
+    match flag.as_str() {
       "i" => re.case_insensitive(true),
       "m" => re.multi_line(true),
       "s" => re.dot_matches_new_line(true),
