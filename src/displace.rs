@@ -19,8 +19,12 @@ pub async fn displace(path: PathBuf, opts: &Options) -> SadResult<String> {
   let print = match opts.action {
     Action::Diff => udiff::udiff(&name, &before, &after),
     Action::Write => {
-      fs::write(&path, after).await.halp()?;
-      format!("{}\n", name)
+      if before != after {
+        fs::write(&path, after).await.halp()?;
+        format!("{}\n", name)
+      } else {
+        String::from("")
+      }
     }
   };
   Ok(print)
