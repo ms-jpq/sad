@@ -14,3 +14,4 @@ clap = { version = "3.0.0-beta.1", features = ["wrap_help"] }
 regex = "1"
 aho-corasick = "0.7"
 difference = "2"
+num_cpus = "1"

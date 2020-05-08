@@ -20,7 +20,7 @@ fn diff(before: &str, after: &str) -> String {
     match line {
       Difference::Add(l) => &diff.push_str(format!("+{}", l).as_str()),
       Difference::Rem(l) => &diff.push_str(format!("-{}", l).as_str()),
-      Difference::Same(l) => &diff.push_str(format!("{}", l).as_str()),
+      Difference::Same(l) => &diff.push_str(l.as_str()),
     };
   }
   diff

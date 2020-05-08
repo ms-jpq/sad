@@ -3,12 +3,12 @@ use async_std::{
   io,
   path::PathBuf,
   prelude::*,
-  sync::{channel, Receiver},
+  sync::{channel, Arc, Receiver},
   task::{self, JoinHandle},
 };
 use clap::Clap;
 use errors::*;
-use futures::future::{join3, JoinAll};
+use futures::future::{join3, join_all, JoinAll};
 use std::process;
 
 mod argparse;
@@ -46,24 +46,33 @@ fn p_path(name: Vec<u8>) -> SadResult<PathBuf> {
 fn stream_displace(
   opts: Options,
   receiver: Receiver<SadResult<Vec<u8>>>,
-) -> (JoinHandle<()>, Receiver<SadResult<String>>) {
+) -> (JoinAll<JoinHandle<()>>, Receiver<SadResult<String>>) {
   let (s, r) = channel::<SadResult<String>>(1);
-
-  let handle = task::spawn(async move {
-    while let Some(name) = receiver.recv().await {
-      let path = name.and_then(p_path);
-      match path {
-        Ok(val) => {
-          let displaced = displace::displace(val, &opts).await;
-          s.send(displaced).await;
+  let rr = Arc::new(receiver);
+  let ss = Arc::new(s);
+  let oo = Arc::new(opts);
+  let handles = (1..=num_cpus::get())
+    .map(|_| {
+      let receiver = Arc::clone(&rr);
+      let sender = Arc::clone(&ss);
+      let opts = Arc::clone(&oo);
+      task::spawn(async move {
+        while let Some(name) = receiver.recv().await {
+          let path = name.and_then(p_path);
+          match path {
+            Ok(val) => {
+              let displaced = displace::displace(val, &opts).await;
+              sender.send(displaced).await;
+            }
+            Err(e) => {
+              sender.send(SadResult::Err(e)).await;
+            }
+          }
         }
-        Err(e) => {
-          s.send(SadResult::Err(e)).await;
-        }
-      }
-    }
-  });
-
+      })
+    })
+    .collect::<Vec<JoinHandle<()>>>();
+  let handle = join_all(handles);
   (handle, r)
 }
 
