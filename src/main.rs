@@ -14,6 +14,7 @@ use std::process;
 mod argparse;
 mod displace;
 mod errors;
+mod udiff;
 
 fn stream_stdin(args: &Arguments) -> (JoinHandle<()>, Receiver<SadResult<Vec<u8>>>) {
   let delim = if args.nul_delim { b'\0' } else { b'\n' };
