@@ -8,7 +8,7 @@ use async_std::{
 };
 use clap::Clap;
 use errors::*;
-use futures::future::{join3, join_all, JoinAll};
+use futures::future::{join, join3, join_all, JoinAll};
 use std::process;
 
 mod argparse;
@@ -80,13 +80,22 @@ fn stream_displace(
 }
 
 fn stream_stdout(receiver: Receiver<SadResult<String>>) -> JoinHandle<()> {
+  let mut stdout = io::BufWriter::new(io::stdout());
+  let mut stderr = io::BufWriter::new(io::stderr());
   task::spawn(async move {
     while let Some(res) = receiver.recv().await {
       match res {
-        Ok(print) => println!("{}", print),
-        Err(err) => eprintln!("{}", err),
+        Ok(print) => {
+          stdout.write(print.as_bytes()).await.unwrap();
+        }
+        Err(err) => {
+          stderr.write(format!("{}", err).as_bytes()).await.unwrap();
+        }
       }
     }
+    let (o, e) = join(stdout.flush(), stderr.flush()).await;
+    o.unwrap();
+    e.unwrap();
   })
 }
 
