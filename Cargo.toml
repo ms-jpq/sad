@@ -9,7 +9,7 @@ edition = "2018"
 [dependencies]
 either = "1"
 futures = "0.3"
-async-std = "1"
+async-std = { version = "1", features = ["unstable"] }
 clap = { version = "3.0.0-beta.1", features = ["wrap_help"] }
 regex = "1"
 aho-corasick = "0.7"
