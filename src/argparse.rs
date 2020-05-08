@@ -8,7 +8,7 @@ use regex::{Regex, RegexBuilder};
 #[derive(Clap)]
 pub struct Arguments {
   pub pattern: String,
-  pub replace: String,
+  pub replace: Option<String>,
 
   #[clap(short, long)]
   pub input: Vec<PathBuf>,
@@ -63,7 +63,7 @@ impl Options {
 
     Ok(Options {
       pattern,
-      replace: args.replace,
+      replace: args.replace.unwrap_or(String::from("")),
       action,
     })
   }

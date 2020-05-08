@@ -15,11 +15,12 @@ async fn replace(path: &PathBuf, opts: &Options) -> SadResult<(String, String)> 
 
 pub async fn displace(path: PathBuf, opts: &Options) -> SadResult<String> {
   let (before, after) = replace(&path, opts).await?;
+  let name = String::from(path.to_string_lossy());
   let print = match opts.action {
-    Action::Diff => udiff::udiff(&before, &after),
+    Action::Diff => udiff::udiff(&name, &before, &after),
     Action::Write => {
       fs::write(&path, after).await.halp()?;
-      String::from(path.to_string_lossy())
+      name
     }
   };
   Ok(print)
