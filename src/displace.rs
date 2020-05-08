@@ -19,13 +19,13 @@ fn rdiff(before: &str, after: &str) -> String {
   for line in changes {
     match line {
       diff::Result::Left(l) => {
-        &diff.push_str(format!("-{}\n", l).as_str());
+        diff.push_str(format!("-{}\n", l).as_str());
       }
       diff::Result::Right(r) => {
-        &diff.push_str(format!("+{}\n", r).as_str());
+        diff.push_str(format!("+{}\n", r).as_str());
       }
       diff::Result::Both(l, _) => {
-        // &diff.push_str(format!(" {}\n", l).as_str());
+        // diff.push_str(format!(" {}\n", l).as_str());
       }
     };
   }
