@@ -3,7 +3,7 @@ use clap::Clap;
 use either::Either::{self, *};
 use regex::{Regex, RegexBuilder};
 use std::collections::HashSet;
-use std::path::PathBuf;
+use async_std::path::PathBuf;
 
 #[derive(Debug, Clap)]
 pub struct Arguments {

@@ -1,13 +1,13 @@
 use argparse::{Arguments, Options};
-use async_std::prelude::*;
 use async_std::{
-  future, io,
+  io,
+  path::PathBuf,
+  prelude::*,
   sync::{channel, Receiver},
   task::{self, JoinHandle},
 };
 use clap::Clap;
 use std::process;
-use std::time::Duration;
 mod argparse;
 
 fn stream_stdin(args: &Arguments) -> (JoinHandle<io::Result<()>>, Receiver<Vec<u8>>) {
@@ -29,12 +29,18 @@ fn stream_stdin(args: &Arguments) -> (JoinHandle<io::Result<()>>, Receiver<Vec<u
   (handle, r)
 }
 
+fn p_path(name: Vec<u8>) -> Result<PathBuf, std::string::FromUtf8Error> {
+  match String::from_utf8(name) {
+    Ok(path) => Ok(PathBuf::from(&path[..])),
+    Err(e) => Err(e),
+  }
+}
+
 fn stream_stdout(receiver: Receiver<Vec<u8>>) -> JoinHandle<()> {
   task::spawn(async move {
     while let Some(buf) = receiver.recv().await {
-      if let Ok(s) = String::from_utf8(buf) {
-        println!("{}", s)
-      }
+      let path = p_path(buf).unwrap();
+      println!("{}", path.to_str().unwrap());
     }
   })
 }
@@ -55,6 +61,6 @@ fn main() {
   }
 
   task::block_on(async {
-    reader.join(writer).await;
+    let _owo = reader.join(writer).await;
   })
 }
