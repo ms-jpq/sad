@@ -20,7 +20,7 @@ pub async fn displace(path: PathBuf, opts: &Options) -> SadResult<String> {
     Action::Diff => udiff::udiff(&name, &before, &after),
     Action::Write => {
       fs::write(&path, after).await.halp()?;
-      name
+      format!("{}\n", name)
     }
   };
   Ok(print)
