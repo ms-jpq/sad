@@ -1,5 +1,4 @@
 use async_std::io;
-use regex;
 use std::{fmt, string};
 
 /*
