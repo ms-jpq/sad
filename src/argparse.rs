@@ -4,7 +4,6 @@ use async_std::path::PathBuf;
 use clap::Clap;
 use either::Either::{self, *};
 use regex::{Regex, RegexBuilder};
-use std::collections::HashSet;
 
 #[derive(Clap)]
 pub struct Arguments {
@@ -46,7 +45,7 @@ impl Options {
       .split_terminator("")
       .skip(1)
       .map(String::from)
-      .collect::<HashSet<String>>();
+      .collect::<Vec<String>>();
 
     let pattern = {
       if args.exact {
@@ -70,7 +69,7 @@ impl Options {
   }
 }
 
-fn p_aho_corasick(pattern: &str, flags: &HashSet<String>) -> SadResult<AhoCorasick> {
+fn p_aho_corasick(pattern: &str, flags: &[String]) -> SadResult<AhoCorasick> {
   let mut ac = AhoCorasickBuilder::new();
   for flag in flags {
     match flag.as_str() {
@@ -81,7 +80,7 @@ fn p_aho_corasick(pattern: &str, flags: &HashSet<String>) -> SadResult<AhoCorasi
   Ok(ac.build(&[pattern]))
 }
 
-fn p_regex(pattern: &str, flags: &HashSet<String>) -> SadResult<Regex> {
+fn p_regex(pattern: &str, flags: &[String]) -> SadResult<Regex> {
   let mut re = RegexBuilder::new(pattern);
   for flag in flags {
     match flag.as_str() {

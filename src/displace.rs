@@ -5,8 +5,8 @@ use difference::{Changeset, Difference};
 use either::Either::{self, *};
 
 pub struct Displaced {
-  path: PathBuf,
-  failure: Either<String, Failure>,
+  pub path: String,
+  pub failure: Either<String, Failure>,
 }
 
 async fn replace(path: &PathBuf, opts: &Options) -> SadResult<(String, String)> {
@@ -32,16 +32,17 @@ fn diff(before: &str, after: &str) -> String {
 }
 
 pub async fn displace(path: PathBuf, opts: &Options) -> Displaced {
+  let name = String::from(path.to_string_lossy());
   match replace(&path, opts).await {
     Ok((before, after)) => {
       let diffs = diff(&before, &after);
       Displaced {
-        path,
+        path: name,
         failure: Left(diffs),
       }
     }
     Err(err) => Displaced {
-      path,
+      path: name,
       failure: Right(err),
     },
   }

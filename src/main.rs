@@ -8,6 +8,7 @@ use async_std::{
 };
 use clap::Clap;
 use displace::Displaced;
+use either::*;
 use errors::*;
 use futures::future::{join, join3, JoinAll};
 use std::process;
@@ -48,7 +49,8 @@ fn stream_displace(
   let handle = task::spawn(async move {
     while let Some(name) = receiver.recv().await {
       let path = p_path(name)?;
-      let displaced = displace::displace(path, &opts);
+      let displaced = displace::displace(path, &opts).await;
+      s.send(displaced).await;
     }
     return SadResult::Ok(());
   });
@@ -56,7 +58,15 @@ fn stream_displace(
 }
 
 fn stream_stdout(receiver: Receiver<Displaced>) -> JoinHandle<()> {
-  task::spawn(async move { while let Some(diff) = receiver.recv().await {} })
+  task::spawn(async move {
+    while let Some(diff) = receiver.recv().await {
+      println!("{}", diff.path);
+      if let Left(succ) = diff.failure {
+        println!("{}", diff.path);
+        println!("{}", succ);
+      }
+    }
+  })
 }
 
 fn main() {
