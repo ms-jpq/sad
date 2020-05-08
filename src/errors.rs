@@ -1,8 +1,26 @@
 use async_std::io;
+use regex;
+use std::{fmt, string};
+
+/*
+ * Consolidate Error Handling
+ */
 
 pub enum Failure {
   IO(String),
   Str(String),
+  Regex(String),
+}
+
+impl fmt::Display for Failure {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    let message = match self {
+      Failure::IO(txt) => txt,
+      Failure::Str(txt) => txt,
+      Failure::Regex(txt) => txt,
+    };
+    write!(f, "{}", message)
+  }
 }
 
 pub type SadResult<T> = Result<T, Failure>;
@@ -26,14 +44,24 @@ impl<T, E: Sadness> Depression for Result<T, E> {
   }
 }
 
+/*
+ * Consolidate Error Handling
+ */
+
 impl Sadness for io::Error {
   fn cry(&self) -> Failure {
     Failure::IO(format!("{}", self))
   }
 }
 
-impl Sadness for std::string::FromUtf8Error {
+impl Sadness for string::FromUtf8Error {
   fn cry(&self) -> Failure {
     Failure::Str(format!("{}", self))
+  }
+}
+
+impl Sadness for regex::Error {
+  fn cry(&self) -> Failure {
+    Failure::Regex(format!("{}", self))
   }
 }
