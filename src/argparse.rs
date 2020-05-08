@@ -74,7 +74,11 @@ fn p_aho_corasick(pattern: &str, flags: &[String]) -> SadResult<AhoCorasick> {
   for flag in flags {
     match flag.as_str() {
       "i" => ac.ascii_case_insensitive(true),
-      _ => return Err(Failure::Regex(String::from("Invalid flags"))),
+      _ => {
+        return Err(Failure::Regex(regex::Error::Syntax(String::from(
+          "Invalid flags",
+        ))))
+      }
     };
   }
   Ok(ac.build(&[pattern]))
@@ -89,7 +93,11 @@ fn p_regex(pattern: &str, flags: &[String]) -> SadResult<Regex> {
       "s" => re.dot_matches_new_line(true),
       "U" => re.swap_greed(true),
       "x" => re.ignore_whitespace(true),
-      _ => return Err(Failure::Regex(String::from("Invalid flags"))),
+      _ => {
+        return Err(Failure::Regex(regex::Error::Syntax(String::from(
+          "Invalid flags",
+        ))))
+      }
     };
   }
   re.build().halp()

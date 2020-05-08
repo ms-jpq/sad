@@ -51,11 +51,13 @@ fn stream_displace(
   let rr = Arc::new(receiver);
   let ss = Arc::new(s);
   let oo = Arc::new(opts);
+
   let handles = (1..=num_cpus::get())
     .map(|_| {
       let receiver = Arc::clone(&rr);
       let sender = Arc::clone(&ss);
       let opts = Arc::clone(&oo);
+
       task::spawn(async move {
         while let Some(name) = receiver.recv().await {
           let path = name.and_then(p_path);
@@ -72,6 +74,7 @@ fn stream_displace(
       })
     })
     .collect::<Vec<JoinHandle<()>>>();
+
   let handle = join_all(handles);
   (handle, r)
 }

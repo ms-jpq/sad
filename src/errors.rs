@@ -6,26 +6,21 @@ use std::{fmt, string};
  */
 
 pub enum Failure {
-  IO(String),
-  Str(String),
-  Regex(String),
+  IO(io::Error),
+  Str(string::FromUtf8Error),
+  Regex(regex::Error),
 }
 
 impl fmt::Display for Failure {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    let message = match self {
-      Failure::IO(txt) => txt,
-      Failure::Str(txt) => txt,
-      Failure::Regex(txt) => txt,
-    };
-    write!(f, "{}", message)
+    write!(f, "{}", self)
   }
 }
 
 pub type SadResult<T> = Result<T, Failure>;
 
 pub trait Sadness {
-  fn cry(&self) -> Failure;
+  fn cry(self) -> Failure;
 }
 
 pub trait Depression {
@@ -48,19 +43,19 @@ impl<T, E: Sadness> Depression for Result<T, E> {
  */
 
 impl Sadness for io::Error {
-  fn cry(&self) -> Failure {
-    Failure::IO(format!("{}", self))
+  fn cry(self) -> Failure {
+    Failure::IO(self)
   }
 }
 
 impl Sadness for string::FromUtf8Error {
-  fn cry(&self) -> Failure {
-    Failure::Str(format!("{}", self))
+  fn cry(self) -> Failure {
+    Failure::Str(self)
   }
 }
 
 impl Sadness for regex::Error {
-  fn cry(&self) -> Failure {
-    Failure::Regex(format!("{}", self))
+  fn cry(self) -> Failure {
+    Failure::Regex(self)
   }
 }
