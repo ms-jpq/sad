@@ -14,5 +14,5 @@ async-std = { version = "1", features = ["unstable"] }
 clap = { version = "3.0.0-beta.1", features = ["wrap_help"] }
 regex = "1"
 aho-corasick = "0.7"
-diff = "0.1"
+difflib = "0.4"
 num_cpus = "1"
