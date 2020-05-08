@@ -1,7 +1,7 @@
 use super::argparse::{Action, Options};
 use super::errors::*;
 use async_std::{fs, path::PathBuf};
-use difference::{Changeset, Difference};
+use diff;
 use either::Either::*;
 
 async fn replace(path: &PathBuf, opts: &Options) -> SadResult<(String, String)> {
@@ -13,14 +13,20 @@ async fn replace(path: &PathBuf, opts: &Options) -> SadResult<(String, String)> 
   Ok((before, after))
 }
 
-fn diff(before: &str, after: &str) -> String {
-  let changes = Changeset::new(before, after, "\n");
+fn rdiff(before: &str, after: &str) -> String {
+  let changes = diff::lines(before, after);
   let mut diff = String::new();
-  for line in changes.diffs {
+  for line in changes {
     match line {
-      Difference::Add(l) => &diff.push_str(format!("+{}", l).as_str()),
-      Difference::Rem(l) => &diff.push_str(format!("-{}", l).as_str()),
-      Difference::Same(l) => &diff.push_str(l.as_str()),
+      diff::Result::Left(l) => {
+        &diff.push_str(format!("-{}\n", l).as_str());
+      }
+      diff::Result::Right(r) => {
+        &diff.push_str(format!("+{}\n", r).as_str());
+      }
+      diff::Result::Both(l, _) => {
+        // &diff.push_str(format!(" {}\n", l).as_str());
+      }
     };
   }
   diff
@@ -29,7 +35,7 @@ fn diff(before: &str, after: &str) -> String {
 pub async fn displace(path: PathBuf, opts: &Options) -> SadResult<String> {
   let (before, after) = replace(&path, opts).await?;
   let print = match opts.action {
-    Action::Diff => diff(&before, &after),
+    Action::Diff => rdiff(&before, &after),
     Action::Write => {
       fs::write(&path, after).await.halp()?;
       String::from(path.to_string_lossy())
