@@ -83,20 +83,17 @@ fn stream_displace(
 
 fn stream_stdout(receiver: Receiver<SadResult<String>>) -> JoinHandle<()> {
   let mut stdout = io::BufWriter::new(io::stdout());
-  let mut stderr = io::BufWriter::new(io::stderr());
   task::spawn(async move {
     while let Some(res) = receiver.recv().await {
       match res {
         Ok(print) => stdout.write(print.as_bytes()).await.unwrap(),
         Err(err) => {
-          stderr.write(format!("{}", err).as_bytes()).await.unwrap();
+          eprintln!("{:?}", err);
           process::exit(1)
         }
       };
     }
-    let (o, e) = join(stdout.flush(), stderr.flush()).await;
-    o.unwrap();
-    e.unwrap();
+    stdout.flush().await.unwrap();
   })
 }
 
@@ -112,7 +109,7 @@ fn main() {
       })
     }
     Err(e) => {
-      eprintln!("{}", e);
+      eprintln!("{:?}", e);
       process::exit(1);
     }
   }

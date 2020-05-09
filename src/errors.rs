@@ -5,6 +5,7 @@ use std::{fmt, string};
  * Consolidate Error Handling
  */
 
+#[derive(Debug)]
 pub enum Failure {
   Simple(String),
   IO(io::Error),
