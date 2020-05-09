@@ -36,6 +36,17 @@ My recommendations are:
 
 `fd <files> | sd <pattern> <replacement> | delta`
 
+## Previews
+
+Replace all `"(\d+)"` -> `🌈$1🌈` in the Chromium repo.
+
+![preview1](https://github.com/ms-jpq/sad/raw/master/previews/preview1.gif)
+
+
+Replace all `std` -> `josephjoestar` in the Chromium repo.
+
+![preview2](https://github.com/ms-jpq/sad/raw/master/previews/preview2.gif)
+
 ## Flags
 
 Name                                | Function
