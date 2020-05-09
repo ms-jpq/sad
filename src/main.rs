@@ -8,7 +8,7 @@ use async_std::{
 };
 use clap::Clap;
 use errors::*;
-use futures::future::{join, join3, join_all, JoinAll};
+use futures::future::{join3, join_all, JoinAll};
 use std::process;
 
 mod argparse;

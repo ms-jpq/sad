@@ -20,7 +20,7 @@ async fn safe_write(canonical: &PathBuf, text: &str) -> SadResult<()> {
     .file_name()
     .and_then(|s| s.to_str())
     .map(String::from)
-    .ok_or(Failure::Simple(format!(
+    .ok_or_else(|| Failure::Simple(format!(
       "Bad file name - {}",
       canonical.to_string_lossy()
     )))?;

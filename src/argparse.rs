@@ -65,7 +65,7 @@ impl Options {
 
     Ok(Options {
       pattern,
-      replace: args.replace.unwrap_or(String::from("")),
+      replace: args.replace.unwrap_or_default(),
       action,
     })
   }
