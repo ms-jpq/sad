@@ -73,3 +73,5 @@ Name | Function
 ## GET SAD NOW!
 
 You can download `sad` from the [github release page](https://github.com/ms-jpq/sad/releases).
+
+Why is it version 0.1? Because that's the default and I forgot to change it.
