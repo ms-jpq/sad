@@ -18,7 +18,7 @@ find "$FIND_ARGS" | sad '<pattern>' '<replacement>' | highlighter-of-your-choice
 
 Feed `sad` a list of files from `stdin`, a search pattern (regex by default), a replacement pattern, and you are good to go!
 
-You can use regex capture groups. For example: `sad '"(\d+)"' ''|$1|''` will replace the double quotes around integers with `|`.
+You can use regex capture groups. For example: `sad '"(\d+)"' '🌈$1🌈'` will replace the double quotes around integers with `🌈`.
 
 If a replacement pattern is omitted, `sad` will assume deletion.
 
