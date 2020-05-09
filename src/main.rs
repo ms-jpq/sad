@@ -94,7 +94,7 @@ fn stream_stdout(receiver: Receiver<SadResult<String>>) -> JoinHandle<()> {
   })
 }
 
-fn err_exit<T>(err: Failure) -> T {
+fn err_exit(err: Failure) -> ! {
   eprintln!("{:#?}", err);
   process::exit(1)
 }
