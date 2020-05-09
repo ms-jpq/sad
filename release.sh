@@ -5,6 +5,7 @@ set -o pipefail
 
 cd "$(dirname "$0")"
 
+rm release.zip || true
 mkdir -p ./dist ./sad
 
 
