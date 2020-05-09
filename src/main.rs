@@ -87,14 +87,16 @@ fn stream_stdout(receiver: Receiver<SadResult<String>>) -> JoinHandle<()> {
     while let Some(res) = receiver.recv().await {
       match res {
         Ok(print) => stdout.write(print.as_bytes()).await.unwrap(),
-        Err(err) => {
-          eprintln!("{:#?}", err);
-          process::exit(1)
-        }
+        Err(err) => err_exit(err),
       };
     }
     stdout.flush().await.unwrap();
   })
+}
+
+fn err_exit<T>(err: Failure) -> T {
+  eprintln!("{:#?}", err);
+  process::exit(1)
 }
 
 fn main() {
@@ -108,9 +110,6 @@ fn main() {
         join3(reader, writer, intermediary).await;
       })
     }
-    Err(e) => {
-      eprintln!("{:#?}", e);
-      process::exit(1);
-    }
+    Err(e) => err_exit(e),
   }
 }
