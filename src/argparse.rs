@@ -16,7 +16,7 @@ pub struct Arguments {
   #[clap(short = "0")]
   pub nul_delim: bool,
 
-  #[clap(short, long)]
+  #[clap(short = "k", long)]
   pub commit: bool,
 
   #[clap(short, long)]

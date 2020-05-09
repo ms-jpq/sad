@@ -6,6 +6,7 @@ use std::{fmt, string};
  */
 
 pub enum Failure {
+  Simple(String),
   IO(io::Error),
   Str(string::FromUtf8Error),
   Regex(regex::Error),

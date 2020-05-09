@@ -16,3 +16,4 @@ regex = "1"
 aho-corasick = "0.7"
 difflib = "0.4"
 num_cpus = "1"
+uuid = { version = "0.8", features = ["v4"] }

@@ -88,7 +88,10 @@ fn stream_stdout(receiver: Receiver<SadResult<String>>) -> JoinHandle<()> {
     while let Some(res) = receiver.recv().await {
       match res {
         Ok(print) => stdout.write(print.as_bytes()).await.unwrap(),
-        Err(err) => stderr.write(format!("{}", err).as_bytes()).await.unwrap(),
+        Err(err) => {
+          stderr.write(format!("{}", err).as_bytes()).await.unwrap();
+          process::exit(1)
+        }
       };
     }
     let (o, e) = join(stdout.flush(), stderr.flush()).await;
