@@ -53,7 +53,8 @@ fn stream_displace(
   let ss = Arc::new(s);
   let oo = Arc::new(opts);
 
-  let handles = (1..=num_cpus::get())
+  let threads = num_cpus::get() * 2;
+  let handles = (1..=threads)
     .map(|_| {
       let receiver = Arc::clone(&rr);
       let sender = Arc::clone(&ss);
