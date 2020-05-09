@@ -4,7 +4,7 @@ Super Accelerated Diff
 
 ## What does it do?
 
-Basically `sad` is a **Batch Search and Replace** tool.
+Basically `sad` is a **Batch File Edit** tool.
 
 It will show you a really nice preview however.
 
