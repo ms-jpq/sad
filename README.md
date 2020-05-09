@@ -40,10 +40,13 @@ My recommendations are:
 
 Replace all `"(\d+)"` -> `🌈$1🌈` in the Chromium repo.
 
+Highlighter -- `diff-so-fancy`
+
 ![preview1](https://github.com/ms-jpq/sad/raw/master/previews/preview1.gif)
 
-
 Replace all `std` -> `josephjoestar` in the Chromium repo.
+
+Highlighter -- `delta`
 
 ![preview2](https://github.com/ms-jpq/sad/raw/master/previews/preview2.gif)
 
