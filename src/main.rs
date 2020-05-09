@@ -17,6 +17,17 @@ mod displace;
 mod errors;
 mod udiff;
 
+fn stream_list(files: Vec<String>) -> (JoinHandle<()>, Receiver<SadResult<Vec<u8>>>) {
+  let (s, r) = channel::<SadResult<Vec<u8>>>(1);
+
+  let handle = task::spawn(async move {
+    for bytes in files.iter().map(|f| f.as_bytes().to_vec()) {
+      s.send(SadResult::Ok(bytes)).await;
+    }
+  });
+  (handle, r)
+}
+
 fn stream_stdin(args: &Arguments) -> (JoinHandle<()>, Receiver<SadResult<Vec<u8>>>) {
   let delim = if args.nul_delim { b'\0' } else { b'\n' };
   let (s, r) = channel::<SadResult<Vec<u8>>>(1);
@@ -38,6 +49,14 @@ fn stream_stdin(args: &Arguments) -> (JoinHandle<()>, Receiver<SadResult<Vec<u8>
   });
 
   (handle, r)
+}
+
+fn choose_input(args: &Arguments) -> (JoinHandle<()>, Receiver<SadResult<Vec<u8>>>) {
+  if args.input.is_empty() {
+    stream_stdin(&args)
+  } else {
+    stream_list(args.input.clone())
+  }
 }
 
 fn p_path(name: Vec<u8>) -> SadResult<PathBuf> {
@@ -105,7 +124,7 @@ fn err_exit(err: Failure) -> ! {
 
 fn main() {
   let args = Arguments::parse();
-  let (reader, path_receiver) = stream_stdin(&args);
+  let (reader, path_receiver) = choose_input(&args);
   match Options::new(args) {
     Ok(opts) => {
       let (intermediary, displaced_receiver) = stream_displace(opts, path_receiver);

@@ -1,6 +1,5 @@
 use super::errors::*;
 use aho_corasick::{AhoCorasick, AhoCorasickBuilder};
-use async_std::path::PathBuf;
 use clap::Clap;
 use either::Either::{self, *};
 use regex::{Regex, RegexBuilder};
@@ -11,7 +10,7 @@ pub struct Arguments {
   pub replace: Option<String>,
 
   #[clap(short, long)]
-  pub input: Vec<PathBuf>,
+  pub input: Vec<String>,
 
   #[clap(short = "0")]
   pub nul_delim: bool,
