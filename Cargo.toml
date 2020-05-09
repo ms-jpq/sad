@@ -10,10 +10,11 @@ edition = "2018"
 either = "1"
 futures = "0.3"
 itertools = "0.9"
-async-std = { version = "1", features = ["unstable"] }
 clap = { version = "3.0.0-beta.1", features = ["wrap_help"] }
+async-std = { version = "1", features = ["unstable"] }
+num_cpus = "1"
 regex = "1"
 aho-corasick = "0.7"
 difflib = "0.4"
-num_cpus = "1"
 uuid = { version = "0.8", features = ["v4"] }
+ansi_term = "0.12"

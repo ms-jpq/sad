@@ -1,3 +1,4 @@
+use ansi_term::Colour;
 use argparse::{Arguments, Options};
 use async_std::{
   io,
@@ -95,7 +96,7 @@ fn stream_stdout(receiver: Receiver<SadResult<String>>) -> JoinHandle<()> {
 }
 
 fn err_exit(err: Failure) -> ! {
-  eprintln!("{:#?}", err);
+  eprintln!("{}", Colour::Red.paint(format!("{:#?}", err)));
   process::exit(1)
 }
 
