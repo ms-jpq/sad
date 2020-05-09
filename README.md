@@ -76,7 +76,7 @@ You can download `sad` from the [github release page](https://github.com/ms-jpq/
 
 Why is it version 0.1? Because that's the default and I forgot to change it.
 
-## What about STDIN -> STDOUT
+## What about stdin -> stdout
 
 If you just want to edit the shell stream, I would recommand [`sd`](https://github.com/chmln/sd), it uses the same concept, but its more for in stream edits. `sad` was inspired by my initial useage of `sd`.
 
