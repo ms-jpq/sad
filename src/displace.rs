@@ -15,7 +15,7 @@ async fn replace(canonical: &PathBuf, opts: &Options) -> SadResult<(String, Stri
 }
 
 async fn safe_write(canonical: &PathBuf, text: &str) -> SadResult<()> {
-  let uuid = Uuid::new_v4().to_hyphenated().to_string();
+  let uuid = Uuid::new_v4().to_simple().to_string();
   let mut file_name = canonical
     .file_name()
     .and_then(|s| s.to_str())
@@ -24,6 +24,7 @@ async fn safe_write(canonical: &PathBuf, text: &str) -> SadResult<()> {
       "Bad file name - {}",
       canonical.to_string_lossy()
     )))?;
+  file_name.push_str("___");
   file_name.push_str(&uuid);
   let backup = canonical.with_file_name(file_name);
   fs::rename(&canonical, &backup).await.halp()?;
