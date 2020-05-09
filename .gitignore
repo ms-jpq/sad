@@ -3,5 +3,6 @@
 /target/
 /dist/
 /out/
+release.zip
 Cargo.lock
 temp*

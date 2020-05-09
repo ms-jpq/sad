@@ -23,4 +23,5 @@ fi
 
 cp ./dist/x86_64-unknown-linux-gnu/release/sad ./out/x86_64-unknown-linux-gnu
 
+zip -r release.zip ./out
 
