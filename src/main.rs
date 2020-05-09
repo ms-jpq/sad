@@ -88,7 +88,7 @@ fn stream_stdout(receiver: Receiver<SadResult<String>>) -> JoinHandle<()> {
       match res {
         Ok(print) => stdout.write(print.as_bytes()).await.unwrap(),
         Err(err) => {
-          eprintln!("{:?}", err);
+          eprintln!("{:#?}", err);
           process::exit(1)
         }
       };
@@ -109,7 +109,7 @@ fn main() {
       })
     }
     Err(e) => {
-      eprintln!("{:?}", e);
+      eprintln!("{:#?}", e);
       process::exit(1);
     }
   }
