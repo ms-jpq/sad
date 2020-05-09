@@ -39,13 +39,15 @@ pub struct Options {
 
 impl Options {
   pub fn new(args: Arguments) -> SadResult<Options> {
-    let flagset = args
+    let auto_flags = p_auto_flags(&args.pattern);
+    let flags = args
       .flags
       .unwrap_or_default()
       .split_terminator("")
       .skip(1)
       .map(String::from)
       .collect::<Vec<String>>();
+    let flagset = itertools::chain(auto_flags, flags).collect::<Vec<String>>();
 
     let pattern = {
       if args.exact {
@@ -69,10 +71,20 @@ impl Options {
   }
 }
 
+fn p_auto_flags(pattern: &str) -> Vec<String> {
+  for c in pattern.chars() {
+    if c.is_uppercase() {
+      return vec![String::from("I")];
+    }
+  }
+  vec![String::from("i")]
+}
+
 fn p_aho_corasick(pattern: &str, flags: &[String]) -> SadResult<AhoCorasick> {
   let mut ac = AhoCorasickBuilder::new();
   for flag in flags {
     match flag.as_str() {
+      "I" => ac.ascii_case_insensitive(false),
       "i" => ac.ascii_case_insensitive(true),
       _ => {
         return Err(Failure::Regex(regex::Error::Syntax(String::from(
@@ -88,6 +100,7 @@ fn p_regex(pattern: &str, flags: &[String]) -> SadResult<Regex> {
   let mut re = RegexBuilder::new(pattern);
   for flag in flags {
     match flag.as_str() {
+      "I" => re.case_insensitive(false),
       "i" => re.case_insensitive(true),
       "m" => re.multi_line(true),
       "s" => re.dot_matches_new_line(true),
