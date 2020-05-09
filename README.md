@@ -28,11 +28,13 @@ If a replacement pattern is omitted, `sad` will assume deletion.
 
 My recommendations are:
 
-[diff-so-fancy](https://github.com/so-fancy/diff-so-fancy) `perl`
+[diff-so-fancy](https://github.com/so-fancy/diff-so-fancy)
 
-[delta](https://github.com/dandavison/delta) `rust`
+`fd <files> | sd <pattern> <replacement> | diff-so-fancy | less`
 
-`sad`'s preview mode `stdout` is not designed to be read by humans.
+[delta](https://github.com/dandavison/delta)
+
+`fd <files> | sd <pattern> <replacement> | delta`
 
 ## Flags
 
