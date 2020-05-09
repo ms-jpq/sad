@@ -1,5 +1,7 @@
-.git/
+/.git/
 .DS_Store
-/target
+/target/
+/dist/
+/out/
 Cargo.lock
 temp*
