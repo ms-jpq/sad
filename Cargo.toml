@@ -1,7 +1,8 @@
 [package]
 name = "sad"
-version = "0.1.0"
-authors = ["Fly me to the moon <git@bigly.dog>"]
+version = "0.1.4"
+description = "batch edit tool | https://github.com/ms-jpq/sad"
+authors = ["git@bigly.dog"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

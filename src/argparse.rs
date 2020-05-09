@@ -5,23 +5,28 @@ use either::Either::{self, *};
 use regex::{Regex, RegexBuilder};
 
 #[derive(Clap)]
+#[clap(name = "sad", author, about, version)]
 pub struct Arguments {
+
+  #[clap(about = "Search pattern")]
   pub pattern: String,
+
+  #[clap(about = "Replacement pattern")]
   pub replace: Option<String>,
 
-  #[clap(short, long)]
+  #[clap(short, long, about = "Skip stdin, supply files to edit")]
   pub input: Vec<String>,
 
-  #[clap(short = "0")]
+  #[clap(short = "0", about = r"Use \0 as stdin delimiter")]
   pub nul_delim: bool,
 
-  #[clap(short = "k", long)]
+  #[clap(short = "k", long, about = "No preview, write changes to file")]
   pub commit: bool,
 
-  #[clap(short, long)]
+  #[clap(short, long, about = "String literal mode")]
   pub exact: bool,
 
-  #[clap(short, long)]
+  #[clap(short, long, about = "Standard regex flags: ie. -f imx")]
   pub flags: Option<String>,
 }
 
