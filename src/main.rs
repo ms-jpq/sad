@@ -87,7 +87,10 @@ fn stream_stdout(receiver: Receiver<SadResult<String>>) -> JoinHandle<()> {
   task::spawn(async move {
     while let Some(res) = receiver.recv().await {
       match res {
-        Ok(print) => stdout.write(print.as_bytes()).await.unwrap(),
+        Ok(print) => match stdout.write(print.as_bytes()).await {
+          Err(e) if e.kind() == std::io::ErrorKind::BrokenPipe => process::exit(1),
+          _ => {}
+        },
         Err(err) => err_exit(err),
       };
     }

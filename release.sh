@@ -5,7 +5,7 @@ set -o pipefail
 
 cd "$(dirname "$0")"
 
-mkdir -p ./dist ./out
+mkdir -p ./dist ./sad
 
 
 if [[ "$(uname)" = 'Linux' ]]
@@ -18,10 +18,10 @@ then
   docker run -it --rm -w /workdir -v "$PWD":/workdir rust cargo build --release --target-dir=./dist/x86_64-unknown-linux-gnu
   cargo build --release --target-dir=./dist/x86_64-apple-darwin
 
-  cp ./dist/x86_64-apple-darwin/release/sad ./out/x86_64-apple-darwin
+  cp ./dist/x86_64-apple-darwin/release/sad ./sad/x86_64-apple-darwin
 fi
 
-cp ./dist/x86_64-unknown-linux-gnu/release/sad ./out/x86_64-unknown-linux-gnu
+cp ./dist/x86_64-unknown-linux-gnu/release/sad ./sad/x86_64-unknown-linux-gnu
 
-zip -r release.zip ./out
+zip -r release.zip ./sad
 

@@ -1,8 +1,9 @@
 use async_std::io;
-use std::{fmt, string};
+use std::string;
 
 /*
  * Consolidate Error Handling
+ * ==========================
  */
 
 #[derive(Debug)]
@@ -11,12 +12,6 @@ pub enum Failure {
   IO(io::Error),
   Str(string::FromUtf8Error),
   Regex(regex::Error),
-}
-
-impl fmt::Display for Failure {
-  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    write!(f, "{}", self)
-  }
 }
 
 pub type SadResult<T> = Result<T, Failure>;
@@ -40,7 +35,7 @@ impl<T, E: Sadness> Depression for Result<T, E> {
   }
 }
 
-/*
+/* ==========================
  * Consolidate Error Handling
  */
 
