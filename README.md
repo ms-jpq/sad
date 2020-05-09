@@ -4,7 +4,7 @@ Super Accelerated Diff
 
 ## What does it do?
 
-Basically `sad` is a **Batch Search and Replace** tool.
+Basically `sad` is a **Batch File Edit** tool.
 
 It will show you a really nice preview however.
 
@@ -73,3 +73,5 @@ Name | Function
 ## GET SAD NOW!
 
 You can download `sad` from the [github release page](https://github.com/ms-jpq/sad/releases).
+
+Why is it version 0.1? Because that's the default and I forgot to change it.
