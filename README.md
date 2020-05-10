@@ -22,6 +22,11 @@ You can use regex capture groups. For example: `sad '"(\d+)"' '🌈$1🌈'` will
 
 If a replacement pattern is omitted, `sad` will assume deletion.
 
+---
+
+use `-k` or `--commit` to write to files
+
+
 ## Requirements
 
 `sad` is designed to work with a diff colorizer. Any would work.
