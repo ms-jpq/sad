@@ -6,23 +6,42 @@ set -o pipefail
 cd "$(dirname "$0")"
 
 rm release.zip || true
-mkdir -p ./dist ./sad
+rm -r "$PWD/sad"
+mkdir -p "$PWD/target" "$PWD/sad"
 
 
-if [[ "$(uname)" = 'Linux' ]]
-then
-  cargo build --release --target=x86_64-unknown-linux-gnu --target-dir=./dist/x86_64-unknown-linux-gnu
-fi
+builds=(
+  x86_64-unknown-linux-gnu
+  x86_64-unknown-linux-musl
+  x86_64-pc-windows-gnu
+)
 
-if [[ "$(uname)" = 'Darwin' ]]
-then
-  docker run -it --rm -w /workdir -v "$PWD":/workdir rust cargo build --release --target-dir=./dist/x86_64-unknown-linux-gnu
-  cargo build --release --target-dir=./dist/x86_64-apple-darwin
 
-  cp ./dist/x86_64-apple-darwin/release/sad ./sad/x86_64-apple-darwin
-fi
+cross_build() {
+  local ARCH="$1"
+  cross build --release --target="$ARCH"
+  cp "$PWD/target/$ARCH/release/sad" "./sad/$ARCH"
+}
 
-cp ./dist/x86_64-unknown-linux-gnu/release/sad ./sad/x86_64-unknown-linux-gnu
+
+macos_build() {
+  if [[ "$(uname)" = 'Darwin' ]]
+  then
+    local ARCH="x86_64-apple-darwin"
+    local DIST="$PWD/target/$ARCH"
+    cargo build --release --target-dir="$DIST"
+    cp "$DIST/release/sad" "$PWD/sad/$ARCH"
+  fi
+}
+
+
+macos_build
+
+for build in "${builds[@]}"
+do
+  cross_build "$build"
+done
+
 
 zip -r release.zip ./sad
 

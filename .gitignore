@@ -1,8 +1,6 @@
 /.git/
 .DS_Store
 /target/
-/dist/
-/out/
 /sad/
 release.zip
 Cargo.lock
