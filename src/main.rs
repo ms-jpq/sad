@@ -108,6 +108,7 @@ fn stream_stdout(receiver: Receiver<SadResult<String>>) -> JoinHandle<()> {
       match res {
         Ok(print) => match stdout.write(print.as_bytes()).await {
           Err(e) if e.kind() == std::io::ErrorKind::BrokenPipe => process::exit(1),
+          Err(e) => err_exit(e.cry()),
           _ => {}
         },
         Err(err) => err_exit(err),
