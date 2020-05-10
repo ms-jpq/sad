@@ -6,7 +6,7 @@ Super Accelerated Diff
 
 Basically `sad` is a **Batch File Edit** tool.
 
-It will show you a really nice preview however.
+It will show you a really nice diff of proposed changes *before* you commit them.
 
 Unlike `sed`, you can double check before you fat finger your edit.
 
