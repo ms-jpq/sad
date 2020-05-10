@@ -30,11 +30,11 @@ My recommendations are:
 
 [diff-so-fancy](https://github.com/so-fancy/diff-so-fancy)
 
-`fd <files> | sd <pattern> <replacement> | diff-so-fancy | less`
+`fd <files> | sad <pattern> <replacement> | diff-so-fancy | less`
 
 [delta](https://github.com/dandavison/delta)
 
-`fd <files> | sd <pattern> <replacement> | delta`
+`fd <files> | sad <pattern> <replacement> | delta`
 
 ## Previews
 
