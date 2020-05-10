@@ -6,7 +6,7 @@ set -o pipefail
 cd "$(dirname "$0")"
 
 rm release.zip || true
-rm -r "$PWD/sad"
+rm -r "$PWD/sad" || true
 mkdir -p "$PWD/target" "$PWD/sad"
 
 
@@ -20,7 +20,7 @@ builds=(
 cross_build() {
   local ARCH="$1"
   cross build --release --target="$ARCH"
-  cp "$PWD/target/$ARCH/release/sad" "./sad/$ARCH"
+  cp "$PWD/target/$ARCH/release/sad" "./sad/$ARCH" || cp "$PWD/target/$ARCH/release/sad.exe" "./sad/$ARCH"
 }
 
 
