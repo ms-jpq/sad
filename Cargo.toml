@@ -5,14 +5,13 @@ description = "batch edit tool | https://github.com/ms-jpq/sad"
 authors = ["git@bigly.dog"]
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 either = "1"
 futures = "0.3"
 itertools = "0.9"
 clap = { version = "3.0.0-beta.1", features = ["wrap_help"] }
-async-std = { version = "1", features = ["unstable"] }
+tokio = { version = "0.2", features = ["full"] }
 num_cpus = "1"
 regex = "1"
 aho-corasick = "0.7"

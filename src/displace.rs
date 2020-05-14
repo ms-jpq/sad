@@ -1,11 +1,9 @@
 use super::argparse::{Action, Options};
 use super::errors::*;
 use super::udiff;
-use async_std::{
-  fs::{self, Metadata},
-  path::PathBuf,
-};
 use either::Either::*;
+use std::{fs::Metadata, path::PathBuf};
+use tokio::fs;
 use uuid::Uuid;
 
 fn replace(before: &str, opts: &Options) -> String {

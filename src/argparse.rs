@@ -3,11 +3,11 @@ use aho_corasick::{AhoCorasick, AhoCorasickBuilder};
 use clap::Clap;
 use either::Either::{self, *};
 use regex::{Regex, RegexBuilder};
+use std::path::PathBuf;
 
 #[derive(Clap)]
 #[clap(name = "sad", author, about, version)]
 pub struct Arguments {
-
   #[clap(about = "Search pattern")]
   pub pattern: String,
 
@@ -15,7 +15,7 @@ pub struct Arguments {
   pub replace: Option<String>,
 
   #[clap(short, long, about = "Skip stdin, supply files to edit")]
-  pub input: Vec<String>,
+  pub input: Vec<PathBuf>,
 
   #[clap(short = "0", about = r"Use \0 as stdin delimiter")]
   pub nul_delim: bool,
