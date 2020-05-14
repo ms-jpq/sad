@@ -18,11 +18,11 @@ pub enum Failure {
 pub type SadResult<T> = Result<T, Failure>;
 
 pub trait SadnessFrom<T> {
-  fn halp(self) -> SadResult<T>;
+  fn into_sadness(self) -> SadResult<T>;
 }
 
 impl<T, E: Into<Failure>> SadnessFrom<T> for Result<T, E> {
-  fn halp(self) -> SadResult<T> {
+  fn into_sadness(self) -> SadResult<T> {
     match self {
       Ok(val) => Ok(val),
       Err(e) => Err(e.into()),

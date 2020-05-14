@@ -117,5 +117,5 @@ fn p_regex(pattern: &str, flags: &[String]) -> SadResult<Regex> {
       }
     };
   }
-  re.build().halp()
+  re.build().into_sadness()
 }

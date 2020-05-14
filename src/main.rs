@@ -21,7 +21,7 @@ mod udiff;
 fn p_path(name: &[u8]) -> SadResult<PathBuf> {
   String::from_utf8(name.to_vec())
     .map(|p| PathBuf::from(p.as_str()))
-    .halp()
+    .into_sadness()
 }
 
 fn stream_stdin(
@@ -37,7 +37,7 @@ fn stream_stdin(
 
   let handle = task::spawn(async move {
     loop {
-      let line = reader.read_until(delim, &mut buf).await.halp()?;
+      let line = reader.read_until(delim, &mut buf).await.into_sadness()?;
       match line {
         0 => return Ok(()),
         _ => {
@@ -80,7 +80,7 @@ fn stream_stdout(mut stream: mpsc::Receiver<SadResult<String>>) -> JoinHandle<Sa
         Err(err) => err_exit(err),
       };
     }
-    stdout.flush().await.halp()?;
+    stdout.flush().await.into_sadness()?;
     Ok(())
   })
 }

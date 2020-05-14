@@ -23,24 +23,24 @@ async fn safe_write(canonical: &PathBuf, meta: &Metadata, text: &str) -> SadResu
   file_name.push_str("___");
   file_name.push_str(&uuid);
   let backup = canonical.with_file_name(file_name);
-  fs::rename(&canonical, &backup).await.halp()?;
-  fs::write(&canonical, text).await.halp()?;
+  fs::rename(&canonical, &backup).await.into_sadness()?;
+  fs::write(&canonical, text).await.into_sadness()?;
   fs::set_permissions(&canonical, meta.permissions())
     .await
-    .halp()?;
-  fs::remove_file(&backup).await.halp()?;
+    .into_sadness()?;
+  fs::remove_file(&backup).await.into_sadness()?;
   Ok(())
 }
 
 pub async fn displace(path: PathBuf, opts: &Options) -> SadResult<String> {
   let name = String::from(path.to_string_lossy());
-  let canonical = fs::canonicalize(&path).await.halp()?;
-  let meta = fs::metadata(&canonical).await.halp()?;
+  let canonical = fs::canonicalize(&path).await.into_sadness()?;
+  let meta = fs::metadata(&canonical).await.into_sadness()?;
   if !meta.is_file() {
     let msg = format!("Not a file - {}", canonical.to_string_lossy());
     return Err(Failure::Simple(msg));
   }
-  let before = fs::read_to_string(&canonical).await.halp()?;
+  let before = fs::read_to_string(&canonical).await.into_sadness()?;
   let after = replace(&before, opts);
   if before == after {
     Ok(String::from(""))
