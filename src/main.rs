@@ -2,6 +2,7 @@ use ansi_term::Colour;
 use argparse::{Arguments, Options};
 use clap::Clap;
 use errors::*;
+use futures::future::{join_all, JoinAll};
 use std::{path::PathBuf, process, sync::Arc};
 use tokio::{
   io,
@@ -65,32 +66,33 @@ fn choose_input(args: &Arguments) -> (JoinHandle<SadResult<()>>, mpsc::Receiver<
   }
 }
 
-// fn stream_process(opts: Options, stream: mpsc::Receiver<PathBuf>) {
-//   let sx = Arc::new(Mutex::new(stream));
-//   let (tx, rx) = mpsc::channel::<String>(1);
+fn stream_process(
+  opts: Options,
+  stream: mpsc::Receiver<PathBuf>,
+) -> (Vec<JoinHandle<SadResult<()>>>, mpsc::Receiver<String>) {
+  let sx = Arc::new(Mutex::new(stream));
+  let oo = Arc::new(opts);
+  let (tx, rx) = mpsc::channel::<String>(1);
 
-//   let threads = num_cpus::get() * 2;
-//   let handles = (1..=threads)
-//     .map(|_| {
-//       let stream = Arc::clone(&sx)
-//       let sender = Arc::clone(&ss);
-//       let opts = Arc::clone(&oo);
+  let threads = num_cpus::get() * 2;
+  let handles = (1..=threads)
+    .map(|_| {
+      let stream = Arc::clone(&sx);
+      let opts = Arc::clone(&oo);
+      let mut sender = mpsc::Sender::clone(&tx);
 
-//       task::spawn(async move {
-//         while let Some(path) = stream.lock().await.next().await {
-//           match path {
-//             Ok(val) => {
-//               let displaced = displace::displace(val, &opts).await;
-//               sender.send(displaced).await;
-//           }
-//         }
-//       })
-//     })
-//     .collect::<Vec<JoinHandle<()>>>();
-
-//   let handle = join_all(handles);
-//   (handle, rx)
-// }
+      task::spawn(async move {
+        while let Some(path) = stream.lock().await.next().await {
+          let displaced = displace::displace(path, &opts).await?;
+          sender.send(displaced).await.into_sadness()?;
+        }
+        Ok(())
+      })
+    })
+    .collect::<Vec<JoinHandle<SadResult<()>>>>();
+  // let handle = join_all(handles);
+  (handles, rx)
+}
 
 fn stream_stdout(mut stream: mpsc::Receiver<String>) -> JoinHandle<SadResult<()>> {
   let mut stdout = io::BufWriter::new(io::stdout());
