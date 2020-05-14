@@ -12,32 +12,21 @@ pub enum Failure {
   IO(io::Error),
   Str(string::FromUtf8Error),
   Regex(regex::Error),
-  SendError(SendError<()>),
+  SendError,
 }
 
 pub type SadResult<T> = Result<T, Failure>;
 
-impl<T, E> From<Result<T, E>> for SadResult<T>
-where
-  E: Into<Failure>,
-{
-  fn from(result: Result<T, E>) -> Self {
-    match result {
+pub trait SadnessFrom<T> {
+  fn halp(self) -> SadResult<T>;
+}
+
+impl<T, E: Into<Failure>> SadnessFrom<T> for Result<T, E> {
+  fn halp(self) -> SadResult<T> {
+    match self {
       Ok(val) => Ok(val),
-      Err(err) => Err(err.into()),
+      Err(e) => Err(e.into()),
     }
-  }
-}
-
-pub trait IntoSad {
-  type Wry;
-  fn halp(self) -> SadResult<Self::Wry>;
-}
-
-impl<T, E: Into<Failure>> IntoSad for Result<T, E> {
-  type Wry = T;
-  fn halp(self) -> SadResult<Self::Wry> {
-    self.into()
   }
 }
 
@@ -65,7 +54,7 @@ impl From<regex::Error> for Failure {
 
 impl<T> From<SendError<T>> for Failure {
   fn from(err: SendError<T>) -> Self {
-    Failure::Simple(String::from("TODO"))
+    Failure::SendError
   }
 }
 

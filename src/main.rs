@@ -1,7 +1,9 @@
 use ansi_term::Colour;
 use argparse::{Arguments, Options};
 use clap::Clap;
+use core::marker::Pin;
 use errors::*;
+use std::future::Future;
 use std::{path::PathBuf, process};
 use tokio::{
   io,
@@ -27,7 +29,7 @@ fn stream_stdin(
   args: &Arguments,
 ) -> (
   JoinHandle<SadResult<()>>,
-  impl Stream<Item = SadResult<PathBuf>>,
+  mpsc::Receiver<SadResult<PathBuf>>,
 ) {
   let delim = if args.nul_delim { b'\0' } else { b'\n' };
   let (mut tx, rx) = mpsc::channel::<SadResult<PathBuf>>(1);
@@ -64,8 +66,9 @@ fn stream_stdin(
 //   //   stream_list(args.input.clone())
 //   // }
 // }
+fn stream_process(stream: mpsc::Receiver<SadResult<PathBuf>>) {}
 
-fn stream_stdout(stream: impl Stream<Item = SadResult<String>>) -> JoinHandle<SadResult<()>> {
+fn stream_stdout(stream: mpsc::Receiver<SadResult<String>>) -> JoinHandle<SadResult<()>> {
   let mut stdout = io::BufWriter::new(io::stdout());
   task::spawn(async move {
     while let Some(res) = stream.next().await {
@@ -78,7 +81,7 @@ fn stream_stdout(stream: impl Stream<Item = SadResult<String>>) -> JoinHandle<Sa
         Err(err) => err_exit(err),
       };
     }
-    stdout.flush().await.unwrap();
+    stdout.flush().await.halp()?;
     Ok(())
   })
 }
