@@ -2,13 +2,13 @@ use ansi_term::Colour;
 use argparse::{Arguments, Options};
 use clap::Clap;
 use errors::*;
-use std::{path::PathBuf, process};
+use std::{path::PathBuf, process, sync::Arc};
 use tokio::{
   io,
   prelude::*,
   runtime,
   stream::{Stream, StreamExt},
-  sync::mpsc,
+  sync::{mpsc, Mutex},
   task::{self, JoinHandle},
 };
 
@@ -65,19 +65,43 @@ fn choose_input(args: &Arguments) -> (JoinHandle<SadResult<()>>, mpsc::Receiver<
   }
 }
 
-fn stream_process(stream: mpsc::Receiver<PathBuf>) {}
+// fn stream_process(opts: Options, stream: mpsc::Receiver<PathBuf>) {
+//   let sx = Arc::new(Mutex::new(stream));
+//   let (tx, rx) = mpsc::channel::<String>(1);
 
-fn stream_stdout(mut stream: mpsc::Receiver<SadResult<String>>) -> JoinHandle<SadResult<()>> {
+//   let threads = num_cpus::get() * 2;
+//   let handles = (1..=threads)
+//     .map(|_| {
+//       let stream = Arc::clone(&sx)
+//       let sender = Arc::clone(&ss);
+//       let opts = Arc::clone(&oo);
+
+//       task::spawn(async move {
+//         while let Some(path) = stream.lock().await.next().await {
+//           match path {
+//             Ok(val) => {
+//               let displaced = displace::displace(val, &opts).await;
+//               sender.send(displaced).await;
+//           }
+//         }
+//       })
+//     })
+//     .collect::<Vec<JoinHandle<()>>>();
+
+//   let handle = join_all(handles);
+//   (handle, rx)
+// }
+
+fn stream_stdout(mut stream: mpsc::Receiver<String>) -> JoinHandle<SadResult<()>> {
   let mut stdout = io::BufWriter::new(io::stdout());
   task::spawn(async move {
-    while let Some(res) = stream.next().await {
-      match res {
-        Ok(print) => match stdout.write(print.as_bytes()).await {
-          Err(e) if e.kind() == std::io::ErrorKind::BrokenPipe => process::exit(1),
-          Err(e) => err_exit(e.into()),
-          _ => {}
-        },
-        Err(err) => err_exit(err),
+    while let Some(print) = stream.next().await {
+      match stdout.write(print.as_bytes()).await {
+        Err(e) if e.kind() == std::io::ErrorKind::BrokenPipe => {
+          process::exit(1);
+        }
+        Err(e) => {}
+        _ => {}
       };
     }
     stdout.flush().await.into_sadness()?;
