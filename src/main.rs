@@ -69,7 +69,7 @@ fn choose_input(args: &Arguments) -> (JoinHandle<SadResult<()>>, mpsc::Receiver<
 fn stream_process(
   opts: Options,
   stream: mpsc::Receiver<PathBuf>,
-) -> (Vec<JoinHandle<SadResult<()>>>, mpsc::Receiver<String>) {
+) -> (JoinAll<JoinHandle<SadResult<()>>>, mpsc::Receiver<String>) {
   let sx = Arc::new(Mutex::new(stream));
   let oo = Arc::new(opts);
   let (tx, rx) = mpsc::channel::<String>(1);
@@ -90,8 +90,8 @@ fn stream_process(
       })
     })
     .collect::<Vec<JoinHandle<SadResult<()>>>>();
-  // let handle = join_all(handles);
-  (handles, rx)
+  let handle = join_all(handles);
+  (handle, rx)
 }
 
 fn stream_stdout(mut stream: mpsc::Receiver<String>) -> JoinHandle<SadResult<()>> {
