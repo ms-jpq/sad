@@ -97,15 +97,12 @@ fn stream_stdout(mut stream: mpsc::Receiver<String>) -> JoinHandle<SadResult<()>
   task::spawn(async move {
     while let Some(print) = stream.next().await {
       match stdout.write(print.as_bytes()).await {
-        Err(e) if e.kind() == std::io::ErrorKind::BrokenPipe => {
-          process::exit(1);
-        }
-        Err(e) => {}
+        Err(e) if e.kind() == std::io::ErrorKind::BrokenPipe => process::exit(1),
+        Err(e) => return Err(e.into()),
         _ => {}
-      };
+      }
     }
-    stdout.flush().await.into_sadness()?;
-    Ok(())
+    stdout.flush().await.into_sadness()
   })
 }
 
