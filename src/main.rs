@@ -18,6 +18,22 @@ mod displace;
 mod errors;
 mod udiff;
 
+fn stream_list(
+  paths: Vec<PathBuf>,
+) -> (
+  JoinHandle<SadResult<()>>,
+  mpsc::Receiver<SadResult<PathBuf>>,
+) {
+  let (mut tx, rx) = mpsc::channel::<SadResult<PathBuf>>(1);
+  let handle = task::spawn(async move {
+    for path in paths {
+      tx.send(Ok(path)).await?;
+    }
+    Ok(())
+  });
+  (handle, rx)
+}
+
 fn p_path(name: &[u8]) -> SadResult<PathBuf> {
   String::from_utf8(name.to_vec())
     .map(|p| PathBuf::from(p.as_str()))
@@ -43,7 +59,7 @@ fn stream_stdin(
         _ => {
           buf.pop();
           let path = p_path(&buf);
-          let owo = tx.send(path).await;
+          tx.send(path).await?;
         }
       }
     }
@@ -52,19 +68,19 @@ fn stream_stdin(
   (handle, rx)
 }
 
-// fn choose_input(
-//   args: &Arguments,
-// ) -> (
-//   JoinHandle<SadResult<()>>,
-//   mpsc::Receiver<SadResult<PathBuf>>,
-// ) {
-//   // if args.input.is_empty() {
-//   stream_stdin(&args)
+fn choose_input(
+  args: &Arguments,
+) -> (
+  JoinHandle<SadResult<()>>,
+  mpsc::Receiver<SadResult<PathBuf>>,
+) {
+  if args.input.is_empty() {
+    stream_stdin(&args)
+  } else {
+    stream_list(args.input.clone())
+  }
+}
 
-//   // } else {
-//   //   stream_list(args.input.clone())
-//   // }
-// }
 fn stream_process(stream: mpsc::Receiver<SadResult<PathBuf>>) {}
 
 fn stream_stdout(mut stream: mpsc::Receiver<SadResult<String>>) -> JoinHandle<SadResult<()>> {
