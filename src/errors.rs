@@ -1,5 +1,5 @@
 use std::{io, string};
-use tokio::sync::mpsc::errors::SendError;
+use tokio::sync::mpsc::error::SendError;
 
 /*
  * Consolidate Error Handling
@@ -26,6 +26,18 @@ where
       Ok(val) => Ok(val),
       Err(err) => Err(err.into()),
     }
+  }
+}
+
+pub trait IntoSad {
+  type Wry;
+  fn halp(self) -> SadResult<Self::Wry>;
+}
+
+impl<T, E: Into<Failure>> IntoSad for Result<T, E> {
+  type Wry = T;
+  fn halp(self) -> SadResult<Self::Wry> {
+    self.into()
   }
 }
 

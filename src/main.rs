@@ -1,120 +1,85 @@
 use ansi_term::Colour;
 use argparse::{Arguments, Options};
-use async_std::{
-  io,
-  path::PathBuf,
-  prelude::*,
-  sync::{channel, Arc, Receiver},
-  task::{self, JoinHandle},
-};
 use clap::Clap;
 use errors::*;
-use futures::future::{join3, join_all, JoinAll};
-use std::process;
+use std::{path::PathBuf, process};
+use tokio::{
+  io,
+  prelude::*,
+  runtime,
+  stream::{Stream, StreamExt},
+  sync::mpsc,
+  task::{self, JoinHandle},
+};
 
 mod argparse;
 mod displace;
 mod errors;
 mod udiff;
 
-fn stream_list(files: Vec<String>) -> (JoinHandle<()>, Receiver<SadResult<Vec<u8>>>) {
-  let (s, r) = channel::<SadResult<Vec<u8>>>(1);
-
-  let handle = task::spawn(async move {
-    for bytes in files.iter().map(|f| f.as_bytes().to_vec()) {
-      s.send(SadResult::Ok(bytes)).await;
-    }
-  });
-  (handle, r)
+fn p_path(name: &[u8]) -> SadResult<PathBuf> {
+  String::from_utf8(name.to_vec())
+    .map(|p| PathBuf::from(p.as_str()))
+    .into()
 }
 
-fn stream_stdin(args: &Arguments) -> (JoinHandle<()>, Receiver<SadResult<Vec<u8>>>) {
+fn stream_stdin(
+  args: &Arguments,
+) -> (
+  JoinHandle<SadResult<()>>,
+  impl Stream<Item = SadResult<PathBuf>>,
+) {
   let delim = if args.nul_delim { b'\0' } else { b'\n' };
-  let (s, r) = channel::<SadResult<Vec<u8>>>(1);
+  let (mut tx, rx) = mpsc::channel::<SadResult<PathBuf>>(1);
   let mut reader = io::BufReader::new(io::stdin());
+  let mut buf = Vec::new();
 
   let handle = task::spawn(async move {
     loop {
-      let mut buf = Vec::new();
-      let read = reader.read_until(delim, &mut buf).await.halp();
-      match read {
-        Ok(0) => return,
-        Ok(_) => {
+      let line = reader.read_until(delim, &mut buf).await.halp()?;
+      match line {
+        0 => return Ok(()),
+        _ => {
           buf.pop();
-          s.send(SadResult::Ok(buf)).await;
+          let path = p_path(&buf);
+          let owo = tx.send(path).await;
         }
-        Err(e) => s.send(SadResult::Err(e)).await,
       }
     }
   });
 
-  (handle, r)
+  (handle, rx)
 }
 
-fn choose_input(args: &Arguments) -> (JoinHandle<()>, Receiver<SadResult<Vec<u8>>>) {
-  if args.input.is_empty() {
-    stream_stdin(&args)
-  } else {
-    stream_list(args.input.clone())
-  }
-}
+// fn choose_input(
+//   args: &Arguments,
+// ) -> (
+//   JoinHandle<SadResult<()>>,
+//   mpsc::Receiver<SadResult<PathBuf>>,
+// ) {
+//   // if args.input.is_empty() {
+//   stream_stdin(&args)
 
-fn p_path(name: Vec<u8>) -> SadResult<PathBuf> {
-  let path = String::from_utf8(name).halp()?;
-  Ok(PathBuf::from(path.as_str()))
-}
+//   // } else {
+//   //   stream_list(args.input.clone())
+//   // }
+// }
 
-fn stream_displace(
-  opts: Options,
-  receiver: Receiver<SadResult<Vec<u8>>>,
-) -> (JoinAll<JoinHandle<()>>, Receiver<SadResult<String>>) {
-  let (s, r) = channel::<SadResult<String>>(1);
-  let rr = Arc::new(receiver);
-  let ss = Arc::new(s);
-  let oo = Arc::new(opts);
-
-  let threads = num_cpus::get() * 2;
-  let handles = (1..=threads)
-    .map(|_| {
-      let receiver = Arc::clone(&rr);
-      let sender = Arc::clone(&ss);
-      let opts = Arc::clone(&oo);
-
-      task::spawn(async move {
-        while let Some(name) = receiver.recv().await {
-          let path = name.and_then(p_path);
-          match path {
-            Ok(val) => {
-              let displaced = displace::displace(val, &opts).await;
-              sender.send(displaced).await;
-            }
-            Err(e) => {
-              sender.send(SadResult::Err(e)).await;
-            }
-          }
-        }
-      })
-    })
-    .collect::<Vec<JoinHandle<()>>>();
-
-  let handle = join_all(handles);
-  (handle, r)
-}
-
-fn stream_stdout(receiver: Receiver<SadResult<String>>) -> JoinHandle<()> {
+fn stream_stdout(stream: impl Stream<Item = SadResult<String>>) -> JoinHandle<SadResult<()>> {
   let mut stdout = io::BufWriter::new(io::stdout());
   task::spawn(async move {
-    while let Some(res) = receiver.recv().await {
+    while let Some(res) = stream.next().await {
       match res {
         Ok(print) => match stdout.write(print.as_bytes()).await {
           Err(e) if e.kind() == std::io::ErrorKind::BrokenPipe => process::exit(1),
-          Err(e) => err_exit(e.cry()),
+          Err(e) => err_exit(e.into()),
           _ => {}
         },
         Err(err) => err_exit(err),
       };
     }
     stdout.flush().await.unwrap();
+    Ok(())
   })
 }
 
@@ -124,16 +89,16 @@ fn err_exit(err: Failure) -> ! {
 }
 
 fn main() {
-  let args = Arguments::parse();
-  let (reader, path_receiver) = choose_input(&args);
-  match Options::new(args) {
-    Ok(opts) => {
-      let (intermediary, displaced_receiver) = stream_displace(opts, path_receiver);
-      let writer = stream_stdout(displaced_receiver);
-      task::block_on(async {
-        join3(reader, writer, intermediary).await;
-      })
-    }
-    Err(e) => err_exit(e),
-  }
+  // let mut rt = runtime::Builder::new().build().unwrap();
+  // let args = Arguments::parse();
+  // let (reader, receiver) = choose_input(&args);
+  // match Options::new(args) {
+  //   Ok(opts) => {
+  //     let writer = stream_stdout(receiver);
+  //     rt.block_on(async {
+  //       let _lmao = join(reader, writer).await;
+  //     })
+  //   }
+  //   Err(e) => err_exit(e),
+  // }
 }
