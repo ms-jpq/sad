@@ -1,7 +1,6 @@
 use ansi_term::Colour;
 use argparse::{Arguments, Options};
 use clap::Clap;
-use core::marker::Pin;
 use errors::*;
 use std::future::Future;
 use std::{path::PathBuf, process};
@@ -22,7 +21,7 @@ mod udiff;
 fn p_path(name: &[u8]) -> SadResult<PathBuf> {
   String::from_utf8(name.to_vec())
     .map(|p| PathBuf::from(p.as_str()))
-    .into()
+    .halp()
 }
 
 fn stream_stdin(
@@ -68,7 +67,7 @@ fn stream_stdin(
 // }
 fn stream_process(stream: mpsc::Receiver<SadResult<PathBuf>>) {}
 
-fn stream_stdout(stream: mpsc::Receiver<SadResult<String>>) -> JoinHandle<SadResult<()>> {
+fn stream_stdout(mut stream: mpsc::Receiver<SadResult<String>>) -> JoinHandle<SadResult<()>> {
   let mut stdout = io::BufWriter::new(io::stdout());
   task::spawn(async move {
     while let Some(res) = stream.next().await {
