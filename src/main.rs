@@ -2,7 +2,6 @@ use ansi_term::Colour;
 use argparse::{Arguments, Options};
 use clap::Clap;
 use errors::*;
-use std::future::Future;
 use std::{path::PathBuf, process};
 use tokio::{
   io,
@@ -18,16 +17,11 @@ mod displace;
 mod errors;
 mod udiff;
 
-fn stream_list(
-  paths: Vec<PathBuf>,
-) -> (
-  JoinHandle<SadResult<()>>,
-  mpsc::Receiver<SadResult<PathBuf>>,
-) {
-  let (mut tx, rx) = mpsc::channel::<SadResult<PathBuf>>(1);
+fn stream_list(paths: Vec<PathBuf>) -> (JoinHandle<SadResult<()>>, mpsc::Receiver<PathBuf>) {
+  let (mut tx, rx) = mpsc::channel::<PathBuf>(1);
   let handle = task::spawn(async move {
     for path in paths {
-      tx.send(Ok(path)).await?;
+      tx.send(path).await?;
     }
     Ok(())
   });
@@ -40,14 +34,9 @@ fn p_path(name: &[u8]) -> SadResult<PathBuf> {
     .into_sadness()
 }
 
-fn stream_stdin(
-  args: &Arguments,
-) -> (
-  JoinHandle<SadResult<()>>,
-  mpsc::Receiver<SadResult<PathBuf>>,
-) {
+fn stream_stdin(args: &Arguments) -> (JoinHandle<SadResult<()>>, mpsc::Receiver<PathBuf>) {
   let delim = if args.nul_delim { b'\0' } else { b'\n' };
-  let (mut tx, rx) = mpsc::channel::<SadResult<PathBuf>>(1);
+  let (mut tx, rx) = mpsc::channel::<PathBuf>(1);
   let mut reader = io::BufReader::new(io::stdin());
   let mut buf = Vec::new();
 
@@ -58,7 +47,7 @@ fn stream_stdin(
         0 => return Ok(()),
         _ => {
           buf.pop();
-          let path = p_path(&buf);
+          let path = p_path(&buf)?;
           tx.send(path).await?;
         }
       }
@@ -68,12 +57,7 @@ fn stream_stdin(
   (handle, rx)
 }
 
-fn choose_input(
-  args: &Arguments,
-) -> (
-  JoinHandle<SadResult<()>>,
-  mpsc::Receiver<SadResult<PathBuf>>,
-) {
+fn choose_input(args: &Arguments) -> (JoinHandle<SadResult<()>>, mpsc::Receiver<PathBuf>) {
   if args.input.is_empty() {
     stream_stdin(&args)
   } else {
@@ -81,7 +65,7 @@ fn choose_input(
   }
 }
 
-fn stream_process(stream: mpsc::Receiver<SadResult<PathBuf>>) {}
+fn stream_process(stream: mpsc::Receiver<PathBuf>) {}
 
 fn stream_stdout(mut stream: mpsc::Receiver<SadResult<String>>) -> JoinHandle<SadResult<()>> {
   let mut stdout = io::BufWriter::new(io::stdout());
