@@ -102,10 +102,7 @@ fn stream_process(
   (handle, rx)
 }
 
-fn stream_pager(
-  cmd: &SubprocessCommand,
-  stream: Receiver<SadResult<String>>,
-) -> TryJoin<JoinHandle<()>, JoinHandle<()>> {
+fn stream_pager(cmd: &SubprocessCommand, stream: Receiver<SadResult<String>>) -> Task {
   let subprocess = Command::new(&cmd.program)
     .args(&cmd.arguments)
     .stdin(Stdio::piped())
@@ -113,20 +110,10 @@ fn stream_pager(
     .stderr(Stdio::inherit())
     .spawn();
 
-  let child = match subprocess {
-    Ok(child) => child,
-    Err(e) => err_exit(e.into()),
-  };
-
-  let child_handle = task::spawn(async {
-    match child.await {
-      Err(e) => err_exit(e.into()),
-      _ => {}
-    }
-  });
+  let mut child = subprocess.unwrap();
 
   let mut stdin = match child.stdin {
-    Some(stdin) => BufWriter::new(stdin),
+    Some(stdin) => BufWriter::new(&stdin),
     None => err_exit(Failure::Simple(format!("Missing stdin - {}", cmd.program))),
   };
 
@@ -143,7 +130,7 @@ fn stream_pager(
     }
   });
 
-  try_join(child_handle, std_handle)
+  std_handle
 }
 
 fn stream_stdout(stream: Receiver<SadResult<String>>) -> Task {
@@ -165,15 +152,7 @@ fn stream_stdout(stream: Receiver<SadResult<String>>) -> Task {
 
 fn stream_output(cmd: Option<SubprocessCommand>, stream: Receiver<SadResult<String>>) -> Task {
   match cmd {
-    Some(cmd) => {
-      let handle = stream_pager(&cmd, stream);
-      task::spawn(async move {
-        match handle.await {
-          Err(_) => panic!(),
-          _ => {}
-        }
-      })
-    }
+    Some(cmd) => stream_pager(&cmd, stream),
     None => stream_stdout(stream),
   }
 }
