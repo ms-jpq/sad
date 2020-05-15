@@ -116,7 +116,7 @@ fn stream_pager(cmd: &SubprocessCommand, stream: Receiver<SadResult<String>>) ->
   };
   let mut stdin = BufWriter::new(child.stdin.unwrap());
 
-  let std_handle = task::spawn(async move {
+  task::spawn(async move {
     while let Some(print) = stream.recv().await {
       match print {
         Ok(val) => {
@@ -128,9 +128,7 @@ fn stream_pager(cmd: &SubprocessCommand, stream: Receiver<SadResult<String>>) ->
       }
     }
     stdin.flush().await.unwrap();
-  });
-
-  std_handle
+  })
 }
 
 fn stream_stdout(stream: Receiver<SadResult<String>>) -> Task {
