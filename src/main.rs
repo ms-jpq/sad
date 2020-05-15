@@ -3,7 +3,7 @@ use argparse::{Arguments, Options, SubprocessCommand};
 use async_std::sync::{channel, Arc, Receiver, Sender};
 use clap::Clap;
 use errors::*;
-use futures::future::{try_join, try_join3, try_join_all, TryJoin, TryJoinAll};
+use futures::future::{try_join3, try_join_all, TryJoinAll};
 use std::{
   path::PathBuf,
   process::{self, Stdio},
@@ -11,7 +11,7 @@ use std::{
 use tokio::{
   io::{AsyncBufReadExt, AsyncWriteExt, BufReader, BufWriter},
   prelude::*,
-  process::{Child, Command},
+  process::Command,
   runtime,
   task::{self, JoinHandle},
 };
