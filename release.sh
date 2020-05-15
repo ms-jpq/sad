@@ -22,7 +22,12 @@ cross_build() {
   local OUT="$RELEASE/$ARCH"
   cross build --release --target="$ARCH"
   mkdir -p "$OUT"
-  cp "$PWD/target/$ARCH/release/sad" "$OUT/sad" || cp "$PWD/target/$ARCH/release/sad.exe" "$OUT/sad"
+  local ARTIFACT="$PWD/target/$ARCH/release/sad"
+  if [[ ! -f "$ARTIFACT" ]]
+  then
+    ARTIFACT="$PWD/target/$ARCH/release/sad.exe"
+  fi
+  cp "$ARTIFACT" "$OUT/sad"
 }
 
 
