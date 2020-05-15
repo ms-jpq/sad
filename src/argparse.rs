@@ -88,10 +88,10 @@ impl Options {
 fn p_auto_flags(pattern: &str) -> Vec<String> {
   for c in pattern.chars() {
     if c.is_uppercase() {
-      return vec![String::from("I")];
+      return vec!["I".into()];
     }
   }
-  vec![String::from("i")]
+  vec!["i".into()]
 }
 
 fn p_aho_corasick(pattern: &str, flags: &[String]) -> SadResult<AhoCorasick> {

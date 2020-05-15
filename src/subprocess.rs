@@ -31,9 +31,18 @@ pub fn stream(
     Err(err) => err_exit(err.into()),
   };
 
-  let mut stdin = BufWriter::new(child.stdin.take().unwrap());
-  let mut stdout = BufReader::new(child.stdout.take().unwrap());
-  let mut stderr = BufReader::new(child.stderr.take().unwrap());
+  let mut stdin = match child.stdin.take() {
+    Some(stdin) => BufWriter::new(stdin),
+    None => err_exit(Failure::Pager("Invalid stdin".into())),
+  };
+  let mut stdout = match child.stdout.take() {
+    Some(stdout) => BufReader::new(stdout),
+    None => err_exit(Failure::Pager("Invalid stdout".into())),
+  };
+  let mut stderr = match child.stderr.take() {
+    Some(stderr) => BufReader::new(stderr),
+    None => err_exit(Failure::Pager("Invalid stderr".into())),
+  };
 
   let (tx, rx) = channel::<SadResult<String>>(1);
   let to = Sender::clone(&tx);

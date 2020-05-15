@@ -9,7 +9,7 @@ use uuid::Uuid;
 fn replace(before: &str, opts: &Options) -> String {
   match &opts.pattern {
     Left(ac) => ac.replace_all(&before, &[opts.replace.as_str()]),
-    Right(re) => String::from(re.replace_all(&before, opts.replace.as_str())),
+    Right(re) => re.replace_all(&before, opts.replace.as_str()).into(),
   }
 }
 
@@ -33,7 +33,7 @@ async fn safe_write(canonical: &PathBuf, meta: &Metadata, text: &str) -> SadResu
 }
 
 pub async fn displace(path: PathBuf, opts: &Options) -> SadResult<String> {
-  let name = String::from(path.to_string_lossy());
+  let name = path.to_string_lossy();
   let canonical = fs::canonicalize(&path).await.into_sadness()?;
   let meta = fs::metadata(&canonical).await.into_sadness()?;
   if !meta.is_file() {
@@ -43,7 +43,7 @@ pub async fn displace(path: PathBuf, opts: &Options) -> SadResult<String> {
   let before = fs::read_to_string(&canonical).await.into_sadness()?;
   let after = replace(&before, opts);
   if before == after {
-    Ok(String::from(""))
+    Ok("".into())
   } else {
     let print = match opts.action {
       Action::Diff => udiff::udiff(&name, &before, &after),

@@ -11,11 +11,11 @@ pub fn udiff(name: &str, before: &str, after: &str) -> String {
   let body = diff
     .into_iter()
     .map(|line| match line.chars().next() {
-      Some(ch) if ch == '@' => String::from(line.trim()),
+      Some(ch) if ch == '@' => line.trim().into(),
       _ => line,
     })
     .skip(2);
-  let end = vec![String::from("\n")];
+  let end = vec!["\n".into()];
   let print = itertools::chain(itertools::chain(prefix, body), end);
   itertools::join(print, "\n")
 }
