@@ -54,7 +54,7 @@ pub fn stream(
     }
     if let Err(err) = stdin.shutdown().await {
       tx.send(Err(err.into())).await;
-    };
+    }
   });
 
   let handle_out = task::spawn(async move {
