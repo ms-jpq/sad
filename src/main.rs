@@ -2,13 +2,12 @@ use ansi_term::Colour;
 use argparse::{Arguments, Options};
 use clap::Clap;
 use errors::*;
-use futures::future::{join_all, JoinAll};
+use futures::future::{join3, join_all, JoinAll};
 use std::{path::PathBuf, process, sync::Arc};
 use tokio::{
   io,
   prelude::*,
   runtime,
-  stream::{Stream, StreamExt},
   sync::{mpsc, Mutex},
   task::{self, JoinHandle},
 };
@@ -49,6 +48,7 @@ fn stream_stdin(args: &Arguments) -> (JoinHandle<SadResult<()>>, mpsc::Receiver<
         _ => {
           buf.pop();
           let path = p_path(&buf)?;
+          buf.clear();
           tx.send(path).await?;
         }
       }
@@ -82,7 +82,7 @@ fn stream_process(
       let mut sender = mpsc::Sender::clone(&tx);
 
       task::spawn(async move {
-        while let Some(path) = stream.lock().await.next().await {
+        while let Some(path) = stream.lock().await.recv().await {
           let displaced = displace::displace(path, &opts).await?;
           sender.send(displaced).await.into_sadness()?;
         }
@@ -97,7 +97,7 @@ fn stream_process(
 fn stream_stdout(mut stream: mpsc::Receiver<String>) -> JoinHandle<SadResult<()>> {
   let mut stdout = io::BufWriter::new(io::stdout());
   task::spawn(async move {
-    while let Some(print) = stream.next().await {
+    while let Some(print) = stream.recv().await {
       match stdout.write(print.as_bytes()).await {
         Err(e) if e.kind() == std::io::ErrorKind::BrokenPipe => process::exit(1),
         Err(e) => return Err(e.into()),
@@ -114,16 +114,21 @@ fn err_exit(err: Failure) -> ! {
 }
 
 fn main() {
-  // let mut rt = runtime::Builder::new().build().unwrap();
-  // let args = Arguments::parse();
-  // let (reader, receiver) = choose_input(&args);
-  // match Options::new(args) {
-  //   Ok(opts) => {
-  //     let writer = stream_stdout(receiver);
-  //     rt.block_on(async {
-  //       let _lmao = join(reader, writer).await;
-  //     })
-  //   }
-  //   Err(e) => err_exit(e),
-  // }
+  let mut rt = runtime::Builder::new()
+    .threaded_scheduler()
+    .enable_io()
+    .build()
+    .unwrap();
+  rt.block_on(async {
+    let args = Arguments::parse();
+    let (reader, receiver) = choose_input(&args);
+    match Options::new(args) {
+      Ok(opts) => {
+        let (steps, rx) = stream_process(opts, receiver);
+        let writer = stream_stdout(rx);
+        join3(reader, steps, writer).await;
+      }
+      Err(e) => err_exit(e),
+    }
+  })
 }
