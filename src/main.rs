@@ -2,7 +2,7 @@ use ansi_term::Colour;
 use argparse::{Arguments, Options};
 use clap::Clap;
 use errors::*;
-use futures::future::{join3, join_all, JoinAll};
+use futures::future::{try_join3, try_join_all, TryJoinAll};
 use std::{path::PathBuf, process, sync::Arc};
 use tokio::{
   io,
@@ -71,7 +71,7 @@ fn choose_input(args: &Arguments) -> (Task, mpsc::Receiver<SadResult<PathBuf>>) 
 fn stream_process(
   opts: Options,
   stream: mpsc::Receiver<SadResult<PathBuf>>,
-) -> (JoinAll<Task>, mpsc::Receiver<SadResult<String>>) {
+) -> (TryJoinAll<Task>, mpsc::Receiver<SadResult<String>>) {
   let sx = Arc::new(Mutex::new(stream));
   let oo = Arc::new(opts);
   let (tx, rx) = mpsc::channel::<SadResult<String>>(1);
@@ -96,7 +96,7 @@ fn stream_process(
       })
     })
     .collect::<Vec<Task>>();
-  let handle = join_all(handles);
+  let handle = try_join_all(handles);
   (handle, rx)
 }
 
@@ -135,7 +135,7 @@ fn main() {
       Ok(opts) => {
         let (steps, rx) = stream_process(opts, receiver);
         let writer = stream_stdout(rx);
-        join3(reader, steps, writer).await
+        try_join3(reader, steps, writer).await
       }
       Err(e) => err_exit(e),
     };
