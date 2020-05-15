@@ -1,3 +1,4 @@
+use ansi_term::Colour;
 use argparse::{Arguments, Options};
 use async_std::sync::{channel, Arc, Receiver, Sender};
 use clap::Clap;
@@ -151,4 +152,11 @@ fn main() {
       err_exit(err.into())
     }
   })
+}
+
+/* Exit */
+
+pub fn err_exit(err: Failure) -> ! {
+  eprintln!("{}", Colour::Red.paint(format!("{:#?}", err)));
+  process::exit(1)
 }

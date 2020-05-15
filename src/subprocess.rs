@@ -19,6 +19,12 @@ pub fn stream(
   cmd: &SubprocessCommand,
   stream: Receiver<SadResult<String>>,
 ) -> (Task, Receiver<SadResult<String>>) {
+  let (tx, rx) = channel::<SadResult<String>>(1);
+  let to = Sender::clone(&tx);
+  let te = Sender::clone(&tx);
+  let tt = Sender::clone(&tx);
+  let ta = Sender::clone(&tx);
+
   let subprocess = Command::new(&cmd.program)
     .args(&cmd.arguments)
     .stdin(Stdio::piped())
@@ -26,39 +32,48 @@ pub fn stream(
     .stderr(Stdio::piped())
     .spawn();
 
-  let mut child = match subprocess {
+  let mut child = match subprocess.into_sadness() {
     Ok(child) => child,
-    Err(err) => err_exit(err.into()),
+    Err(err) => {
+      let handle = task::spawn(async move { tx.send(Err(err)).await });
+      return (handle, rx);
+    }
   };
 
   let mut stdin = match child.stdin.take() {
     Some(stdin) => BufWriter::new(stdin),
-    None => err_exit(Failure::Pager("Invalid stdin".into())),
+    None => {
+      let err = Err(Failure::Pager("Invalid stin".into()));
+      let handle = task::spawn(async move { tx.send(err).await });
+      return (handle, rx);
+    }
   };
   let mut stdout = match child.stdout.take() {
     Some(stdout) => BufReader::new(stdout),
-    None => err_exit(Failure::Pager("Invalid stdout".into())),
+    None => {
+      let err = Err(Failure::Pager("Invalid stdout".into()));
+      let handle = task::spawn(async move { tx.send(err).await });
+      return (handle, rx);
+    }
   };
   let mut stderr = match child.stderr.take() {
     Some(stderr) => BufReader::new(stderr),
-    None => err_exit(Failure::Pager("Invalid stderr".into())),
+    None => {
+      let err = Err(Failure::Pager("Invalid stderr".into()));
+      let handle = task::spawn(async move { tx.send(err).await });
+      return (handle, rx);
+    }
   };
-
-  let (tx, rx) = channel::<SadResult<String>>(1);
-  let to = Sender::clone(&tx);
-  let te = Sender::clone(&tx);
-  let tt = Sender::clone(&tx);
-  let t4 = Sender::clone(&tx);
 
   let handle_in = task::spawn(async move {
     while let Some(print) = stream.recv().await {
       match print {
         Ok(val) => {
-          if let Err(e) = stdin.write(val.as_bytes()).await {
-            err_exit(e.into())
+          if let Err(err) = stdin.write(val.as_bytes()).await.into_sadness() {
+            tx.send(Err(err)).await;
           }
         }
-        Err(e) => err_exit(e),
+        Err(err) => tx.send(Err(err)).await,
       }
     }
     if let Err(err) = stdin.shutdown().await {
@@ -101,7 +116,7 @@ pub fn stream(
 
   let handle = task::spawn(async move {
     if let Err(err) = try_join4(handle_child, handle_in, handle_out, handle_err).await {
-      t4.send(Err(err.into())).await;
+      ta.send(Err(err.into())).await;
     }
   });
 
