@@ -1,7 +1,7 @@
 /.git/
 .DS_Store
 /target/
-/sad/
+/release/
 release.zip
 Cargo.lock
 temp*

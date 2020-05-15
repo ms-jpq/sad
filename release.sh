@@ -5,9 +5,9 @@ set -o pipefail
 
 cd "$(dirname "$0")"
 
-rm release.zip || true
-rm -r "$PWD/sad" || true
-mkdir -p "$PWD/target" "$PWD/sad"
+RELEASE="$PWD/release"
+
+mkdir -p "$PWD/target" "$RELEASE"
 
 
 builds=(
@@ -19,8 +19,10 @@ builds=(
 
 cross_build() {
   local ARCH="$1"
+  local OUT="$RELEASE/$ARCH"
   cross build --release --target="$ARCH"
-  cp "$PWD/target/$ARCH/release/sad" "./sad/$ARCH" || cp "$PWD/target/$ARCH/release/sad.exe" "./sad/$ARCH"
+  mkdir -p "$OUT"
+  cp "$PWD/target/$ARCH/release/sad" "$OUT/sad" || cp "$PWD/target/$ARCH/release/sad.exe" "$OUT/sad"
 }
 
 
@@ -28,9 +30,11 @@ macos_build() {
   if [[ "$(uname)" = 'Darwin' ]]
   then
     local ARCH="x86_64-apple-darwin"
+    local OUT="$RELEASE/$ARCH"
     local DIST="$PWD/target/$ARCH"
     cargo build --release --target-dir="$DIST"
-    cp "$DIST/release/sad" "$PWD/sad/$ARCH"
+    mkdir -p "$OUT"
+    cp "$DIST/release/sad" "$OUT/sad"
   fi
 }
 
@@ -41,7 +45,4 @@ for build in "${builds[@]}"
 do
   cross_build "$build"
 done
-
-
-zip -r release.zip ./sad
 
