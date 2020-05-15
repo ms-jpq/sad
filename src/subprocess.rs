@@ -1,6 +1,7 @@
 use super::errors::*;
 use super::types::Task;
 use async_std::sync::{channel, Receiver, Sender};
+use futures::future::try_join4;
 use std::process::Stdio;
 use tokio::{
   io::{AsyncBufReadExt, AsyncWriteExt, BufReader, BufWriter},
@@ -37,6 +38,8 @@ pub fn stream(
   let (tx, rx) = channel::<SadResult<String>>(1);
   let to = Sender::clone(&tx);
   let te = Sender::clone(&tx);
+  let tt = Sender::clone(&tx);
+  let t4 = Sender::clone(&tx);
 
   let handle_in = task::spawn(async move {
     while let Some(print) = stream.recv().await {
@@ -83,7 +86,17 @@ pub fn stream(
     }
   });
 
-  let handle = task::spawn(async move {});
+  let handle_child = task::spawn(async move {
+    if let Err(err) = child.await {
+      tt.send(Err(err.into())).await;
+    }
+  });
+
+  let handle = task::spawn(async move {
+    if let Err(err) = try_join4(handle_child, handle_in, handle_out, handle_err).await {
+      t4.send(Err(err.into())).await;
+    }
+  });
 
   (handle, rx)
 }
