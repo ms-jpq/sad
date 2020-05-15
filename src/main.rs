@@ -102,11 +102,14 @@ fn stream_process(
   (handle, rx)
 }
 
-fn stream_pager(cmd: &SubprocessCommand, stream: Receiver<SadResult<String>>) -> Task {
+fn stream_pager(
+  cmd: &SubprocessCommand,
+  stream: Receiver<SadResult<String>>,
+) -> (Task, Task, Receiver<SadResult<String>>) {
   let subprocess = Command::new(&cmd.program)
     .args(&cmd.arguments)
     .stdin(Stdio::piped())
-    .stdout(Stdio::inherit())
+    .stdout(Stdio::piped())
     .stderr(Stdio::inherit())
     .spawn();
 
@@ -114,9 +117,13 @@ fn stream_pager(cmd: &SubprocessCommand, stream: Receiver<SadResult<String>>) ->
     Ok(child) => child,
     Err(err) => err_exit(err.into()),
   };
-  let mut stdin = BufWriter::new(child.stdin.unwrap());
 
-  task::spawn(async move {
+  let mut stdin = BufWriter::new(child.stdin.unwrap());
+  let mut stdout = BufReader::new(child.stdout.unwrap());
+  let (tx, rx) = channel::<SadResult<String>>(1);
+  let tt = Sender::clone(&tx);
+
+  let handle_in = task::spawn(async move {
     while let Some(print) = stream.recv().await {
       match print {
         Ok(val) => {
@@ -127,8 +134,25 @@ fn stream_pager(cmd: &SubprocessCommand, stream: Receiver<SadResult<String>>) ->
         Err(e) => err_exit(e),
       }
     }
-    stdin.shutdown().await.unwrap();
-  })
+    if let Err(err) = stdin.shutdown().await {
+      tx.send(Err(err.into())).await;
+    };
+  });
+
+  let handle_out = task::spawn(async move {
+    loop {
+      let mut buf = String::new();
+      match stdout.read_line(&mut buf).await.into_sadness() {
+        Ok(0) => return,
+        Ok(_) => {
+          tt.send(Ok(buf)).await;
+        }
+        Err(err) => tt.send(Err(err)).await,
+      }
+    }
+  });
+
+  (handle_in, handle_out, rx)
 }
 
 fn stream_stdout(stream: Receiver<SadResult<String>>) -> Task {
@@ -150,7 +174,15 @@ fn stream_stdout(stream: Receiver<SadResult<String>>) -> Task {
 
 fn stream_output(cmd: Option<SubprocessCommand>, stream: Receiver<SadResult<String>>) -> Task {
   match cmd {
-    Some(cmd) => stream_pager(&cmd, stream),
+    Some(cmd) => {
+      let (send_in, send_out, rx) = stream_pager(&cmd, stream);
+      let recv = stream_stdout(rx);
+      task::spawn(async {
+        if let Err(e) = try_join3(send_in, send_out, recv).await {
+          err_exit(e.into())
+        }
+      })
+    }
     None => stream_stdout(stream),
   }
 }
