@@ -1,6 +1,6 @@
 [package]
 name = "sad"
-version = "0.1.5"
+version = "0.2.0"
 description = "batch edit tool | https://github.com/ms-jpq/sad"
 authors = ["git@bigly.dog"]
 edition = "2018"
@@ -12,7 +12,7 @@ futures = "0.3"
 itertools = "0.9"
 clap = { version = "3.0.0-beta.1", features = ["wrap_help"] }
 tokio = { version = "0.2", features = ["fs", "io-std", "io-util", "process", "sync", "rt-threaded"] }
-async-std = { version = "1", features = ["unstable"] }
+async-std = { version = "1.5", features = ["unstable"] }
 num_cpus = "1"
 regex = "1"
 aho-corasick = "0.7"

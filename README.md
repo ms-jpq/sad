@@ -55,10 +55,16 @@ Highlighter -- `delta`
 
 ![preview2](https://github.com/ms-jpq/sad/raw/master/previews/preview2.gif)
 
+## Environmental Variables
+
+Name        | Function
+------------|----------------------------------------------------------------------------------------------------------------------------
+`GIT_PAGER` | `sad` will automatically pipe it's output to the standard git pager as of v0.2. If set, no need to do `... | diff-so-fancy`
+
 ## Flags
 
 Name                                | Function
------------------------------------ | -------------------------------------------------------------------
+------------------------------------|--------------------------------------------------------------------
 `-i file1 file2` `--input files...` | instead of reading from `stdin`, read file names from argument list
 `-k --commit`                       | instead of printing out a preview, write edits to files
 `-0`                                | use `\0` instead of `\n` when reading from `stdin`
@@ -79,7 +85,6 @@ Name | Function
 
 You can download `sad` from the [github release page](https://github.com/ms-jpq/sad/releases).
 
-Why is it version 0.1? Because that's the default and I forgot to change it.
 
 ## What about stdin -> stdout
 
