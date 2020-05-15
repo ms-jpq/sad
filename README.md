@@ -58,13 +58,13 @@ Highlighter -- `delta`
 ## Environmental Variables
 
 Name        | Function
-------------|----------------------------------------------------------------------------------------------------------------------------
-`GIT_PAGER` | `sad` will automatically pipe it's output to the standard git pager as of v0.2. If set, no need to do `... | diff-so-fancy`
+------------|---------
+`GIT_PAGER` | `sad` will automatically pipe it's output to the standard git pager as of v0.2. If set to `<highlighter>`, no need to do `... \| <highlighter>`
 
 ## Flags
 
 Name                                | Function
-------------------------------------|--------------------------------------------------------------------
+------------------------------------|---------
 `-i file1 file2` `--input files...` | instead of reading from `stdin`, read file names from argument list
 `-k --commit`                       | instead of printing out a preview, write edits to files
 `-0`                                | use `\0` instead of `\n` when reading from `stdin`
@@ -74,7 +74,7 @@ Name                                | Function
 ## Regex Flags
 
 Name | Function
------|----------------------------------------------------
+-----|---------
 `i`  | case insensitive (works for `--exact` mode as well)
 `I`  | case sensitive (works for `--exact` mode as well)
 `m`  | multiline: `^` `$` match each line
