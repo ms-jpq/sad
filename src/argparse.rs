@@ -1,4 +1,5 @@
 use super::errors::*;
+use super::subprocess::SubprocessCommand;
 use aho_corasick::{AhoCorasick, AhoCorasickBuilder};
 use clap::Clap;
 use either::Either::{self, *};
@@ -37,12 +38,6 @@ pub struct Arguments {
 pub enum Action {
   Diff,
   Write,
-}
-
-#[derive(Clone)]
-pub struct SubprocessCommand {
-  pub program: String,
-  pub arguments: Vec<String>,
 }
 
 #[derive(Clone)]

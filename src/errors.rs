@@ -1,4 +1,5 @@
-use std::{io, string};
+use ansi_term::Colour;
+use std::{io, process, string};
 use tokio::{sync::mpsc::error::SendError, task::JoinError};
 
 /*
@@ -63,4 +64,11 @@ impl From<JoinError> for Failure {
   fn from(_: JoinError) -> Self {
     Failure::JoinError
   }
+}
+
+/* Exit */
+
+pub fn err_exit(err: Failure) -> ! {
+  eprintln!("{}", Colour::Red.paint(format!("{:#?}", err)));
+  process::exit(1)
 }

@@ -1,27 +1,23 @@
-use ansi_term::Colour;
-use argparse::{Arguments, Options, SubprocessCommand};
+use argparse::{Arguments, Options};
 use async_std::sync::{channel, Arc, Receiver, Sender};
 use clap::Clap;
 use errors::*;
 use futures::future::{try_join3, try_join_all, TryJoinAll};
-use std::{
-  path::PathBuf,
-  process::{self, Stdio},
-};
+use std::{path::PathBuf, process};
 use tokio::{
   io::{AsyncBufReadExt, AsyncWriteExt, BufReader, BufWriter},
   prelude::*,
-  process::Command,
-  runtime,
-  task::{self, JoinHandle},
+  runtime, task,
 };
+use types::Task;
+use subprocess::{SubprocessCommand};
 
 mod argparse;
 mod displace;
 mod errors;
+mod subprocess;
+mod types;
 mod udiff;
-
-type Task = JoinHandle<()>;
 
 fn stream_list(paths: Vec<PathBuf>) -> (Task, Receiver<SadResult<PathBuf>>) {
   let (tx, rx) = channel::<SadResult<PathBuf>>(1);
@@ -102,59 +98,6 @@ fn stream_process(
   (handle, rx)
 }
 
-fn stream_pager(
-  cmd: &SubprocessCommand,
-  stream: Receiver<SadResult<String>>,
-) -> (Task, Task, Receiver<SadResult<String>>) {
-  let subprocess = Command::new(&cmd.program)
-    .args(&cmd.arguments)
-    .stdin(Stdio::piped())
-    .stdout(Stdio::piped())
-    .stderr(Stdio::inherit())
-    .spawn();
-
-  let child = match subprocess {
-    Ok(child) => child,
-    Err(err) => err_exit(err.into()),
-  };
-
-  let mut stdin = BufWriter::new(child.stdin.unwrap());
-  let mut stdout = BufReader::new(child.stdout.unwrap());
-  let (tx, rx) = channel::<SadResult<String>>(1);
-  let tt = Sender::clone(&tx);
-
-  let handle_in = task::spawn(async move {
-    while let Some(print) = stream.recv().await {
-      match print {
-        Ok(val) => {
-          if let Err(e) = stdin.write(val.as_bytes()).await {
-            err_exit(e.into())
-          }
-        }
-        Err(e) => err_exit(e),
-      }
-    }
-    if let Err(err) = stdin.shutdown().await {
-      tx.send(Err(err.into())).await;
-    };
-  });
-
-  let handle_out = task::spawn(async move {
-    loop {
-      let mut buf = String::new();
-      match stdout.read_line(&mut buf).await.into_sadness() {
-        Ok(0) => return,
-        Ok(_) => {
-          tt.send(Ok(buf)).await;
-        }
-        Err(err) => tt.send(Err(err)).await,
-      }
-    }
-  });
-
-  (handle_in, handle_out, rx)
-}
-
 fn stream_stdout(stream: Receiver<SadResult<String>>) -> Task {
   let mut stdout = BufWriter::new(io::stdout());
   task::spawn(async move {
@@ -175,7 +118,7 @@ fn stream_stdout(stream: Receiver<SadResult<String>>) -> Task {
 fn stream_output(cmd: Option<SubprocessCommand>, stream: Receiver<SadResult<String>>) -> Task {
   match cmd {
     Some(cmd) => {
-      let (send_in, send_out, rx) = stream_pager(&cmd, stream);
+      let (send_in, send_out, rx) = subprocess::stream(&cmd, stream);
       let recv = stream_stdout(rx);
       task::spawn(async {
         if let Err(e) = try_join3(send_in, send_out, recv).await {
@@ -185,11 +128,6 @@ fn stream_output(cmd: Option<SubprocessCommand>, stream: Receiver<SadResult<Stri
     }
     None => stream_stdout(stream),
   }
-}
-
-fn err_exit(err: Failure) -> ! {
-  eprintln!("{}", Colour::Red.paint(format!("{:#?}", err)));
-  process::exit(1)
 }
 
 fn main() {
