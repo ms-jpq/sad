@@ -4,7 +4,7 @@ use async_std::sync::{channel, Receiver, Sender};
 use futures::future::try_join4;
 use std::process::Stdio;
 use tokio::{
-  io::{AsyncBufReadExt, AsyncWriteExt, BufReader, BufWriter},
+  io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader, BufWriter},
   process::Command,
   task,
 };
@@ -81,16 +81,14 @@ pub fn stream(
 
   let handle_err = task::spawn(async move {
     let mut buf = String::new();
-    loop {
-      match stderr.read_line(&mut buf).await.into_sadness() {
-        Ok(0) => {
-          if !buf.is_empty() {
-            let err = buf.clone();
-            te.send(Err(Failure::Pager(err))).await
-          }
+    match stderr.read_to_string(&mut buf).await.into_sadness() {
+      Err(err) => {
+        te.send(Err(err)).await;
+      }
+      Ok(_) => {
+        if !buf.is_empty() {
+          te.send(Err(Failure::Pager(buf))).await
         }
-        Err(err) => te.send(Err(err)).await,
-        _ => {}
       }
     }
   });
