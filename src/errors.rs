@@ -1,6 +1,6 @@
 use ansi_term::Colour;
 use std::{io, process, string};
-use tokio::{sync::mpsc::error::SendError, task::JoinError};
+use tokio::task::JoinError;
 
 /*
  * Consolidate Error Handling
@@ -13,8 +13,8 @@ pub enum Failure {
   IO(io::Error),
   Str(string::FromUtf8Error),
   Regex(regex::Error),
-  SendError,
   JoinError,
+  Pager(String),
 }
 
 pub type SadResult<T> = Result<T, Failure>;
@@ -51,12 +51,6 @@ impl From<string::FromUtf8Error> for Failure {
 impl From<regex::Error> for Failure {
   fn from(err: regex::Error) -> Self {
     Failure::Regex(err)
-  }
-}
-
-impl<T> From<SendError<T>> for Failure {
-  fn from(_: SendError<T>) -> Self {
-    Failure::SendError
   }
 }
 

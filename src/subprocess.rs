@@ -17,7 +17,7 @@ pub struct SubprocessCommand {
 pub fn stream(
   cmd: &SubprocessCommand,
   stream: Receiver<SadResult<String>>,
-) -> (Task, Task, Receiver<SadResult<String>>) {
+) -> (Task, Receiver<SadResult<String>>) {
   let subprocess = Command::new(&cmd.program)
     .args(&cmd.arguments)
     .stdin(Stdio::piped())
@@ -35,7 +35,8 @@ pub fn stream(
   let mut stderr = BufReader::new(child.stderr.take().unwrap());
 
   let (tx, rx) = channel::<SadResult<String>>(1);
-  let tt = Sender::clone(&tx);
+  let to = Sender::clone(&tx);
+  let te = Sender::clone(&tx);
 
   let handle_in = task::spawn(async move {
     while let Some(print) = stream.recv().await {
@@ -59,12 +60,30 @@ pub fn stream(
       match stdout.read_line(&mut buf).await.into_sadness() {
         Ok(0) => return,
         Ok(_) => {
-          tt.send(Ok(buf)).await;
+          to.send(Ok(buf)).await;
         }
-        Err(err) => tt.send(Err(err)).await,
+        Err(err) => to.send(Err(err)).await,
       }
     }
   });
 
-  (handle_in, handle_out, rx)
+  let handle_err = task::spawn(async move {
+    let mut buf = String::new();
+    loop {
+      match stderr.read_line(&mut buf).await.into_sadness() {
+        Ok(0) => {
+          if !buf.is_empty() {
+            let err = buf.clone();
+            te.send(Err(Failure::Pager(err))).await
+          }
+        }
+        Err(err) => te.send(Err(err)).await,
+        _ => {}
+      }
+    }
+  });
+
+  let handle = task::spawn(async move {});
+
+  (handle, rx)
 }

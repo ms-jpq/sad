@@ -2,15 +2,15 @@ use argparse::{Arguments, Options};
 use async_std::sync::{channel, Arc, Receiver, Sender};
 use clap::Clap;
 use errors::*;
-use futures::future::{try_join3, try_join_all, TryJoinAll};
+use futures::future::{try_join, try_join3, try_join_all, TryJoinAll};
 use std::{path::PathBuf, process};
+use subprocess::SubprocessCommand;
 use tokio::{
   io::{AsyncBufReadExt, AsyncWriteExt, BufReader, BufWriter},
   prelude::*,
   runtime, task,
 };
 use types::Task;
-use subprocess::{SubprocessCommand};
 
 mod argparse;
 mod displace;
@@ -118,10 +118,10 @@ fn stream_stdout(stream: Receiver<SadResult<String>>) -> Task {
 fn stream_output(cmd: Option<SubprocessCommand>, stream: Receiver<SadResult<String>>) -> Task {
   match cmd {
     Some(cmd) => {
-      let (send_in, send_out, rx) = subprocess::stream(&cmd, stream);
+      let (child, rx) = subprocess::stream(&cmd, stream);
       let recv = stream_stdout(rx);
       task::spawn(async {
-        if let Err(e) = try_join3(send_in, send_out, recv).await {
+        if let Err(e) = try_join(child, recv).await {
           err_exit(e.into())
         }
       })
