@@ -3,15 +3,15 @@ use argparse::{Arguments, Options, SubprocessCommand};
 use async_std::sync::{channel, Arc, Receiver, Sender};
 use clap::Clap;
 use errors::*;
-use futures::future::{try_join3, try_join_all, TryJoinAll};
+use futures::future::{try_join, try_join3, try_join_all, TryJoin, TryJoinAll};
 use std::{
   path::PathBuf,
   process::{self, Stdio},
 };
 use tokio::{
-  io,
+  io::{AsyncBufReadExt, AsyncWriteExt, BufReader, BufWriter},
   prelude::*,
-  process::Command,
+  process::{Child, Command},
   runtime,
   task::{self, JoinHandle},
 };
@@ -42,7 +42,7 @@ fn p_path(name: &[u8]) -> SadResult<PathBuf> {
 fn stream_stdin(args: &Arguments) -> (Task, Receiver<SadResult<PathBuf>>) {
   let delim = if args.nul_delim { b'\0' } else { b'\n' };
   let (tx, rx) = channel::<SadResult<PathBuf>>(1);
-  let mut reader = io::BufReader::new(io::stdin());
+  let mut reader = BufReader::new(io::stdin());
   let mut buf = Vec::new();
 
   let handle = task::spawn(async move {
@@ -79,8 +79,7 @@ fn stream_process(
   let oo = Arc::new(opts.clone());
   let (tx, rx) = channel::<SadResult<String>>(1);
 
-  let threads = num_cpus::get() * 2;
-  let handles = (1..=threads)
+  let handles = (1..=num_cpus::get() * 2)
     .map(|_| {
       let stream = Receiver::clone(&stream);
       let opts = Arc::clone(&oo);
@@ -103,38 +102,52 @@ fn stream_process(
   (handle, rx)
 }
 
-fn stream_pager(cmd: SubprocessCommand, stream: Receiver<SadResult<String>>) -> Task {
-  task::spawn(async move {
-    let subprocess = Command::new(&cmd.program)
-      .args(&cmd.arguments)
-      .stdin(Stdio::piped())
-      .stdout(Stdio::inherit())
-      .stderr(Stdio::inherit())
-      .spawn();
-    match subprocess {
-      Ok(child) => match child.stdin {
-        Some(stdin) => {
-          let mut stdin = io::BufWriter::new(stdin);
-          while let Some(print) = stream.recv().await {
-            match print {
-              Ok(val) => {
-                if let Err(e) = stdin.write(val.as_bytes()).await {
-                  err_exit(e.into())
-                }
-              }
-              Err(e) => err_exit(e),
-            }
+fn stream_pager(
+  cmd: &SubprocessCommand,
+  stream: Receiver<SadResult<String>>,
+) -> TryJoin<JoinHandle<()>, JoinHandle<()>> {
+  let subprocess = Command::new(&cmd.program)
+    .args(&cmd.arguments)
+    .stdin(Stdio::piped())
+    .stdout(Stdio::inherit())
+    .stderr(Stdio::inherit())
+    .spawn();
+
+  let child = match subprocess {
+    Ok(child) => child,
+    Err(e) => err_exit(e.into()),
+  };
+
+  let child_handle = task::spawn(async {
+    match child.await {
+      Err(e) => err_exit(e.into()),
+      _ => {}
+    }
+  });
+
+  let mut stdin = match child.stdin {
+    Some(stdin) => BufWriter::new(stdin),
+    None => err_exit(Failure::Simple(format!("Missing stdin - {}", cmd.program))),
+  };
+
+  let std_handle = task::spawn(async move {
+    while let Some(print) = stream.recv().await {
+      match print {
+        Ok(val) => {
+          if let Err(e) = stdin.write(val.as_bytes()).await {
+            err_exit(e.into())
           }
         }
-        None => err_exit(Failure::Simple(format!("Missing stdin - {}", cmd.program))),
-      },
-      Err(e) => err_exit(e.into()),
+        Err(e) => err_exit(e),
+      }
     }
-  })
+  });
+
+  try_join(child_handle, std_handle)
 }
 
 fn stream_stdout(stream: Receiver<SadResult<String>>) -> Task {
-  let mut stdout = io::BufWriter::new(io::stdout());
+  let mut stdout = BufWriter::new(io::stdout());
   task::spawn(async move {
     while let Some(print) = stream.recv().await {
       match print {
@@ -152,7 +165,15 @@ fn stream_stdout(stream: Receiver<SadResult<String>>) -> Task {
 
 fn stream_output(cmd: Option<SubprocessCommand>, stream: Receiver<SadResult<String>>) -> Task {
   match cmd {
-    Some(cmd) => stream_pager(cmd, stream),
+    Some(cmd) => {
+      let handle = stream_pager(&cmd, stream);
+      task::spawn(async move {
+        match handle.await {
+          Err(_) => panic!(),
+          _ => {}
+        }
+      })
+    }
     None => stream_stdout(stream),
   }
 }
