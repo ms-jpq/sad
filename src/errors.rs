@@ -53,7 +53,7 @@ impl From<regex::Error> for Failure {
 }
 
 impl<T> From<SendError<T>> for Failure {
-  fn from(err: SendError<T>) -> Self {
+  fn from(_: SendError<T>) -> Self {
     Failure::SendError
   }
 }

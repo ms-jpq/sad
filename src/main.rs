@@ -17,13 +17,14 @@ mod displace;
 mod errors;
 mod udiff;
 
-fn stream_list(paths: Vec<PathBuf>) -> (JoinHandle<SadResult<()>>, mpsc::Receiver<PathBuf>) {
-  let (mut tx, rx) = mpsc::channel::<PathBuf>(1);
+type Task = JoinHandle<()>;
+
+fn stream_list(paths: Vec<PathBuf>) -> (Task, mpsc::Receiver<SadResult<PathBuf>>) {
+  let (mut tx, rx) = mpsc::channel::<SadResult<PathBuf>>(1);
   let handle = task::spawn(async move {
     for path in paths {
-      tx.send(path).await?;
+      tx.send(Ok(path)).await.unwrap();
     }
-    Ok(())
   });
   (handle, rx)
 }
@@ -34,23 +35,24 @@ fn p_path(name: &[u8]) -> SadResult<PathBuf> {
     .into_sadness()
 }
 
-fn stream_stdin(args: &Arguments) -> (JoinHandle<SadResult<()>>, mpsc::Receiver<PathBuf>) {
+fn stream_stdin(args: &Arguments) -> (Task, mpsc::Receiver<SadResult<PathBuf>>) {
   let delim = if args.nul_delim { b'\0' } else { b'\n' };
-  let (mut tx, rx) = mpsc::channel::<PathBuf>(1);
+  let (mut tx, rx) = mpsc::channel::<SadResult<PathBuf>>(1);
   let mut reader = io::BufReader::new(io::stdin());
   let mut buf = Vec::new();
 
   let handle = task::spawn(async move {
     loop {
-      let line = reader.read_until(delim, &mut buf).await.into_sadness()?;
+      let line = reader.read_until(delim, &mut buf).await.into_sadness();
       match line {
-        0 => return Ok(()),
-        _ => {
+        Ok(0) => return,
+        Ok(_) => {
           buf.pop();
-          let path = p_path(&buf)?;
+          let path = p_path(&buf);
           buf.clear();
-          tx.send(path).await?;
+          tx.send(path).await.unwrap();
         }
+        Err(err) => tx.send(Err(err)).await.unwrap(),
       }
     }
   });
@@ -58,7 +60,7 @@ fn stream_stdin(args: &Arguments) -> (JoinHandle<SadResult<()>>, mpsc::Receiver<
   (handle, rx)
 }
 
-fn choose_input(args: &Arguments) -> (JoinHandle<SadResult<()>>, mpsc::Receiver<PathBuf>) {
+fn choose_input(args: &Arguments) -> (Task, mpsc::Receiver<SadResult<PathBuf>>) {
   if args.input.is_empty() {
     stream_stdin(&args)
   } else {
@@ -68,11 +70,11 @@ fn choose_input(args: &Arguments) -> (JoinHandle<SadResult<()>>, mpsc::Receiver<
 
 fn stream_process(
   opts: Options,
-  stream: mpsc::Receiver<PathBuf>,
-) -> (JoinAll<JoinHandle<SadResult<()>>>, mpsc::Receiver<String>) {
+  stream: mpsc::Receiver<SadResult<PathBuf>>,
+) -> (JoinAll<Task>, mpsc::Receiver<SadResult<String>>) {
   let sx = Arc::new(Mutex::new(stream));
   let oo = Arc::new(opts);
-  let (tx, rx) = mpsc::channel::<String>(1);
+  let (tx, rx) = mpsc::channel::<SadResult<String>>(1);
 
   let threads = num_cpus::get() * 2;
   let handles = (1..=threads)
@@ -83,28 +85,35 @@ fn stream_process(
 
       task::spawn(async move {
         while let Some(path) = stream.lock().await.recv().await {
-          let displaced = displace::displace(path, &opts).await?;
-          sender.send(displaced).await.into_sadness()?;
+          match path {
+            Ok(val) => {
+              let displaced = displace::displace(val, &opts).await;
+              sender.send(displaced).await.unwrap()
+            }
+            Err(err) => sender.send(Err(err)).await.unwrap(),
+          }
         }
-        Ok(())
       })
     })
-    .collect::<Vec<JoinHandle<SadResult<()>>>>();
+    .collect::<Vec<Task>>();
   let handle = join_all(handles);
   (handle, rx)
 }
 
-fn stream_stdout(mut stream: mpsc::Receiver<String>) -> JoinHandle<SadResult<()>> {
+fn stream_stdout(mut stream: mpsc::Receiver<SadResult<String>>) -> Task {
   let mut stdout = io::BufWriter::new(io::stdout());
   task::spawn(async move {
     while let Some(print) = stream.recv().await {
-      match stdout.write(print.as_bytes()).await {
-        Err(e) if e.kind() == std::io::ErrorKind::BrokenPipe => process::exit(1),
-        Err(e) => return Err(e.into()),
-        _ => {}
+      match print {
+        Ok(val) => match stdout.write(val.as_bytes()).await {
+          Err(e) if e.kind() == std::io::ErrorKind::BrokenPipe => process::exit(1),
+          Err(e) => err_exit(e.into()),
+          _ => {}
+        },
+        Err(e) => err_exit(e),
       }
     }
-    stdout.flush().await.into_sadness()
+    stdout.flush().await.unwrap()
   })
 }
 
@@ -122,13 +131,14 @@ fn main() {
   rt.block_on(async {
     let args = Arguments::parse();
     let (reader, receiver) = choose_input(&args);
-    match Options::new(args) {
+    let end = match Options::new(args) {
       Ok(opts) => {
         let (steps, rx) = stream_process(opts, receiver);
         let writer = stream_stdout(rx);
-        join3(reader, steps, writer).await;
+        join3(reader, steps, writer).await
       }
       Err(e) => err_exit(e),
-    }
+    };
+    println!("{:#?}", end)
   })
 }
