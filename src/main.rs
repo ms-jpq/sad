@@ -1,14 +1,14 @@
 use ansi_term::Colour;
 use argparse::{Arguments, Options};
+use async_std::sync::{channel, Arc, Receiver, Sender};
 use clap::Clap;
 use errors::*;
 use futures::future::{try_join3, try_join_all, TryJoinAll};
-use std::{path::PathBuf, process, sync::Arc};
+use std::{path::PathBuf, process};
 use tokio::{
   io,
   prelude::*,
   runtime,
-  sync::{mpsc, Mutex},
   task::{self, JoinHandle},
 };
 
@@ -19,11 +19,11 @@ mod udiff;
 
 type Task = JoinHandle<()>;
 
-fn stream_list(paths: Vec<PathBuf>) -> (Task, mpsc::Receiver<SadResult<PathBuf>>) {
-  let (mut tx, rx) = mpsc::channel::<SadResult<PathBuf>>(1);
+fn stream_list(paths: Vec<PathBuf>) -> (Task, Receiver<SadResult<PathBuf>>) {
+  let (tx, rx) = channel::<SadResult<PathBuf>>(1);
   let handle = task::spawn(async move {
     for path in paths {
-      tx.send(Ok(path)).await.unwrap();
+      tx.send(Ok(path)).await;
     }
   });
   (handle, rx)
@@ -35,9 +35,9 @@ fn p_path(name: &[u8]) -> SadResult<PathBuf> {
     .into_sadness()
 }
 
-fn stream_stdin(args: &Arguments) -> (Task, mpsc::Receiver<SadResult<PathBuf>>) {
+fn stream_stdin(args: &Arguments) -> (Task, Receiver<SadResult<PathBuf>>) {
   let delim = if args.nul_delim { b'\0' } else { b'\n' };
-  let (mut tx, rx) = mpsc::channel::<SadResult<PathBuf>>(1);
+  let (tx, rx) = channel::<SadResult<PathBuf>>(1);
   let mut reader = io::BufReader::new(io::stdin());
   let mut buf = Vec::new();
 
@@ -50,9 +50,9 @@ fn stream_stdin(args: &Arguments) -> (Task, mpsc::Receiver<SadResult<PathBuf>>) 
           buf.pop();
           let path = p_path(&buf);
           buf.clear();
-          tx.send(path).await.unwrap();
+          tx.send(path).await;
         }
-        Err(err) => tx.send(Err(err)).await.unwrap(),
+        Err(err) => tx.send(Err(err)).await,
       }
     }
   });
@@ -60,7 +60,7 @@ fn stream_stdin(args: &Arguments) -> (Task, mpsc::Receiver<SadResult<PathBuf>>) 
   (handle, rx)
 }
 
-fn choose_input(args: &Arguments) -> (Task, mpsc::Receiver<SadResult<PathBuf>>) {
+fn choose_input(args: &Arguments) -> (Task, Receiver<SadResult<PathBuf>>) {
   if args.input.is_empty() {
     stream_stdin(&args)
   } else {
@@ -70,27 +70,26 @@ fn choose_input(args: &Arguments) -> (Task, mpsc::Receiver<SadResult<PathBuf>>) 
 
 fn stream_process(
   opts: Options,
-  stream: mpsc::Receiver<SadResult<PathBuf>>,
-) -> (TryJoinAll<Task>, mpsc::Receiver<SadResult<String>>) {
-  let sx = Arc::new(Mutex::new(stream));
+  stream: Receiver<SadResult<PathBuf>>,
+) -> (TryJoinAll<Task>, Receiver<SadResult<String>>) {
   let oo = Arc::new(opts);
-  let (tx, rx) = mpsc::channel::<SadResult<String>>(1);
+  let (tx, rx) = channel::<SadResult<String>>(1);
 
   let threads = num_cpus::get() * 2;
   let handles = (1..=threads)
     .map(|_| {
-      let stream = Arc::clone(&sx);
+      let stream = Receiver::clone(&stream);
       let opts = Arc::clone(&oo);
-      let mut sender = mpsc::Sender::clone(&tx);
+      let sender = Sender::clone(&tx);
 
       task::spawn(async move {
-        while let Some(path) = stream.lock().await.recv().await {
+        while let Some(path) = stream.recv().await {
           match path {
             Ok(val) => {
               let displaced = displace::displace(val, &opts).await;
-              sender.send(displaced).await.unwrap()
+              sender.send(displaced).await
             }
-            Err(err) => sender.send(Err(err)).await.unwrap(),
+            Err(err) => sender.send(Err(err)).await,
           }
         }
       })
@@ -100,7 +99,7 @@ fn stream_process(
   (handle, rx)
 }
 
-fn stream_stdout(mut stream: mpsc::Receiver<SadResult<String>>) -> Task {
+fn stream_stdout(stream: Receiver<SadResult<String>>) -> Task {
   let mut stdout = io::BufWriter::new(io::stdout());
   task::spawn(async move {
     while let Some(print) = stream.recv().await {
