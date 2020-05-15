@@ -127,7 +127,7 @@ fn stream_pager(cmd: &SubprocessCommand, stream: Receiver<SadResult<String>>) ->
         Err(e) => err_exit(e),
       }
     }
-    stdin.flush().await.unwrap();
+    stdin.shutdown().await.unwrap();
   })
 }
 
@@ -144,7 +144,7 @@ fn stream_stdout(stream: Receiver<SadResult<String>>) -> Task {
         Err(e) => err_exit(e),
       }
     }
-    stdout.flush().await.unwrap()
+    stdout.shutdown().await.unwrap()
   })
 }
 
