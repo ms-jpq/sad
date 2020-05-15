@@ -110,12 +110,11 @@ fn stream_pager(cmd: &SubprocessCommand, stream: Receiver<SadResult<String>>) ->
     .stderr(Stdio::inherit())
     .spawn();
 
-  let mut child = subprocess.unwrap();
-
-  let mut stdin = match child.stdin {
-    Some(stdin) => BufWriter::new(&stdin),
-    None => err_exit(Failure::Simple(format!("Missing stdin - {}", cmd.program))),
+  let child = match subprocess {
+    Ok(child) => child,
+    Err(err) => err_exit(err.into()),
   };
+  let mut stdin = BufWriter::new(child.stdin.unwrap());
 
   let std_handle = task::spawn(async move {
     while let Some(print) = stream.recv().await {
@@ -128,6 +127,7 @@ fn stream_pager(cmd: &SubprocessCommand, stream: Receiver<SadResult<String>>) ->
         Err(e) => err_exit(e),
       }
     }
+    stdin.flush().await.unwrap();
   });
 
   std_handle
