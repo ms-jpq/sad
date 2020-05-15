@@ -3,7 +3,7 @@ use aho_corasick::{AhoCorasick, AhoCorasickBuilder};
 use clap::Clap;
 use either::Either::{self, *};
 use regex::{Regex, RegexBuilder};
-use std::path::PathBuf;
+use std::{env, path::PathBuf};
 
 #[derive(Clap)]
 #[clap(name = "sad", author, about, version)]
@@ -28,6 +28,9 @@ pub struct Arguments {
 
   #[clap(short, long, about = "Standard regex flags: ie. -f imx")]
   pub flags: Option<String>,
+
+  #[clap(long, about = "ignore $GIT_PAGER")]
+  pub no_pager: bool,
 }
 
 pub enum Action {
@@ -39,6 +42,7 @@ pub struct Options {
   pub pattern: Either<AhoCorasick, Regex>,
   pub replace: String,
   pub action: Action,
+  pub pager: Option<String>,
 }
 
 impl Options {
@@ -67,10 +71,13 @@ impl Options {
       Action::Diff
     };
 
+    let pager = if args.no_pager { None } else { p_pager() };
+
     Ok(Options {
       pattern,
       replace: args.replace.unwrap_or_default(),
       action,
+      pager,
     })
   }
 }
@@ -90,11 +97,7 @@ fn p_aho_corasick(pattern: &str, flags: &[String]) -> SadResult<AhoCorasick> {
     match flag.as_str() {
       "I" => ac.ascii_case_insensitive(false),
       "i" => ac.ascii_case_insensitive(true),
-      _ => {
-        return Err(Failure::Regex(regex::Error::Syntax(String::from(
-          "Invalid flags",
-        ))))
-      }
+      _ => return Err(Failure::Simple("Invalid flags".into())),
     };
   }
   Ok(ac.build(&[pattern]))
@@ -110,12 +113,18 @@ fn p_regex(pattern: &str, flags: &[String]) -> SadResult<Regex> {
       "s" => re.dot_matches_new_line(true),
       "U" => re.swap_greed(true),
       "x" => re.ignore_whitespace(true),
-      _ => {
-        return Err(Failure::Regex(regex::Error::Syntax(String::from(
-          "Invalid flags",
-        ))))
-      }
+      _ => return Err(Failure::Simple("Invalid flags".into())),
     };
   }
   re.build().into_sadness()
+}
+
+fn p_pager() -> Option<String> {
+  match env::var("GIT_PAGER") {
+    Ok(val) => {
+      let pager = val.split('|').next().unwrap_or(&val).trim();
+      Some(String::from(pager))
+    }
+    _ => None,
+  }
 }
