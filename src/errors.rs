@@ -1,5 +1,5 @@
 use std::{io, string};
-use tokio::sync::mpsc::error::SendError;
+use tokio::{sync::mpsc::error::SendError, task::JoinError};
 
 /*
  * Consolidate Error Handling
@@ -13,6 +13,7 @@ pub enum Failure {
   Str(string::FromUtf8Error),
   Regex(regex::Error),
   SendError,
+  JoinError,
 }
 
 pub type SadResult<T> = Result<T, Failure>;
@@ -58,3 +59,8 @@ impl<T> From<SendError<T>> for Failure {
   }
 }
 
+impl From<JoinError> for Failure {
+  fn from(_: JoinError) -> Self {
+    Failure::JoinError
+  }
+}

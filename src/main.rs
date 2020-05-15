@@ -139,6 +139,8 @@ fn main() {
       }
       Err(e) => err_exit(e),
     };
-    println!("{:#?}", end)
+    if let Err(err) = end {
+      err_exit(err.into())
+    }
   })
 }
