@@ -33,21 +33,24 @@ pub struct Arguments {
   pub no_pager: bool,
 }
 
+#[derive(Clone)]
 pub enum Action {
   Diff,
   Write,
 }
 
-pub struct PagerCommand {
-  program: String,
-  arguments: Vec<String>,
+#[derive(Clone)]
+pub struct SubprocessCommand {
+  pub program: String,
+  pub arguments: Vec<String>,
 }
 
+#[derive(Clone)]
 pub struct Options {
   pub pattern: Either<AhoCorasick, Regex>,
   pub replace: String,
   pub action: Action,
-  pub pager: Option<PagerCommand>,
+  pub pager: Option<SubprocessCommand>,
 }
 
 impl Options {
@@ -124,11 +127,11 @@ fn p_regex(pattern: &str, flags: &[String]) -> SadResult<Regex> {
   re.build().into_sadness()
 }
 
-fn p_pager() -> Option<PagerCommand> {
+fn p_pager() -> Option<SubprocessCommand> {
   env::var("GIT_PAGER").ok().and_then(|val| {
     let less_less = val.split('|').next().unwrap_or(&val).trim();
     let mut commands = less_less.split(' ').map(String::from);
-    commands.next().map(|program| PagerCommand {
+    commands.next().map(|program| SubprocessCommand {
       program,
       arguments: commands.collect(),
     })

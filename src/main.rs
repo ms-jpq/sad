@@ -1,13 +1,17 @@
 use ansi_term::Colour;
-use argparse::{Arguments, Options};
+use argparse::{Arguments, Options, SubprocessCommand};
 use async_std::sync::{channel, Arc, Receiver, Sender};
 use clap::Clap;
 use errors::*;
 use futures::future::{try_join3, try_join_all, TryJoinAll};
-use std::{path::PathBuf, process};
+use std::{
+  path::PathBuf,
+  process::{self, Stdio},
+};
 use tokio::{
   io,
   prelude::*,
+  process::Command,
   runtime,
   task::{self, JoinHandle},
 };
@@ -69,10 +73,10 @@ fn choose_input(args: &Arguments) -> (Task, Receiver<SadResult<PathBuf>>) {
 }
 
 fn stream_process(
-  opts: Options,
+  opts: &Options,
   stream: Receiver<SadResult<PathBuf>>,
 ) -> (TryJoinAll<Task>, Receiver<SadResult<String>>) {
-  let oo = Arc::new(opts);
+  let oo = Arc::new(opts.clone());
   let (tx, rx) = channel::<SadResult<String>>(1);
 
   let threads = num_cpus::get() * 2;
@@ -99,6 +103,36 @@ fn stream_process(
   (handle, rx)
 }
 
+fn stream_pager(cmd: SubprocessCommand, stream: Receiver<SadResult<String>>) -> Task {
+  task::spawn(async move {
+    let subprocess = Command::new(&cmd.program)
+      .args(&cmd.arguments)
+      .stdin(Stdio::piped())
+      .stdout(Stdio::inherit())
+      .stderr(Stdio::inherit())
+      .spawn();
+    match subprocess {
+      Ok(child) => match child.stdin {
+        Some(stdin) => {
+          let mut stdin = io::BufWriter::new(stdin);
+          while let Some(print) = stream.recv().await {
+            match print {
+              Ok(val) => {
+                if let Err(e) = stdin.write(val.as_bytes()).await {
+                  err_exit(e.into())
+                }
+              }
+              Err(e) => err_exit(e),
+            }
+          }
+        }
+        None => err_exit(Failure::Simple(format!("Missing stdin - {}", cmd.program))),
+      },
+      Err(e) => err_exit(e.into()),
+    }
+  })
+}
+
 fn stream_stdout(stream: Receiver<SadResult<String>>) -> Task {
   let mut stdout = io::BufWriter::new(io::stdout());
   task::spawn(async move {
@@ -114,6 +148,13 @@ fn stream_stdout(stream: Receiver<SadResult<String>>) -> Task {
     }
     stdout.flush().await.unwrap()
   })
+}
+
+fn stream_output(cmd: Option<SubprocessCommand>, stream: Receiver<SadResult<String>>) -> Task {
+  match cmd {
+    Some(cmd) => stream_pager(cmd, stream),
+    None => stream_stdout(stream),
+  }
 }
 
 fn err_exit(err: Failure) -> ! {
@@ -132,8 +173,8 @@ fn main() {
     let (reader, receiver) = choose_input(&args);
     let end = match Options::new(args) {
       Ok(opts) => {
-        let (steps, rx) = stream_process(opts, receiver);
-        let writer = stream_stdout(rx);
+        let (steps, rx) = stream_process(&opts, receiver);
+        let writer = stream_output(opts.pager, rx);
         try_join3(reader, steps, writer).await
       }
       Err(e) => err_exit(e),
