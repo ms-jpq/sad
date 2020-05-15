@@ -38,11 +38,16 @@ pub enum Action {
   Write,
 }
 
+pub struct PagerCommand {
+  program: String,
+  arguments: Vec<String>,
+}
+
 pub struct Options {
   pub pattern: Either<AhoCorasick, Regex>,
   pub replace: String,
   pub action: Action,
-  pub pager: Option<String>,
+  pub pager: Option<PagerCommand>,
 }
 
 impl Options {
@@ -119,12 +124,13 @@ fn p_regex(pattern: &str, flags: &[String]) -> SadResult<Regex> {
   re.build().into_sadness()
 }
 
-fn p_pager() -> Option<String> {
-  match env::var("GIT_PAGER") {
-    Ok(val) => {
-      let pager = val.split('|').next().unwrap_or(&val).trim();
-      Some(String::from(pager))
-    }
-    _ => None,
-  }
+fn p_pager() -> Option<PagerCommand> {
+  env::var("GIT_PAGER").ok().and_then(|val| {
+    let less_less = val.split('|').next().unwrap_or(&val).trim();
+    let mut commands = less_less.split(' ').map(String::from);
+    commands.next().map(|program| PagerCommand {
+      program,
+      arguments: commands.collect(),
+    })
+  })
 }
