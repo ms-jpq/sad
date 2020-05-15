@@ -7,6 +7,7 @@ cd "$(dirname "$0")"
 
 RELEASE="$PWD/release"
 
+rm -r "$RELEASE" || true
 mkdir -p "$PWD/target" "$RELEASE"
 
 
@@ -21,13 +22,12 @@ cross_build() {
   local ARCH="$1"
   local OUT="$RELEASE/$ARCH"
   cross build --release --target="$ARCH"
-  mkdir -p "$OUT"
   local ARTIFACT="$PWD/target/$ARCH/release/sad"
   if [[ ! -f "$ARTIFACT" ]]
   then
     ARTIFACT="$PWD/target/$ARCH/release/sad.exe"
   fi
-  cp "$ARTIFACT" "$OUT/sad"
+  zip -j "$OUT" "$ARTIFACT"
 }
 
 
@@ -38,8 +38,7 @@ macos_build() {
     local OUT="$RELEASE/$ARCH"
     local DIST="$PWD/target/$ARCH"
     cargo build --release --target-dir="$DIST"
-    mkdir -p "$OUT"
-    cp "$DIST/release/sad" "$OUT/sad"
+    zip -j "$OUT" "$DIST/release/sad"
   fi
 }
 
