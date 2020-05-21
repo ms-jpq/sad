@@ -1,8 +1,8 @@
-pub fn udiff(name: &str, before: &str, after: &str) -> String {
+pub fn udiff(hunk_size: usize, name: &str, before: &str, after: &str) -> String {
   let delim = '\n';
   let before_split = before.split_terminator(delim).collect::<Vec<&str>>();
   let after_split = after.split_terminator(delim).collect::<Vec<&str>>();
-  let diff = difflib::unified_diff(&before_split, &after_split, name, name, "", "", 3);
+  let diff = difflib::unified_diff(&before_split, &after_split, name, name, "", "", hunk_size);
   let prefix = vec![
     format!("\ndiff --git {} {}", name, name),
     format!("--- {}", name),

@@ -32,6 +32,9 @@ pub struct Arguments {
 
   #[clap(long, about = "ignore $GIT_PAGER")]
   pub no_pager: bool,
+
+  #[clap(short, long, about = "Hunk size, same as in GNU diff --unified={size}")]
+  pub hunk: Option<usize>
 }
 
 #[derive(Clone)]
@@ -46,6 +49,7 @@ pub struct Options {
   pub replace: String,
   pub action: Action,
   pub pager: Option<SubprocessCommand>,
+  pub hunk: usize
 }
 
 impl Options {
@@ -81,6 +85,7 @@ impl Options {
       replace: args.replace.unwrap_or_default(),
       action,
       pager,
+      hunk: args.hunk.unwrap_or(3),
     })
   }
 }
