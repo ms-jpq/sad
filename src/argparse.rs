@@ -34,7 +34,7 @@ pub struct Arguments {
   pub no_pager: bool,
 
   #[clap(short, long, about = "Hunk size, same as in GNU diff --unified={size}")]
-  pub hunk: Option<usize>
+  pub hunk: Option<usize>,
 }
 
 #[derive(Clone)]
@@ -49,7 +49,7 @@ pub struct Options {
   pub replace: String,
   pub action: Action,
   pub pager: Option<SubprocessCommand>,
-  pub hunk: usize
+  pub hunk: usize,
 }
 
 impl Options {

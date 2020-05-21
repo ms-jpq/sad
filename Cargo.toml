@@ -1,6 +1,6 @@
 [package]
 name = "sad"
-version = "0.2.0"
+version = "0.3.0"
 description = "batch edit tool | https://github.com/ms-jpq/sad"
 authors = ["git@bigly.dog"]
 edition = "2018"

@@ -1,3 +1,5 @@
+use difflib::{self, SequenceMatcher};
+
 pub fn udiff(hunk_size: usize, name: &str, before: &str, after: &str) -> String {
   let delim = '\n';
   let before_split = before.split_terminator(delim).collect::<Vec<&str>>();
@@ -18,4 +20,16 @@ pub fn udiff(hunk_size: usize, name: &str, before: &str, after: &str) -> String 
   let end = vec!["\n".into()];
   let print = itertools::chain(itertools::chain(prefix, body), end);
   itertools::join(print, "\n")
+}
+
+pub struct Hunk {
+  name: String,
+  lines: (usize, usize),
+  diff: String,
+}
+
+pub fn hdiff(hunk_size: usize, name: &str, before: &str, after: &str) -> String {
+  let seq = SequenceMatcher::new(before, after);
+
+  return "".into();
 }
