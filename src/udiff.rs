@@ -1,22 +1,22 @@
 use super::errors::*;
 use difflib::{sequencematcher::Opcode, sequencematcher::SequenceMatcher};
-use regex::{Captures, Regex};
+use regex::Regex;
 use std::{
   convert::TryFrom,
   fmt::{self, Display, Formatter},
 };
 
 pub struct DiffRange {
-  r1: (usize, usize),
-  r2: (usize, usize),
+  before: (usize, usize),
+  after: (usize, usize),
 }
 
 impl DiffRange {
-  fn new(ops: &[Opcode]) -> Option<DiffRange> {
+  pub fn new(ops: &[Opcode]) -> Option<DiffRange> {
     match (ops.first(), ops.last()) {
       (Some(first), Some(last)) => Some(DiffRange {
-        r1: (first.first_start, last.first_end),
-        r2: (first.second_start, last.second_end),
+        before: (first.first_start, last.first_end),
+        after: (first.second_start, last.second_end),
       }),
       _ => None,
     }
@@ -28,21 +28,15 @@ impl Display for DiffRange {
     write!(
       f,
       "@@ -{} +{} @@",
-      format_range_unified(self.r1),
-      format_range_unified(self.r2)
+      format_range_unified(self.before),
+      format_range_unified(self.after)
     )
   }
 }
 
 fn format_range_unified((start, end): (usize, usize)) -> String {
-  let mut beginning = start + 1;
   let length = end - start;
-  if length == 1 {
-    return beginning.to_string();
-  }
-  if length == 0 {
-    beginning -= 1;
-  }
+  let beginning = if length == 0 { start } else { start + 1 };
   format!("{},{}", beginning, length)
 }
 
@@ -81,8 +75,8 @@ impl TryFrom<&str> for DiffRange {
       .into_sadness()?;
 
     Ok(DiffRange {
-      r1: (r11, r12),
-      r2: (r21, r22),
+      before: (r11, r12),
+      after: (r21, r22),
     })
   }
 }
