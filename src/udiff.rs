@@ -1,5 +1,10 @@
+use super::errors::*;
 use difflib::{sequencematcher::Opcode, sequencematcher::SequenceMatcher};
-use std::fmt::{self, Display, Formatter};
+use regex::{Captures, Regex};
+use std::{
+  convert::TryFrom,
+  fmt::{self, Display, Formatter},
+};
 
 pub struct DiffRange {
   r1: (usize, usize),
@@ -41,6 +46,47 @@ fn format_range_unified((start, end): (usize, usize)) -> String {
   format!("{},{}", beginning, length)
 }
 
+impl TryFrom<&str> for DiffRange {
+  type Error = Failure;
+
+  fn try_from(candidate: &str) -> SadResult<Self> {
+    let preg = r"^@@ -(\d+),(\d+) \+(\d+),(\d+) @@$";
+    let re = Regex::new(preg).into_sadness()?;
+    let captures = re
+      .captures(candidate)
+      .ok_or_else(|| Failure::Parse(candidate.into()))?;
+    let r11 = captures
+      .get(1)
+      .ok_or_else(|| Failure::Parse(candidate.into()))?
+      .as_str()
+      .parse::<usize>()
+      .into_sadness()?;
+    let r12 = captures
+      .get(2)
+      .ok_or_else(|| Failure::Parse(candidate.into()))?
+      .as_str()
+      .parse::<usize>()
+      .into_sadness()?;
+    let r21 = captures
+      .get(3)
+      .ok_or_else(|| Failure::Parse(candidate.into()))?
+      .as_str()
+      .parse::<usize>()
+      .into_sadness()?;
+    let r22 = captures
+      .get(4)
+      .ok_or_else(|| Failure::Parse(candidate.into()))?
+      .as_str()
+      .parse::<usize>()
+      .into_sadness()?;
+
+    Ok(DiffRange {
+      r1: (r11, r12),
+      r2: (r21, r22),
+    })
+  }
+}
+
 pub fn udiff(hunk_size: usize, name: &str, before: &str, after: &str) -> String {
   let before = before.split_terminator('\n').collect::<Vec<&str>>();
   let after = after.split_terminator('\n').collect::<Vec<&str>>();
@@ -71,5 +117,5 @@ pub fn udiff(hunk_size: usize, name: &str, before: &str, after: &str) -> String 
       }
     }
   }
-  print
+  ret
 }
