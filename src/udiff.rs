@@ -6,7 +6,6 @@ use std::{
   fmt::{self, Display, Formatter},
 };
 
-// WARN: Index starts at 1
 #[derive(Debug)]
 pub struct DiffRange {
   before: (usize, usize),
@@ -14,12 +13,11 @@ pub struct DiffRange {
 }
 
 impl DiffRange {
-  // WARN: Opcode Index starts at 0
   pub fn new(ops: &[Opcode]) -> Option<DiffRange> {
     match (ops.first(), ops.last()) {
       (Some(first), Some(last)) => Some(DiffRange {
-        before: (first.first_start + 1, last.first_end - first.first_start),
-        after: (first.second_start + 1, last.second_end - first.second_start),
+        before: (first.first_start, last.first_end - first.first_start),
+        after: (first.second_start, last.second_end - first.second_start),
       }),
       _ => None,
     }
@@ -31,7 +29,10 @@ impl Display for DiffRange {
     write!(
       f,
       "@@ -{},{} +{},{} @@",
-      self.before.0, self.before.1, self.after.0, self.after.1,
+      self.before.0 + 1,
+      self.before.1,
+      self.after.0 + 1,
+      self.after.1,
     )
   }
 }
@@ -71,8 +72,8 @@ impl TryFrom<&str> for DiffRange {
       .into_sadness()?;
 
     Ok(DiffRange {
-      before: (before_start, before_inc),
-      after: (after_start, after_inc),
+      before: (before_start - 1, before_inc),
+      after: (after_start - 1, after_inc),
     })
   }
 }
@@ -136,7 +137,7 @@ impl Patchable for Diffs {
         ret.push_str(line);
         ret.push('\n')
       }
-      prev = before_start - 1 + before_inc;
+      prev = before_start + before_inc;
     }
     for i in prev..before.len() {
       before.get(i).map(|b| ret.push_str(b)).unwrap();
