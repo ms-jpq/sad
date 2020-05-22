@@ -159,18 +159,18 @@ pub fn udiff(unified: usize, name: &str, before: &str, after: &str) -> String {
     for code in group {
       if code.tag == "equal" {
         for line in before.iter().take(code.first_end).skip(code.first_start) {
-          ret.push_str(&format!("\n {}", line))
+          ret.push_str(&format!("\n {}", *line))
         }
         continue;
       }
       if code.tag == "replace" || code.tag == "delete" {
         for line in before.iter().take(code.first_end).skip(code.first_start) {
-          ret.push_str(&format!("\n-{}", line))
+          ret.push_str(&format!("\n-{}", *line))
         }
       }
       if code.tag == "replace" || code.tag == "insert" {
         for line in after.iter().take(code.second_end).skip(code.second_start) {
-          ret.push_str(&format!("\n+{}", line))
+          ret.push_str(&format!("\n+{}", *line))
         }
       }
     }
