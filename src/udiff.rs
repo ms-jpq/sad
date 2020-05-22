@@ -101,6 +101,12 @@ impl Patchable for Diffs {
     for group in &matcher.get_grouped_opcodes(unified) {
       let mut new_lines = Vec::new();
       for code in group {
+        if code.tag == "equal" {
+          for line in before.iter().take(code.first_end).skip(code.first_start) {
+            new_lines.push(line.to_string());
+          }
+          continue;
+        }
         if code.tag == "replace" || code.tag == "insert" {
           for line in after.iter().take(code.second_end).skip(code.second_start) {
             new_lines.push(line.to_string());
