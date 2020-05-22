@@ -46,7 +46,7 @@ pub async fn displace(path: PathBuf, opts: &Options) -> SadResult<String> {
     Ok(String::new())
   } else {
     let print = match opts.action {
-      Action::Diff => udiff::udiff(opts.hunk, &name, &before, &after),
+      Action::Diff => udiff::udiff(opts.unified, &name, &before, &after),
       Action::Write => {
         safe_write(&canonical, &meta, &after).await?;
         format!("{}\n", name)

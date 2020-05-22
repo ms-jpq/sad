@@ -81,7 +81,7 @@ impl TryFrom<&str> for DiffRange {
   }
 }
 
-pub fn udiff(hunk_size: usize, name: &str, before: &str, after: &str) -> String {
+pub fn udiff(unified: usize, name: &str, before: &str, after: &str) -> String {
   let before = before.split_terminator('\n').collect::<Vec<&str>>();
   let after = after.split_terminator('\n').collect::<Vec<&str>>();
   let mut ret = String::new();
@@ -90,7 +90,7 @@ pub fn udiff(hunk_size: usize, name: &str, before: &str, after: &str) -> String 
   ret.push_str(&format!("\n+++ {}", name));
 
   let mut matcher = SequenceMatcher::new(&before, &after);
-  for group in &matcher.get_grouped_opcodes(hunk_size) {
+  for group in &matcher.get_grouped_opcodes(unified) {
     ret.push_str(&format!("\n{}", DiffRange::new(group).unwrap()));
     for code in group {
       if code.tag == "equal" {
