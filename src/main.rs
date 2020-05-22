@@ -7,8 +7,7 @@ use futures::future::{try_join, try_join3, try_join_all, TryJoinAll};
 use std::{path::PathBuf, process, sync::Arc};
 use subprocess::SubprocessCommand;
 use tokio::{
-  io::{AsyncWriteExt, BufWriter},
-  prelude::*,
+  io::{self, AsyncWriteExt, BufWriter},
   runtime, task,
 };
 use types::Task;
