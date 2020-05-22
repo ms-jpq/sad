@@ -1,5 +1,8 @@
 use difflib::sequencematcher::SequenceMatcher;
-use std::rc::Rc;
+use std::{
+  fmt::{self, Display},
+  rc::Rc,
+};
 
 pub struct DiffRange {
   pub r11: usize,
@@ -8,17 +11,23 @@ pub struct DiffRange {
   pub r22: usize,
 }
 
-pub enum DiffLine {
-  Iden(String),
-  Plus(String),
-  Minus(String),
+impl Display for DiffRange {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(f, "")
+  }
 }
 
-pub struct Hunk {
-  pub name: String,
-  pub range: DiffRange,
-  intern: Vec<DiffLine>,
-}
+// pub enum DiffLine {
+//   Iden(String),
+//   Plus(String),
+//   Minus(String),
+// }
+
+// pub struct Hunk {
+//   pub name: String,
+//   pub range: DiffRange,
+//   intern: Vec<DiffLine>,
+// }
 
 fn format_range_unified(start: usize, end: usize) -> String {
   let mut beginning = start + 1;
@@ -47,10 +56,10 @@ fn diff_iter(
   for group in &matcher.get_grouped_opcodes(n) {
     let (first, last) = (group.first().unwrap(), group.last().unwrap());
     let range = DiffRange {
-      r11 : first.first_start,
-      r12 : last.first_end,
-      r21 : first.second_start,
-      r22 : last.second_end
+      r11: first.first_start,
+      r12: last.first_end,
+      r21: first.second_start,
+      r22: last.second_end,
     };
     new_hunk(range);
     for code in group {
@@ -75,19 +84,39 @@ fn diff_iter(
 }
 
 pub fn udiff(hunk_size: usize, name: &str, before: &str, after: &str) -> String {
-  let mut print = Rc::new(vec![
+  let print = Rc::new(vec![
     format!("\ndiff --git {} {}", name, name),
     format!("--- {}", name),
     format!("+++ {}", name),
   ]);
 
+  let mut np = Rc::clone(&print);
   let mut new_hunk = |size| {
-
+    Rc::get_mut(&mut np).map(|p| p.push(format!("{}", size)));
   };
-  let mut eq = |line: &str| {};
-  let mut plus = |line: &str| {};
-  let mut minus = |line: &str| {};
+  let mut np = Rc::clone(&print);
+  let mut eq = |line: &str| {
+    Rc::get_mut(&mut np).map(|p| p.push(format!(" {}", line)));
+  };
 
-  diff_iter(hunk_size, before, after, &mut new_hunk, &mut eq, &mut plus, &mut minus);
+  let mut np = Rc::clone(&print);
+  let mut plus = |line: &str| {
+    Rc::get_mut(&mut np).map(|p| p.push(format!("+{}", line)));
+  };
+
+  let mut np = Rc::clone(&print);
+  let mut minus = |line: &str| {
+    Rc::get_mut(&mut np).map(|p| p.push(format!("-{}", line)));
+  };
+
+  diff_iter(
+    hunk_size,
+    before,
+    after,
+    &mut new_hunk,
+    &mut eq,
+    &mut plus,
+    &mut minus,
+  );
   print.join("\n")
 }
