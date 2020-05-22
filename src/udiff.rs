@@ -49,25 +49,25 @@ impl TryFrom<&str> for DiffRange {
     let captures = re
       .captures(candidate)
       .ok_or_else(|| Failure::Parse(candidate.into()))?;
-    let r11 = captures
+    let before_start = captures
       .get(1)
       .ok_or_else(|| Failure::Parse(candidate.into()))?
       .as_str()
       .parse::<usize>()
       .into_sadness()?;
-    let r12 = captures
+    let before_inc = captures
       .get(2)
       .ok_or_else(|| Failure::Parse(candidate.into()))?
       .as_str()
       .parse::<usize>()
       .into_sadness()?;
-    let r21 = captures
+    let after_start = captures
       .get(3)
       .ok_or_else(|| Failure::Parse(candidate.into()))?
       .as_str()
       .parse::<usize>()
       .into_sadness()?;
-    let r22 = captures
+    let after_inc = captures
       .get(4)
       .ok_or_else(|| Failure::Parse(candidate.into()))?
       .as_str()
@@ -75,8 +75,8 @@ impl TryFrom<&str> for DiffRange {
       .into_sadness()?;
 
     Ok(DiffRange {
-      before: (r11, r12),
-      after: (r21, r22),
+      before: (before_start, before_inc),
+      after: (after_start, after_inc),
     })
   }
 }
@@ -113,3 +113,4 @@ pub fn udiff(unified: usize, name: &str, before: &str, after: &str) -> String {
   }
   ret
 }
+
