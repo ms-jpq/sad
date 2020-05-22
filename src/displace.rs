@@ -55,3 +55,4 @@ pub async fn displace(path: PathBuf, opts: &Options) -> SadResult<String> {
     Ok(print)
   }
 }
+

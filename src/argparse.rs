@@ -141,3 +141,4 @@ fn p_pager() -> Option<SubprocessCommand> {
     })
   })
 }
+

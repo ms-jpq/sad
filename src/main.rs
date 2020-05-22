@@ -160,3 +160,4 @@ pub fn err_exit(err: Failure) -> ! {
   eprintln!("{}", Colour::Red.paint(format!("{:#?}", err)));
   process::exit(1)
 }
+
