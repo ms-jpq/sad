@@ -78,7 +78,7 @@ impl TryFrom<&str> for DiffRange {
 
 pub struct Diff {
   range: DiffRange,
-  after_lines: Vec<String>,
+  new_lines: Vec<String>,
 }
 
 pub type Diffs = Vec<Diff>;
@@ -92,20 +92,23 @@ impl Patchable for Diffs {
   fn new(unified: usize, before: &str, after: &str) -> Self {
     let before = before.split_terminator('\n').collect::<Vec<&str>>();
     let after = after.split_terminator('\n').collect::<Vec<&str>>();
+
     let mut ret = Vec::new();
     let mut matcher = SequenceMatcher::new(&before, &after);
+
     for group in &matcher.get_grouped_opcodes(unified) {
-      let mut diff = Diff {
-        range: DiffRange::new(group).unwrap(),
-        after_lines: Vec::new(),
-      };
+      let mut new_lines = Vec::new();
       for code in group {
         if code.tag == "replace" || code.tag == "insert" {
           for line in after.iter().take(code.second_end).skip(code.second_start) {
-            diff.after_lines.push(line.to_string());
+            new_lines.push(line.to_string());
           }
         }
       }
+      let diff = Diff {
+        range: DiffRange::new(group).unwrap(),
+        new_lines,
+      };
       ret.push(diff);
     }
     ret
@@ -114,17 +117,19 @@ impl Patchable for Diffs {
   fn patch(&self, before: &[&str]) -> String {
     let mut ret = String::new();
     let mut prev = 0;
+
     for diff in self.iter() {
       let (before_start, before_inc) = diff.range.before;
-      let before_end = before_start + before_inc - 1;
       for i in prev..before_start {
-        ret.push_str(before.get(i).unwrap())
+        before.get(i).map(|b| ret.push_str(b));
       }
-      for line in diff.after_lines.iter() {
+      for line in diff.new_lines.iter() {
         ret.push_str(line)
       }
-
-      prev = before_end - 1;
+      prev = before_start - 1 + before_inc;
+    }
+    for i in prev..before.len() {
+      before.get(i).map(|b| ret.push_str(b));
     }
     ret
   }
