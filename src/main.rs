@@ -1,7 +1,7 @@
 use ansi_term::Colour;
 use argparse::{Arguments, Options};
 use async_std::sync::{channel, Receiver, Sender};
-use clap::Clap;
+use structopt::StructOpt;
 use errors::*;
 use futures::future::{try_join, try_join3, try_join_all, TryJoinAll};
 use std::{path::PathBuf, process, sync::Arc};
@@ -89,7 +89,7 @@ fn main() {
     .build()
     .unwrap();
   rt.block_on(async {
-    let args = Arguments::parse();
+    let args = Arguments::from_args();
     let (reader, receiver) = args.stream();
     let end = match Options::new(args) {
       Ok(opts) => {

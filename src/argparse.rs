@@ -1,48 +1,48 @@
 use super::errors::*;
 use super::subprocess::SubprocessCommand;
 use aho_corasick::{AhoCorasick, AhoCorasickBuilder};
-use clap::Clap;
+use structopt::StructOpt;
 use regex::{Regex, RegexBuilder};
 use std::{env, path::PathBuf};
 
-#[derive(Clap)]
-#[clap(name = "sad", author, about, version)]
+#[derive(StructOpt)]
+#[structopt(name = "sad", author, about)]
 pub struct Arguments {
-  #[clap(about = "Search pattern")]
+  #[structopt(about = "Search pattern")]
   pub pattern: String,
 
-  #[clap(about = "Replacement pattern")]
+  #[structopt(about = "Replacement pattern")]
   pub replace: Option<String>,
 
-  #[clap(short, long, about = "Skip stdin, supply files to edit")]
+  #[structopt(short, long, about = "Skip stdin, supply files to edit")]
   pub input: Vec<PathBuf>,
 
-  #[clap(short = "0", about = r"Use \0 as stdin delimiter")]
+  #[structopt(short = "0", about = r"Use \0 as stdin delimiter")]
   pub nul_delim: bool,
 
-  #[clap(short = "k", long, about = "No preview, write changes to file")]
+  #[structopt(short = "k", long, about = "No preview, write changes to file")]
   pub commit: bool,
 
-  #[clap(short, long, about = "String literal mode")]
+  #[structopt(short, long, about = "String literal mode")]
   pub exact: bool,
 
-  #[clap(short, long, about = "Standard regex flags: ie. -f imx")]
+  #[structopt(short, long, about = "Standard regex flags: ie. -f imx")]
   pub flags: Option<String>,
 
-  #[clap(long, about = "ignore $GIT_PAGER")]
+  #[structopt(long, about = "ignore $GIT_PAGER")]
   pub no_pager: bool,
 
-  #[clap(
+  #[structopt(
     short,
     long,
     about = "Same as in GNU diff --unified={size}, affects hunk size"
   )]
   pub unified: Option<usize>,
 
-  #[clap(long, about = "*Internal use only*")]
+  #[structopt(long, about = "*Internal use only*")]
   pub interna_preview: Option<String>,
 
-  #[clap(long, about = "*Internal use only*")]
+  #[structopt(long, about = "*Internal use only*")]
   pub internal_patch: Option<String>,
 }
 

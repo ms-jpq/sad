@@ -9,7 +9,7 @@ edition = "2018"
 [dependencies]
 futures = "0.3"
 itertools = "0.9"
-clap = { version = "3.0.0-beta.1", features = ["wrap_help"] }
+structopt = "0.3"
 tokio = { version = "0.2", features = ["fs", "io-std", "io-util", "process", "sync", "rt-threaded"] }
 async-std = { version = "1.5", features = ["unstable"] }
 num_cpus = "1"
