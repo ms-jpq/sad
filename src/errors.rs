@@ -65,4 +65,3 @@ impl From<JoinError> for Failure {
     Failure::JoinError
   }
 }
-

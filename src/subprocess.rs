@@ -122,4 +122,3 @@ pub fn stream(
 
   (handle, rx)
 }
-

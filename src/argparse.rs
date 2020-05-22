@@ -2,7 +2,6 @@ use super::errors::*;
 use super::subprocess::SubprocessCommand;
 use aho_corasick::{AhoCorasick, AhoCorasickBuilder};
 use clap::Clap;
-use either::Either::{self, *};
 use regex::{Regex, RegexBuilder};
 use std::{env, path::PathBuf};
 
@@ -39,18 +38,28 @@ pub struct Arguments {
     about = "Same as in GNU diff --unified={size}, affects hunk size"
   )]
   pub unified: Option<usize>,
+
+  #[clap(long, about = "*Internal use only*")]
+  pub interna_preview: Option<String>,
+
+  #[clap(long, about = "*Internal use only*")]
+  pub internal_patch: Option<String>,
+}
+
+#[derive(Clone)]
+pub enum Engine {
+  AhoCorasick(AhoCorasick, String),
+  Regex(Regex, String),
 }
 
 #[derive(Clone)]
 pub enum Action {
-  Diff,
-  Write,
+  Diff(Engine),
+  Write(Engine),
 }
 
 #[derive(Clone)]
 pub struct Options {
-  pub pattern: Either<AhoCorasick, Regex>,
-  pub replace: String,
   pub action: Action,
   pub pager: Option<SubprocessCommand>,
   pub unified: usize,
@@ -68,25 +77,24 @@ impl Options {
       .collect::<Vec<String>>();
     let flagset = itertools::chain(auto_flags, flags).collect::<Vec<String>>();
 
-    let pattern = {
+    let engine = {
+      let replace = args.replace.unwrap_or_default();
       if args.exact {
-        Left(p_aho_corasick(&args.pattern, &flagset)?)
+        Engine::AhoCorasick(p_aho_corasick(&args.pattern, &flagset)?, replace)
       } else {
-        Right(p_regex(&args.pattern, &flagset)?)
+        Engine::Regex(p_regex(&args.pattern, &flagset)?, replace)
       }
     };
 
     let action = if args.commit {
-      Action::Write
+      Action::Write(engine)
     } else {
-      Action::Diff
+      Action::Diff(engine)
     };
 
     let pager = if args.no_pager { None } else { p_pager() };
 
     Ok(Options {
-      pattern,
-      replace: args.replace.unwrap_or_default(),
       action,
       pager,
       unified: args.unified.unwrap_or(3),
@@ -141,4 +149,3 @@ fn p_pager() -> Option<SubprocessCommand> {
     })
   })
 }
-

@@ -7,7 +7,6 @@ edition = "2018"
 
 
 [dependencies]
-either = "1"
 futures = "0.3"
 itertools = "0.9"
 clap = { version = "3.0.0-beta.1", features = ["wrap_help"] }

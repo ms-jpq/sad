@@ -6,7 +6,6 @@ use std::{
   fmt::{self, Display, Formatter},
 };
 
-#[derive(Debug)]
 pub struct DiffRange {
   before: (usize, usize),
   after: (usize, usize),
@@ -78,7 +77,6 @@ impl TryFrom<&str> for DiffRange {
   }
 }
 
-#[derive(Debug)]
 pub struct Diff {
   range: DiffRange,
   new_lines: Vec<String>,
@@ -179,4 +177,3 @@ pub fn udiff(unified: usize, name: &str, before: &str, after: &str) -> String {
   }
   ret
 }
-
