@@ -5,10 +5,12 @@ use std::{fs::Metadata, path::PathBuf};
 use tokio::fs;
 use uuid::Uuid;
 
-fn replace(before: &str, engine: &Engine) -> String {
-  match engine {
-    Engine::AhoCorasick(ac, replace) => ac.replace_all(&before, &[replace.as_str()]),
-    Engine::Regex(re, replace) => re.replace_all(&before, replace.as_str()).into(),
+impl Engine {
+  fn replace(&self, before: &str) -> String {
+    match self {
+      Engine::AhoCorasick(ac, replace) => ac.replace_all(&before, &[replace.as_str()]),
+      Engine::Regex(re, replace) => re.replace_all(&before, replace.as_str()).into(),
+    }
   }
 }
 
@@ -41,8 +43,8 @@ pub async fn displace(path: PathBuf, opts: &Options) -> SadResult<String> {
   }
   let before = fs::read_to_string(&canonical).await.into_sadness()?;
   let after = match &opts.action {
-    Action::Diff(engine) => replace(&before, &engine),
-    Action::Write(engine) => replace(&before, &engine),
+    Action::Diff(engine) => engine.replace(&before),
+    Action::Write(engine) => engine.replace(&before),
   };
   if before == after {
     Ok(String::new())
