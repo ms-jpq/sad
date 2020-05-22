@@ -1,14 +1,30 @@
-use difflib::sequencematcher::SequenceMatcher;
+use difflib::{sequencematcher::Opcode, sequencematcher::SequenceMatcher};
+use std::fmt::{self, Display, Formatter};
 
+pub struct DiffRange {
+  r1: (usize, usize),
+  r2: (usize, usize),
+}
 
-// pub struct Hunk {
-//   pub name: String,
-//   pub range: (usize, usize),
-//   pub lines: Vec<String>,
-// }
+impl DiffRange {
+  fn new(ops: &[Opcode]) -> Option<DiffRange> {
+    match (ops.first(), ops.last()) {
+      (Some(first), Some(last)) => Some(DiffRange {
+        r1: (first.first_start, last.first_end),
+        r2: (first.second_start, last.second_end),
+      }),
+      _ => None,
+    }
+  }
+}
 
+impl Display for DiffRange {
+  fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+    write!(f, "@@ -{} +{} @@", format_range_unified(self.r1), format_range_unified(self.r2))
+  }
+}
 
-fn format_range_unified(start: usize, end: usize) -> String {
+fn format_range_unified((start, end): (usize, usize)) -> String {
   let mut beginning = start + 1;
   let length = end - start;
   if length == 1 {
@@ -20,7 +36,6 @@ fn format_range_unified(start: usize, end: usize) -> String {
   format!("{},{}", beginning, length)
 }
 
-
 pub fn udiff(hunk_size: usize, name: &str, before: &str, after: &str) -> String {
   let before = before.split_terminator('\n').collect::<Vec<&str>>();
   let after = after.split_terminator('\n').collect::<Vec<&str>>();
@@ -31,10 +46,7 @@ pub fn udiff(hunk_size: usize, name: &str, before: &str, after: &str) -> String 
   ];
   let mut matcher = SequenceMatcher::new(&before, &after);
   for group in &matcher.get_grouped_opcodes(hunk_size) {
-    let (first, last) = (group.first().unwrap(), group.last().unwrap());
-    let r1 = format_range_unified(first.first_start, last.first_end);
-    let r2 = format_range_unified(first.second_start, last.second_end);
-    print.push(format!("@@ -{} +{} @@", r1, r2));
+    print.push(format!("{}", DiffRange::new(group).unwrap()));
     for code in group {
       if code.tag == "equal" {
         for line in before.iter().take(code.first_end).skip(code.first_start) {
