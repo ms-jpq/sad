@@ -42,16 +42,13 @@ pub async fn displace(path: PathBuf, opts: &Options) -> SadResult<String> {
     return Err(Failure::Simple(msg));
   }
   let before = fs::read_to_string(&canonical).await.into_sadness()?;
-  let after = match &opts.action {
-    Action::Diff(engine) => engine.replace(&before),
-    Action::Write(engine) => engine.replace(&before),
-  };
+  let after = opts.engine.replace(&before);
   if before == after {
     Ok(String::new())
   } else {
     let print = match opts.action {
-      Action::Diff(_) => udiff(opts.unified, &name, &before, &after),
-      Action::Write(_) => {
+      Action::Diff => udiff(opts.unified, &name, &before, &after),
+      Action::Write => {
         safe_write(&canonical, &meta, &after).await?;
         format!("{}\n", name)
       }

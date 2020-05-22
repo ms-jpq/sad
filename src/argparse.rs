@@ -54,13 +54,14 @@ pub enum Engine {
 
 #[derive(Clone)]
 pub enum Action {
-  Diff(Engine),
-  Write(Engine),
+  Diff,
+  Write,
 }
 
 #[derive(Clone)]
 pub struct Options {
   pub action: Action,
+  pub engine: Engine,
   pub pager: Option<SubprocessCommand>,
   pub unified: usize,
 }
@@ -87,15 +88,16 @@ impl Options {
     };
 
     let action = if args.commit {
-      Action::Write(engine)
+      Action::Write
     } else {
-      Action::Diff(engine)
+      Action::Diff
     };
 
     let pager = if args.no_pager { None } else { p_pager() };
 
     Ok(Options {
       action,
+      engine,
       pager,
       unified: args.unified.unwrap_or(3),
     })
