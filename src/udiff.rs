@@ -84,6 +84,7 @@ pub struct Diff {
 pub type Diffs = Vec<Diff>;
 
 trait Patchable {
+pub trait Patchable {
   fn new(unified: usize, before: &str, after: &str) -> Self;
   fn patch(&self, before: &[&str]) -> String;
 }

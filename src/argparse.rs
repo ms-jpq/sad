@@ -33,7 +33,11 @@ pub struct Arguments {
   #[clap(long, about = "ignore $GIT_PAGER")]
   pub no_pager: bool,
 
-  #[clap(short, long, about = "Same as in GNU diff --unified={size}, affects hunk size")]
+  #[clap(
+    short,
+    long,
+    about = "Same as in GNU diff --unified={size}, affects hunk size"
+  )]
   pub unified: Option<usize>,
 }
 

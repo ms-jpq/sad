@@ -48,7 +48,6 @@ impl From<string::FromUtf8Error> for Failure {
   }
 }
 
-
 impl From<num::ParseIntError> for Failure {
   fn from(err: num::ParseIntError) -> Self {
     Failure::Parse(format!("{:#?}", err))
