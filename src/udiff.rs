@@ -20,7 +20,12 @@ impl DiffRange {
 
 impl Display for DiffRange {
   fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-    write!(f, "@@ -{} +{} @@", format_range_unified(self.r1), format_range_unified(self.r2))
+    write!(
+      f,
+      "@@ -{} +{} @@",
+      format_range_unified(self.r1),
+      format_range_unified(self.r2)
+    )
   }
 }
 
@@ -66,6 +71,5 @@ pub fn udiff(hunk_size: usize, name: &str, before: &str, after: &str) -> String 
       }
     }
   }
-  print.push('\n');
   print
 }
