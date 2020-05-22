@@ -18,24 +18,12 @@ impl DiffRange {
   pub fn new(ops: &[Opcode]) -> Option<DiffRange> {
     match (ops.first(), ops.last()) {
       (Some(first), Some(last)) => Some(DiffRange {
-        before: format_range(first.first_start, last.first_end),
-        after: format_range(first.second_start, last.second_end),
+        before: (first.first_start + 1, last.first_end - first.first_start),
+        after: (first.second_start + 1, last.second_end - first.second_start),
       }),
       _ => None,
     }
   }
-}
-
-pub fn format_range(start: usize, end: usize) -> (usize, usize) {
-  let mut beginning = start + 1;
-  let length = end - start;
-  if length == 1 {
-    return (beginning, 1)
-  }
-  if length == 0 {
-    beginning -= 1;
-  }
-  (beginning, length)
 }
 
 impl Display for DiffRange {
