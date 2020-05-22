@@ -90,7 +90,7 @@ fn main() {
     .unwrap();
   rt.block_on(async {
     let args = Arguments::parse();
-    let (reader, receiver) = input::choose_input(&args);
+    let (reader, receiver) = args.stream();
     let end = match Options::new(args) {
       Ok(opts) => {
         let (steps, rx) = stream_process(&opts, receiver);

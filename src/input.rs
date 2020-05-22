@@ -8,6 +8,16 @@ use tokio::{
   task,
 };
 
+impl Arguments {
+  pub fn stream(&self) -> (Task, Receiver<SadResult<PathBuf>>) {
+    if self.input.is_empty() {
+      stream_stdin(&self)
+    } else {
+      stream_list(self.input.clone())
+    }
+  }
+}
+
 fn stream_stdin(args: &Arguments) -> (Task, Receiver<SadResult<PathBuf>>) {
   let delim = if args.nul_delim { b'\0' } else { b'\n' };
   let (tx, rx) = channel::<SadResult<PathBuf>>(1);
@@ -45,12 +55,4 @@ fn p_path(name: &[u8]) -> SadResult<PathBuf> {
   String::from_utf8(name.to_vec())
     .map(|p| PathBuf::from(p.as_str()))
     .into_sadness()
-}
-
-pub fn choose_input(args: &Arguments) -> (Task, Receiver<SadResult<PathBuf>>) {
-  if args.input.is_empty() {
-    stream_stdin(&args)
-  } else {
-    stream_list(args.input.clone())
-  }
 }
