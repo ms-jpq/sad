@@ -13,21 +13,14 @@ pub struct DiffRange {
 
 impl Display for DiffRange {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    write!(f, "")
+    write!(
+      f,
+      "@@ -{} +{} @@",
+      format_range_unified(self.r11, self.r12),
+      format_range_unified(self.r21, self.r22)
+    )
   }
 }
-
-// pub enum DiffLine {
-//   Iden(String),
-//   Plus(String),
-//   Minus(String),
-// }
-
-// pub struct Hunk {
-//   pub name: String,
-//   pub range: DiffRange,
-//   intern: Vec<DiffLine>,
-// }
 
 fn format_range_unified(start: usize, end: usize) -> String {
   let mut beginning = start + 1;
@@ -120,3 +113,15 @@ pub fn udiff(hunk_size: usize, name: &str, before: &str, after: &str) -> String 
   );
   print.join("\n")
 }
+
+// pub enum DiffLine {
+//   Iden(String),
+//   Plus(String),
+//   Minus(String),
+// }
+
+// pub struct Hunk {
+//   pub name: String,
+//   pub range: DiffRange,
+//   intern: Vec<DiffLine>,
+// }
