@@ -39,32 +39,33 @@ fn format_range_unified((start, end): (usize, usize)) -> String {
 pub fn udiff(hunk_size: usize, name: &str, before: &str, after: &str) -> String {
   let before = before.split_terminator('\n').collect::<Vec<&str>>();
   let after = after.split_terminator('\n').collect::<Vec<&str>>();
-  let mut print = vec![
-    format!("\ndiff --git {} {}", name, name),
-    format!("--- {}", name),
-    format!("+++ {}", name),
-  ];
+  let mut print = String::new();
+  print.push_str(&format!("\ndiff --git {} {}", name, name));
+  print.push_str(&format!("\n--- {}", name));
+  print.push_str(&format!("\n+++ {}", name));
+
   let mut matcher = SequenceMatcher::new(&before, &after);
   for group in &matcher.get_grouped_opcodes(hunk_size) {
-    print.push(format!("{}", DiffRange::new(group).unwrap()));
+    print.push_str(&format!("\n{}", DiffRange::new(group).unwrap()));
     for code in group {
       if code.tag == "equal" {
         for line in before.iter().take(code.first_end).skip(code.first_start) {
-          print.push(format!(" {}", line))
+          print.push_str(&format!("\n {}", line))
         }
         continue;
       }
       if code.tag == "replace" || code.tag == "delete" {
         for line in before.iter().take(code.first_end).skip(code.first_start) {
-          print.push(format!("-{}", line))
+          print.push_str(&format!("\n-{}", line))
         }
       }
       if code.tag == "replace" || code.tag == "insert" {
         for line in after.iter().take(code.second_end).skip(code.second_start) {
-          print.push(format!("+{}", line))
+          print.push_str(&format!("\n+{}", line))
         }
       }
     }
   }
-  print.join("\n")
+  print.push('\n');
+  print
 }

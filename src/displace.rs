@@ -43,7 +43,7 @@ pub async fn displace(path: PathBuf, opts: &Options) -> SadResult<String> {
   let before = fs::read_to_string(&canonical).await.into_sadness()?;
   let after = replace(&before, opts);
   if before == after {
-    Ok("".into())
+    Ok(String::new())
   } else {
     let print = match opts.action {
       Action::Diff => udiff::udiff(opts.hunk, &name, &before, &after),
