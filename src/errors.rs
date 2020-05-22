@@ -1,4 +1,4 @@
-use std::{io, string};
+use std::{io, num, string};
 use tokio::task::JoinError;
 
 /*
@@ -14,6 +14,7 @@ pub enum Failure {
   Regex(regex::Error),
   JoinError,
   Pager(String),
+  Parse(String),
 }
 
 pub type SadResult<T> = Result<T, Failure>;
@@ -44,6 +45,12 @@ impl From<io::Error> for Failure {
 impl From<string::FromUtf8Error> for Failure {
   fn from(err: string::FromUtf8Error) -> Self {
     Failure::Str(err)
+  }
+}
+
+impl From<num::ParseIntError> for Failure {
+  fn from(err: num::ParseIntError) -> Self {
+    Failure::Parse(format!("{:#?}", err))
   }
 }
 

@@ -1,80 +1,183 @@
-use difflib::sequencematcher::SequenceMatcher;
+use super::errors::*;
+use difflib::{sequencematcher::Opcode, sequencematcher::SequenceMatcher};
+use regex::Regex;
 use std::{
-  cell::RefCell,
-  fmt::{self, Display},
-  rc::Rc,
+  convert::TryFrom,
+  fmt::{self, Display, Formatter},
 };
 
+#[derive(Debug)]
 pub struct DiffRange {
-  pub r11: usize,
-  pub r12: usize,
-  pub r21: usize,
-  pub r22: usize,
+  before: (usize, usize),
+  after: (usize, usize),
+}
+
+impl DiffRange {
+  pub fn new(ops: &[Opcode]) -> Option<DiffRange> {
+    match (ops.first(), ops.last()) {
+      (Some(first), Some(last)) => Some(DiffRange {
+        before: (first.first_start, last.first_end - first.first_start),
+        after: (first.second_start, last.second_end - first.second_start),
+      }),
+      _ => None,
+    }
+  }
 }
 
 impl Display for DiffRange {
-  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+  fn fmt(&self, f: &mut Formatter) -> fmt::Result {
     write!(
       f,
-      "@@ -{} +{} @@",
-      format_range_unified(self.r11, self.r12),
-      format_range_unified(self.r21, self.r22)
+      "@@ -{},{} +{},{} @@",
+      self.before.0 + 1,
+      self.before.1,
+      self.after.0 + 1,
+      self.after.1,
     )
   }
 }
 
-fn format_range_unified(start: usize, end: usize) -> String {
-  let mut beginning = start + 1;
-  let length = end - start;
-  if length == 1 {
-    return beginning.to_string();
+impl TryFrom<&str> for DiffRange {
+  type Error = Failure;
+
+  fn try_from(candidate: &str) -> SadResult<Self> {
+    let preg = r"^@@ -(\d+),(\d+) \+(\d+),(\d+) @@$";
+    let re = Regex::new(preg).into_sadness()?;
+    let captures = re
+      .captures(candidate)
+      .ok_or_else(|| Failure::Parse(candidate.into()))?;
+    let before_start = captures
+      .get(1)
+      .ok_or_else(|| Failure::Parse(candidate.into()))?
+      .as_str()
+      .parse::<usize>()
+      .into_sadness()?;
+    let before_inc = captures
+      .get(2)
+      .ok_or_else(|| Failure::Parse(candidate.into()))?
+      .as_str()
+      .parse::<usize>()
+      .into_sadness()?;
+    let after_start = captures
+      .get(3)
+      .ok_or_else(|| Failure::Parse(candidate.into()))?
+      .as_str()
+      .parse::<usize>()
+      .into_sadness()?;
+    let after_inc = captures
+      .get(4)
+      .ok_or_else(|| Failure::Parse(candidate.into()))?
+      .as_str()
+      .parse::<usize>()
+      .into_sadness()?;
+
+    Ok(DiffRange {
+      before: (before_start - 1, before_inc),
+      after: (after_start - 1, after_inc),
+    })
   }
-  if length == 0 {
-    beginning -= 1;
-  }
-  format!("{},{}", beginning, length)
 }
 
-fn diff_iter(
-  n: usize,
-  before: &str,
-  after: &str,
-  new_hunk: &mut impl FnMut(DiffRange),
-  eq: &mut impl FnMut(&str),
-  plus: &mut impl FnMut(&str),
-  minus: &mut impl FnMut(&str),
-) {
+#[derive(Debug)]
+pub struct Diff {
+  range: DiffRange,
+  new_lines: Vec<String>,
+}
+
+pub type Diffs = Vec<Diff>;
+
+pub trait Patchable {
+  fn new(unified: usize, before: &str, after: &str) -> Self;
+  fn patch(&self, before: &[&str]) -> String;
+}
+
+impl Patchable for Diffs {
+  fn new(unified: usize, before: &str, after: &str) -> Self {
+    let before = before.split_terminator('\n').collect::<Vec<&str>>();
+    let after = after.split_terminator('\n').collect::<Vec<&str>>();
+
+    let mut ret = Vec::new();
+    let mut matcher = SequenceMatcher::new(&before, &after);
+
+    for group in &matcher.get_grouped_opcodes(unified) {
+      let mut new_lines = Vec::new();
+      for code in group {
+        if code.tag == "equal" {
+          for line in before.iter().take(code.first_end).skip(code.first_start) {
+            new_lines.push(line.to_string());
+          }
+          continue;
+        }
+        if code.tag == "replace" || code.tag == "insert" {
+          for line in after.iter().take(code.second_end).skip(code.second_start) {
+            new_lines.push(line.to_string());
+          }
+        }
+      }
+      let diff = Diff {
+        range: DiffRange::new(group).unwrap(),
+        new_lines,
+      };
+      ret.push(diff);
+    }
+    ret
+  }
+
+  fn patch(&self, before: &[&str]) -> String {
+    let mut ret = String::new();
+    let mut prev = 0;
+
+    for diff in self.iter() {
+      let (before_start, before_inc) = diff.range.before;
+      for i in prev..before_start {
+        before.get(i).map(|b| ret.push_str(b)).unwrap();
+        ret.push('\n');
+      }
+      for line in diff.new_lines.iter() {
+        ret.push_str(line);
+        ret.push('\n')
+      }
+      prev = before_start + before_inc;
+    }
+    for i in prev..before.len() {
+      before.get(i).map(|b| ret.push_str(b)).unwrap();
+      ret.push('\n')
+    }
+    ret
+  }
+}
+
+pub fn udiff(unified: usize, name: &str, before: &str, after: &str) -> String {
   let before = before.split_terminator('\n').collect::<Vec<&str>>();
   let after = after.split_terminator('\n').collect::<Vec<&str>>();
+  let mut ret = String::new();
+  ret.push_str(&format!("\ndiff --git {} {}", name, name));
+  ret.push_str(&format!("\n--- {}", name));
+  ret.push_str(&format!("\n+++ {}", name));
+
   let mut matcher = SequenceMatcher::new(&before, &after);
-  for group in &matcher.get_grouped_opcodes(n) {
-    let (first, last) = (group.first().unwrap(), group.last().unwrap());
-    let range = DiffRange {
-      r11: first.first_start,
-      r12: last.first_end,
-      r21: first.second_start,
-      r22: last.second_end,
-    };
-    new_hunk(range);
+  for group in &matcher.get_grouped_opcodes(unified) {
+    ret.push_str(&format!("\n{}", DiffRange::new(group).unwrap()));
     for code in group {
       if code.tag == "equal" {
         for line in before.iter().take(code.first_end).skip(code.first_start) {
-          // eq(*line)
+          ret.push_str(&format!("\n {}", line))
         }
         continue;
       }
       if code.tag == "replace" || code.tag == "delete" {
         for line in before.iter().take(code.first_end).skip(code.first_start) {
-          // minus(*line)
+          ret.push_str(&format!("\n-{}", line))
         }
       }
       if code.tag == "replace" || code.tag == "insert" {
         for line in after.iter().take(code.second_end).skip(code.second_start) {
-          // plus(*line)
+          ret.push_str(&format!("\n+{}", line))
         }
       }
     }
   }
+  ret
 }
 
 pub fn udiff(hunk_size: usize, name: &str, before: &str, after: &str) -> String {
