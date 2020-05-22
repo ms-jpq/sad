@@ -1,10 +1,10 @@
 use ansi_term::Colour;
 use argparse::{Arguments, Options};
 use async_std::sync::{channel, Receiver, Sender};
-use structopt::StructOpt;
 use errors::*;
 use futures::future::{try_join, try_join3, try_join_all, TryJoinAll};
 use std::{path::PathBuf, process, sync::Arc};
+use structopt::StructOpt;
 use subprocess::SubprocessCommand;
 use tokio::{
   io::{self, AsyncWriteExt, BufWriter},
@@ -70,7 +70,7 @@ fn stream_stdout(stream: Receiver<SadResult<String>>) -> Task {
 fn stream_output(cmd: Option<SubprocessCommand>, stream: Receiver<SadResult<String>>) -> Task {
   match cmd {
     Some(cmd) => {
-      let (child, rx) = subprocess::stream(&cmd, stream);
+      let (child, rx) = cmd.stream(stream);
       let recv = stream_stdout(rx);
       task::spawn(async {
         if let Err(e) = try_join(child, recv).await {

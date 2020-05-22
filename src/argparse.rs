@@ -1,9 +1,9 @@
 use super::errors::*;
 use super::subprocess::SubprocessCommand;
 use aho_corasick::{AhoCorasick, AhoCorasickBuilder};
-use structopt::StructOpt;
 use regex::{Regex, RegexBuilder};
 use std::{env, path::PathBuf};
+use structopt::StructOpt;
 
 #[derive(StructOpt)]
 #[structopt(name = "sad", author, about)]
