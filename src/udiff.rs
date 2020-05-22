@@ -1,5 +1,6 @@
 use difflib::sequencematcher::SequenceMatcher;
 use std::{
+  cell::RefCell,
   fmt::{self, Display},
   rc::Rc,
 };
@@ -58,18 +59,18 @@ fn diff_iter(
     for code in group {
       if code.tag == "equal" {
         for line in before.iter().take(code.first_end).skip(code.first_start) {
-          eq(*line)
+          // eq(*line)
         }
         continue;
       }
       if code.tag == "replace" || code.tag == "delete" {
         for line in before.iter().take(code.first_end).skip(code.first_start) {
-          minus(*line)
+          // minus(*line)
         }
       }
       if code.tag == "replace" || code.tag == "insert" {
         for line in after.iter().take(code.second_end).skip(code.second_start) {
-          plus(*line)
+          // plus(*line)
         }
       }
     }
@@ -77,29 +78,30 @@ fn diff_iter(
 }
 
 pub fn udiff(hunk_size: usize, name: &str, before: &str, after: &str) -> String {
-  let print = Rc::new(vec![
-    format!("\ndiff --git {} {}", name, name),
-    format!("--- {}", name),
-    format!("+++ {}", name),
-  ]);
+  let ret = Rc::new(RefCell::new(String::new()));
 
-  let mut np = Rc::clone(&print);
+  let mut r = (*ret).borrow_mut();
+  r.push_str(&format!("\ndiff --git {} {}", name, name));
+  r.push_str(&format!("--- {}", name));
+  r.push_str(&format!("+++ {}", name));
+
+  let np = Rc::clone(&ret);
   let mut new_hunk = |size| {
-    Rc::get_mut(&mut np).map(|p| p.push(format!("{}", size)));
+    (*np).borrow_mut().push_str(&format!("{}", size));
   };
-  let mut np = Rc::clone(&print);
+  let np = Rc::clone(&ret);
   let mut eq = |line: &str| {
-    Rc::get_mut(&mut np).map(|p| p.push(format!(" {}", line)));
+    // (*np).borrow_mut().push_str(&format!(" {}", line));
   };
 
-  let mut np = Rc::clone(&print);
+  let np = Rc::clone(&ret);
   let mut plus = |line: &str| {
-    Rc::get_mut(&mut np).map(|p| p.push(format!("+{}", line)));
+    // (*np).borrow_mut().push_str(&format!("+{}", line));
   };
 
-  let mut np = Rc::clone(&print);
+  let np = Rc::clone(&ret);
   let mut minus = |line: &str| {
-    Rc::get_mut(&mut np).map(|p| p.push(format!("-{}", line)));
+    // (*np).borrow_mut().push_str(&format!("-{}", line));
   };
 
   diff_iter(
@@ -111,7 +113,8 @@ pub fn udiff(hunk_size: usize, name: &str, before: &str, after: &str) -> String 
     &mut plus,
     &mut minus,
   );
-  print.join("\n")
+
+  (*ret).replace(String::new())
 }
 
 // pub enum DiffLine {
