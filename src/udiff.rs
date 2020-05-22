@@ -7,6 +7,7 @@ use std::{
 };
 
 // WARN: Index starts at 1
+#[derive(Debug)]
 pub struct DiffRange {
   before: (usize, usize),
   after: (usize, usize),
@@ -17,12 +18,24 @@ impl DiffRange {
   pub fn new(ops: &[Opcode]) -> Option<DiffRange> {
     match (ops.first(), ops.last()) {
       (Some(first), Some(last)) => Some(DiffRange {
-        before: (first.first_start + 1, last.first_end - first.first_start),
-        after: (first.second_start + 1, last.second_end - first.second_start),
+        before: format_range(first.first_start, last.first_end),
+        after: format_range(first.second_start, last.second_end),
       }),
       _ => None,
     }
   }
+}
+
+pub fn format_range(start: usize, end: usize) -> (usize, usize) {
+  let mut beginning = start + 1;
+  let length = end - start;
+  if length == 1 {
+    return (beginning, 1)
+  }
+  if length == 0 {
+    beginning -= 1;
+  }
+  (beginning, length)
 }
 
 impl Display for DiffRange {
@@ -76,6 +89,7 @@ impl TryFrom<&str> for DiffRange {
   }
 }
 
+#[derive(Debug)]
 pub struct Diff {
   range: DiffRange,
   new_lines: Vec<String>,
@@ -83,7 +97,6 @@ pub struct Diff {
 
 pub type Diffs = Vec<Diff>;
 
-trait Patchable {
 pub trait Patchable {
   fn new(unified: usize, before: &str, after: &str) -> Self;
   fn patch(&self, before: &[&str]) -> String;
@@ -122,15 +135,18 @@ impl Patchable for Diffs {
     for diff in self.iter() {
       let (before_start, before_inc) = diff.range.before;
       for i in prev..before_start {
-        before.get(i).map(|b| ret.push_str(b));
+        before.get(i).map(|b| ret.push_str(b)).unwrap();
+        ret.push('\n');
       }
       for line in diff.new_lines.iter() {
-        ret.push_str(line)
+        ret.push_str(line);
+        ret.push('\n')
       }
       prev = before_start - 1 + before_inc;
     }
     for i in prev..before.len() {
-      before.get(i).map(|b| ret.push_str(b));
+      before.get(i).map(|b| ret.push_str(b)).unwrap();
+      ret.push('\n')
     }
     ret
   }
