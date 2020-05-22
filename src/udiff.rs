@@ -102,13 +102,13 @@ impl Patchable for Diffs {
       for code in group {
         if code.tag == "equal" {
           for line in before.iter().take(code.first_end).skip(code.first_start) {
-            new_lines.push(line.to_string());
+            new_lines.push((*line).to_string());
           }
           continue;
         }
         if code.tag == "replace" || code.tag == "insert" {
           for line in after.iter().take(code.second_end).skip(code.second_start) {
-            new_lines.push(line.to_string());
+            new_lines.push((*line).to_string());
           }
         }
       }

@@ -1,14 +1,14 @@
-use super::argparse::{Engine,Action, Options};
+use super::argparse::{Action, Engine, Options};
 use super::errors::*;
 use super::udiff::udiff;
 use std::{fs::Metadata, path::PathBuf};
 use tokio::fs;
 use uuid::Uuid;
 
-fn replace(before: &str, action: &Action) -> String {
-  match action {
-    Engine::AhoCorasick(ac) => ac.replace_all(&before, &[action.replace.as_str()]),
-    Engine::Regex(re) => re.replace_all(&before, action.replace.as_str()).into(),
+fn replace(before: &str, engine: &Engine) -> String {
+  match engine {
+    Engine::AhoCorasick(ac, replace) => ac.replace_all(&before, &[replace.as_str()]),
+    Engine::Regex(re, replace) => re.replace_all(&before, replace.as_str()).into(),
   }
 }
 
@@ -40,7 +40,10 @@ pub async fn displace(path: PathBuf, opts: &Options) -> SadResult<String> {
     return Err(Failure::Simple(msg));
   }
   let before = fs::read_to_string(&canonical).await.into_sadness()?;
-  let after = replace(&before, &opts.action);
+  let after = match &opts.action {
+    Action::Diff(engine) => replace(&before, &engine),
+    Action::Write(engine) => replace(&before, &engine),
+  };
   if before == after {
     Ok(String::new())
   } else {
