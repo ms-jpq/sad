@@ -1,7 +1,7 @@
 use super::errors::*;
 use super::types::Task;
 use async_std::sync::{channel, Receiver, Sender};
-use futures::future::{select, try_join, try_join4, Either};
+use futures::future::{try_join, try_join4};
 use std::process::Stdio;
 use tokio::{
   io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader, BufWriter},
@@ -128,7 +128,7 @@ impl SubprocessCommand {
     stream: Receiver<SadResult<String>>,
   ) -> (Task, Receiver<SadResult<String>>) {
     let (tx, rx) = channel::<SadResult<String>>(1);
-    let (tix, rix) = channel::<Failure>(1);
+    let tt = Sender::clone(&tx);
     let ta = Sender::clone(&tx);
 
     let subprocess = Command::new(&self.program)
@@ -160,44 +160,28 @@ impl SubprocessCommand {
         match print {
           Ok(val) => {
             if let Err(err) = stdin.write(val.as_bytes()).await.into_sadness() {
-              tix.send(err).await;
+              tx.send(Err(err)).await;
             }
           }
-          Err(err) => tix.send(err).await,
+          Err(err) => tx.send(Err(err)).await,
         }
       }
       if let Err(err) = stdin.shutdown().await {
-        tix.send(err.into()).await;
+        tx.send(Err(err.into())).await;
       }
     });
 
-    let handle_kill = task::spawn(async move { rix.recv().await });
-
     let handle_child = task::spawn(async move {
-      match select(child, handle_kill).await {
-        Either::Left((exit, _)) => match exit {
-          Err(err) => tx.send(Err(err.into())).await,
-          Ok(status) => match status.code() {
-            Some(0) | Some(1) | Some(130) | None => {}
-            Some(c) => {
-              tx.send(Err(Failure::Fzf(format!("Error exit - {}", c))))
-                .await
-            }
-          },
-        },
-        Either::Right((handle, mut child)) => {
-          let err = match handle.into_sadness() {
-            Ok(Some(err)) => err,
-            Ok(None) => Failure::Fzf("Uknown reason".to_string()),
-            Err(err) => err,
-          };
-          let err = match child.kill() {
-            Ok(_) => err,
-            Err(e) => Failure::Fzf(format!("{:#?}\n{:#?}", err, e)),
-          };
-          tx.send(Err(err)).await
+      match child.await {
+        Err(err) =>
+        tt.send(Err(err.into())).await,
+        Ok(status) => {
+          match status.code() {
+            Some(0) | Some(1) | Some(130) | None => {},
+            Some(c) => tt.send(Err(Failure::Fzf(format!("Error exit - {}", c)))).await
+          }
         }
-      };
+      }
     });
 
     let handle = task::spawn(async move {
