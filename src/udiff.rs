@@ -44,7 +44,7 @@ pub type Diffs = Vec<Diff>;
 
 pub trait Patchable {
   fn new(unified: usize, before: &str, after: &str) -> Self;
-  fn patch(&self, before: &[&str]) -> String;
+  fn patch(&self, ranges: &HashSet<DiffRange>, before: &str) -> String;
 }
 
 impl Patchable for Diffs {
@@ -79,21 +79,30 @@ impl Patchable for Diffs {
     ret
   }
 
-  fn patch(&self, before: &[&str]) -> String {
+  fn patch(&self, ranges: &HashSet<DiffRange>, before: &str) -> String {
+    let before = before.split_terminator('\n').collect::<Vec<&str>>();
     let mut ret = String::new();
     let mut prev = 0;
 
     for diff in self.iter() {
       let (before_start, before_inc) = diff.range.before;
+      let before_end = before_start + before_inc;
       for i in prev..before_start {
         before.get(i).map(|b| ret.push_str(b)).unwrap();
         ret.push('\n');
       }
-      for line in diff.new_lines.iter() {
-        ret.push_str(line);
-        ret.push('\n')
+      if ranges.contains(&diff.range) {
+        for line in diff.new_lines.iter() {
+          ret.push_str(line);
+          ret.push('\n')
+        }
+      } else {
+        for i in before_start..before_end {
+          before.get(i).map(|b| ret.push_str(b)).unwrap();
+          ret.push('\n')
+        }
       }
-      prev = before_start + before_inc;
+      prev = before_end;
     }
     for i in prev..before.len() {
       before.get(i).map(|b| ret.push_str(b)).unwrap();
@@ -104,7 +113,7 @@ impl Patchable for Diffs {
 }
 
 pub fn udiff(
-  ranges: Option<HashSet<DiffRange>>,
+  ranges: Option<&HashSet<DiffRange>>,
   unified: usize,
   name: &str,
   before: &str,
@@ -112,6 +121,7 @@ pub fn udiff(
 ) -> String {
   let before = before.split_terminator('\n').collect::<Vec<&str>>();
   let after = after.split_terminator('\n').collect::<Vec<&str>>();
+
   let mut ret = String::new();
   ret.push_str(&format!("\ndiff --git {} {}", name, name));
   ret.push_str(&format!("\n--- {}", name));

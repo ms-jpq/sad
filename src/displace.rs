@@ -1,7 +1,7 @@
 use super::argparse::{Action, Engine, Options};
 use super::errors::*;
 use super::input::Payload;
-use super::udiff::udiff;
+use super::udiff::{udiff, Diffs, Patchable};
 use std::{fs::Metadata, path::PathBuf};
 use tokio::fs;
 use uuid::Uuid;
@@ -54,9 +54,9 @@ async fn safe_write(canonical: &PathBuf, meta: &Metadata, text: &str) -> SadResu
 }
 
 pub async fn displace(opts: &Options, payload: Payload) -> SadResult<String> {
-  let path = payload.path();
+  let path = payload.path().clone();
   let name = path.to_string_lossy();
-  let (canonical, meta) = read_meta(path).await?;
+  let (canonical, meta) = read_meta(&path).await?;
   let before = fs::read_to_string(&canonical).await.into_sadness()?;
   let after = opts.engine.replace(&before);
 
@@ -68,7 +68,13 @@ pub async fn displace(opts: &Options, payload: Payload) -> SadResult<String> {
         udiff(None, opts.unified, &name, &before, &after)
       }
     }
-    (Action::Preview, Payload::Piecewise(_, _)) => String::new(),
+    (Action::Preview, Payload::Piecewise(_, ranges)) => {
+      if before == after {
+        String::new()
+      } else {
+        udiff(Some(ranges), opts.unified, &name, &before, &after)
+      }
+    }
     (Action::Commit, Payload::Entire(_)) => {
       if before == after {
         String::new()
@@ -77,7 +83,14 @@ pub async fn displace(opts: &Options, payload: Payload) -> SadResult<String> {
         format!("{}\n", name)
       }
     }
-    (Action::Commit, Payload::Piecewise(_, _)) => String::new(),
+    (Action::Commit, Payload::Piecewise(_, ranges)) => {
+      if before == after {
+        String::new()
+      } else {
+        let diffs: Diffs = Patchable::new(opts.unified, &before, &after);
+        diffs.patch(&ranges, &before)
+      }
+    }
   };
   Ok(print)
 }
