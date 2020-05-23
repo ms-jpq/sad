@@ -17,14 +17,19 @@ pub enum Payload {
 
 impl Arguments {
   pub fn stream(&self) -> (Task, Receiver<SadResult<Payload>>) {
-    if self.input.is_empty() {
+    if let Some(preview) = &self.internal_preview {
+      stream_preview(&self)
+    }
+    else if let Some(patch) = &self.internal_patch {
+      stream_patch(&self)
+    }
+    else if self.input.is_empty() {
       stream_stdin(&self)
     } else {
-      stream_input(self.input.clone())
+      stream_input(&self)
     }
   }
 }
-
 impl TryFrom<&str> for DiffRange {
   type Error = Failure;
 
@@ -66,6 +71,27 @@ impl TryFrom<&str> for DiffRange {
   }
 }
 
+
+fn stream_preview(args: &Arguments) -> (Task, Receiver<SadResult<Payload>>) {
+  let (tx, rx) = channel::<SadResult<Payload>>(1);
+  let handle = task::spawn(async move {
+    for path in Vec::new() {
+      tx.send(Ok(Payload::Entire(path))).await;
+    }
+  });
+  (handle, rx)
+}
+
+fn stream_patch(args: &Arguments) -> (Task, Receiver<SadResult<Payload>>) {
+  let (tx, rx) = channel::<SadResult<Payload>>(1);
+  let handle = task::spawn(async move {
+    for path in Vec::new() {
+      tx.send(Ok(Payload::Entire(path))).await;
+    }
+  });
+  (handle, rx)
+}
+
 fn p_path(name: &[u8]) -> SadResult<PathBuf> {
   String::from_utf8(name.to_vec())
     .map(|p| PathBuf::from(p.as_str()))
@@ -96,7 +122,8 @@ fn stream_stdin(args: &Arguments) -> (Task, Receiver<SadResult<Payload>>) {
   (handle, rx)
 }
 
-fn stream_input(paths: Vec<PathBuf>) -> (Task, Receiver<SadResult<Payload>>) {
+fn stream_input(args: &Arguments) -> (Task, Receiver<SadResult<Payload>>) {
+  let paths = args.input.clone();
   let (tx, rx) = channel::<SadResult<Payload>>(1);
   let handle = task::spawn(async move {
     for path in paths {

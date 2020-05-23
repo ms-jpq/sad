@@ -44,7 +44,7 @@ pub fn stream_output(printer: Printer, stream: Receiver<SadResult<String>>) -> T
         program: "fzf".to_string(),
         arguments: vec!["--read0".to_string()],
       };
-      let (child, rx) = cmd.stream(stream);
+      let (child, rx) = cmd.stream_connected(stream);
       let recv = stream_stdout(rx);
       task::spawn(async {
         if let Err(e) = try_join(child, recv).await {

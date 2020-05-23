@@ -126,16 +126,16 @@ impl SubprocessCommand {
   pub fn stream_connected(
     &self,
     stream: Receiver<SadResult<String>>,
-  ) -> (Task, Receiver<SadResult<()>>) {
-    let (tx, rx) = channel::<SadResult<()>>(1);
+  ) -> (Task, Receiver<SadResult<String>>) {
+    let (tx, rx) = channel::<SadResult<String>>(1);
     let tt = Sender::clone(&tx);
     let ta = Sender::clone(&tx);
 
     let subprocess = Command::new(&self.program)
       .args(&self.arguments)
       .stdin(Stdio::piped())
-      .stdout(Stdio::piped())
-      .stderr(Stdio::piped())
+      .stdout(Stdio::inherit())
+      .stderr(Stdio::inherit())
       .spawn();
 
     let mut child = match subprocess.into_sadness() {

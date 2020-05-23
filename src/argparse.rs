@@ -47,7 +47,7 @@ pub struct Arguments {
   pub pick: bool,
 
   #[structopt(long, about = "*Internal use only*")]
-  pub interna_preview: Option<String>,
+  pub internal_preview: Option<String>,
 
   #[structopt(long, about = "*Internal use only*")]
   pub internal_patch: Option<String>,
