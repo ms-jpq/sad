@@ -4,7 +4,7 @@ use async_std::sync::{channel, Receiver, Sender};
 use futures::future::{select, try_join, try_join4, Either};
 use std::process::Stdio;
 use tokio::{
-  io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader, BufWriter},
+  io::{self, AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader, BufWriter},
   process::Command,
   task,
 };
@@ -164,6 +164,10 @@ impl SubprocessCommand {
                 Ok(_) => err,
                 Err(e) => Failure::Fzf(format!("{:#?}\n{:#?}", err, e)),
               };
+              let err = match reset_term().await {
+                Ok(_) => err,
+                Err(e) => Failure::Fzf(format!("{:#?}\n{:#?}", err, e)),
+              };
               tx.send(Err(err)).await
             }
             None => match child.await.into_sadness() {
@@ -193,4 +197,15 @@ async fn process_status_code(code: Option<i32>, tx: Sender<SadResult<String>>) {
         .await
     }
   }
+}
+
+async fn reset_term() -> SadResult<()> {
+  io::stdout().flush().await.into_sadness()?;
+  io::stderr().flush().await.into_sadness()?;
+  if let Ok(_) = which::which("tput") {
+    Command::new("tput").arg("reset").status().await.into_sadness()?;
+  } else if let Ok(_) = which::which("reset") {
+    Command::new("reset").status().await.into_sadness()?;
+  };
+  Ok(())
 }
