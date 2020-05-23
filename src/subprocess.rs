@@ -1,7 +1,7 @@
 use super::errors::*;
 use super::types::Task;
 use async_std::sync::{channel, Receiver, Sender};
-use futures::future::{try_join, try_join4};
+use futures::future::{select, try_join, try_join4, Either};
 use std::process::Stdio;
 use tokio::{
   io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader, BufWriter},
@@ -106,7 +106,7 @@ impl SubprocessCommand {
     stream: Receiver<SadResult<String>>,
   ) -> (Task, Receiver<SadResult<String>>) {
     let (tx, rx) = channel::<SadResult<String>>(1);
-    let tt = Sender::clone(&tx);
+    let (tix, rix) = channel::<Failure>(1);
     let ta = Sender::clone(&tx);
 
     let subprocess = Command::new(&self.program)
@@ -132,25 +132,44 @@ impl SubprocessCommand {
         match print {
           Ok(val) => {
             if let Err(err) = stdin.write(val.as_bytes()).await.into_sadness() {
-              tx.send(Err(err)).await;
+              tix.send(err).await;
             }
           }
-          Err(err) => tx.send(Err(err)).await,
+          Err(err) => tix.send(err).await,
         }
       }
       if let Err(err) = stdin.shutdown().await {
-        tx.send(Err(err.into())).await;
+        tix.send(err.into()).await;
       }
     });
 
+    let handle_kill = task::spawn(async move { rix.recv().await });
+
     let handle_child = task::spawn(async move {
-      match child.await {
-        Err(err) =>
-        tt.send(Err(err.into())).await,
-        Ok(status) => {
-          match status.code() {
-            Some(0) | Some(1) | Some(130) | None => {},
-            Some(c) => tt.send(Err(Failure::Fzf(format!("Error exit - {}", c)))).await
+      match select(child, handle_kill).await {
+        Either::Left((Ok(status), _)) => process_status_code(status.code(), tx).await,
+        Either::Left((Err(err), _)) => tx.send(Err(err.into())).await,
+        Either::Right((handle, mut child)) => {
+          let maybe_failure = match handle.into_sadness() {
+            Ok(err) => err,
+            Err(err) => Some(err),
+          };
+          match maybe_failure {
+            Some(err) => {
+              let err = match child.kill().into_sadness() {
+                Ok(_) => err,
+                Err(e) => Failure::Fzf(format!("{:#?}\n{:#?}", err, e)),
+              };
+              let err = match child.await.into_sadness() {
+                Ok(_) => err,
+                Err(e) => Failure::Fzf(format!("{:#?}\n{:#?}", err, e)),
+              };
+              tx.send(Err(err)).await
+            }
+            None => match child.await.into_sadness() {
+              Err(err) => tx.send(Err(err)).await,
+              Ok(status) => process_status_code(status.code(), tx).await,
+            },
           }
         }
       }
@@ -163,5 +182,15 @@ impl SubprocessCommand {
     });
 
     (handle, rx)
+  }
+}
+
+async fn process_status_code(code: Option<i32>, tx: Sender<SadResult<String>>) {
+  match code {
+    Some(0) | Some(1) | Some(130) | None => {}
+    Some(c) => {
+      tx.send(Err(Failure::Fzf(format!("Error exit - {}", c))))
+        .await
+    }
   }
 }
