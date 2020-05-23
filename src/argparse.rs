@@ -164,16 +164,18 @@ fn p_regex(pattern: &str, flags: &[String]) -> SadResult<Regex> {
   re.build().into_sadness()
 }
 
+fn p_tty() -> bool {
+  atty::is(atty::Stream::Stdout)
+}
+
 fn p_fzf(fzf: Option<String>) -> Option<Vec<String>> {
-  match fzf {
-    Some(val) => {
-      if val == "never" {
-        None
-      } else {
-        Some(val.split(' ').map(String::from).collect())
-      }
-    }
-    None => Some(Vec::new()),
+  match (which::which("fzf"), p_tty()) {
+    (Ok(_), true) => match fzf {
+      Some(v) if v == "never" => None,
+      Some(val) => Some(val.split(' ').map(String::from).collect()),
+      None => Some(Vec::new()),
+    },
+    _ => None,
   }
 }
 
