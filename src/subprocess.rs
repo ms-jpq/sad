@@ -186,11 +186,17 @@ impl SubprocessCommand {
           },
         },
         Either::Right((handle, mut child)) => match handle {
-          Ok(Some(err)) => {
-            let _ = child.kill();
-            tx.send(Err(err)).await;
+          Ok(Some(err)) => match child.kill() {
+            Ok(_) => tx.send(Err(err)).await,
+            Err(e) => {
+              tx.send(Err(Failure::Fzf(format!("{:#?}\n{:#?}", err, e))))
+                .await
+            }
+          },
+          Ok(None) => {
+            tx.send(Err(Failure::Fzf("Uknown reason".to_string())))
+              .await
           }
-          Ok(None) => tx.send(Err(Failure::Fzf("unknown".to_string()))).await,
           Err(err) => tx.send(Err(err.into())).await,
         },
       };
