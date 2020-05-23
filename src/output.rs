@@ -38,6 +38,7 @@ pub fn stream_output(opts: Options, stream: Receiver<SadResult<String>>) -> Task
         "-m".to_string(),
         "--ansi".to_string(),
         format!("--bind=enter:{}", execute),
+        format!("--bind=double-click:{}", execute),
         format!("--preview={} --internal-preview={{}}", preview_args),
         "--preview-window=70%:wrap".to_string(),
       ];
