@@ -183,7 +183,7 @@ impl SubprocessCommand {
 fn combine_err<T>(err: Failure, res: SadResult<T>) -> Failure {
   match res {
     Ok(_) => err,
-    Err(e) => Failure::Fzf(format!("{:#?}\n{:#?}", err, e)),
+    Err(e) => Failure::Fzf(format!("{:#?}\n{:#?}", e, err)),
   }
 }
 
@@ -208,6 +208,8 @@ async fn reset_term() -> SadResult<()> {
       .into_sadness()?;
   } else if let Ok(_) = which::which("reset") {
     Command::new("reset").status().await.into_sadness()?;
+  } else {
+    Err(Failure::Fzf("Unable to clear screen".to_string()))?;
   };
   Ok(())
 }
