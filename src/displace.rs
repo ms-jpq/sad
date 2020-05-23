@@ -16,10 +16,10 @@ impl Engine {
 }
 
 impl Payload {
-  fn path(&self) -> &PathBuf {
+  fn path(&self) -> PathBuf {
     match self {
-      Payload::Entire(path) => path,
-      Payload::Piecewise(path, _) => path,
+      Payload::Entire(path) => path.clone(),
+      Payload::Piecewise(path, _) => path.clone(),
     }
   }
 }
@@ -56,19 +56,32 @@ async fn safe_write(canonical: &PathBuf, meta: &Metadata, text: &str) -> SadResu
 pub async fn displace(opts: &Options, payload: Payload) -> SadResult<String> {
   let path = payload.path();
   let name = path.to_string_lossy();
-  let (canonical, meta) = read_meta(path).await?;
+  let (canonical, meta) = read_meta(&path).await?;
   let before = fs::read_to_string(&canonical).await.into_sadness()?;
   let after = opts.engine.replace(&before);
-  if before == after {
-    Ok(String::new())
-  } else {
-    let print = match opts.action {
-      Action::Preview => udiff(opts.unified, &name, &before, &after),
-      Action::Commit => {
+
+  let print = match (&opts.action, payload) {
+    (Action::Preview, Payload::Entire(_)) => {
+      if before == after {
+        String::new()
+      } else {
+        udiff(opts.unified, &name, &before, &after)
+      }
+    },
+    (Action::Preview, Payload::Piecewise(_, _)) => {
+      String::new()
+    },
+    (Action::Commit, Payload::Entire(_)) => {
+      if before == after {
+        String::new()
+      } else {
         safe_write(&canonical, &meta, &after).await?;
         format!("{}\n", name)
       }
-    };
-    Ok(print)
-  }
+    },
+    (Action::Commit, Payload::Piecewise(_, _)) => {
+      String::new()
+    },
+  };
+  Ok(print)
 }
