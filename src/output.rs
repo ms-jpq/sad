@@ -8,8 +8,8 @@ use futures::future::try_join;
 use std::{env, process};
 use tokio::{
   io::{self, AsyncWriteExt, BufWriter},
-  task,
   process::Command,
+  task,
 };
 
 fn stream_stdout(stream: Receiver<SadResult<String>>) -> Task {
@@ -73,9 +73,10 @@ pub async fn err_exit(err: Failure) -> ! {
 }
 
 async fn reset_term() {
+  if let Ok(_) = which::which("tput") {
+    let _ = Command::new("tput").arg("reset").status().await;
+  } else if let Ok(_) = which::which("reset") {
+    let _ = Command::new("reset").status().await;
+  };
   io::stdout().flush().await.unwrap();
-  if let Some(mut out) = term::stdout() {
-    out.reset().unwrap_or(());
-    out.flush().unwrap_or(());
-  }
 }
