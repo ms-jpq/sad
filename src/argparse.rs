@@ -36,15 +36,15 @@ pub struct Arguments {
   )]
   pub pager: Option<String>,
 
+  #[structopt(long, about = "Additional Fzf options, disable = never")]
+  pub fzf: Option<String>,
+
   #[structopt(
     short,
     long,
     about = "Same as in GNU diff --unified={size}, affects hunk size"
   )]
   pub unified: Option<usize>,
-
-  #[structopt(short, long, about = "Pick hunks using fzf")]
-  pub pick: bool,
 
   #[structopt(long, about = "*Internal use only*")]
   pub internal_preview: Option<String>,
@@ -61,7 +61,7 @@ pub enum Engine {
 pub enum Action {
   Preview,
   Commit,
-  Pick,
+  Fzf,
 }
 
 #[derive(Clone)]
@@ -74,6 +74,7 @@ pub enum Printer {
 pub struct Options {
   pub action: Action,
   pub engine: Engine,
+  pub fzf: Option<Vec<String>>,
   pub printer: Printer,
   pub unified: usize,
 }
@@ -99,13 +100,15 @@ impl Options {
       }
     };
 
-    let action = match (args.pick, args.commit) {
-      (true, _) => Action::Pick,
+    let fzf = p_fzf(args.fzf);
+
+    let action = match (fzf != None, args.commit) {
+      (true, _) => Action::Fzf,
       (false, true) => Action::Commit,
       (false, false) => Action::Preview,
     };
 
-    let printer = if args.pick {
+    let printer = if fzf != None {
       Printer::Fzf
     } else {
       match p_pager(args.pager) {
@@ -117,6 +120,7 @@ impl Options {
     Ok(Options {
       action,
       engine,
+      fzf,
       printer,
       unified: args.unified.unwrap_or(3),
     })
@@ -160,13 +164,27 @@ fn p_regex(pattern: &str, flags: &[String]) -> SadResult<Regex> {
   re.build().into_sadness()
 }
 
+fn p_fzf(fzf: Option<String>) -> Option<Vec<String>> {
+  fzf.and_then(|val| {
+    if val == "never" {
+      None
+    } else {
+      Some(val.split(' ').map(String::from).collect())
+    }
+  })
+}
+
 fn p_pager(pager: Option<String>) -> Option<SubprocessCommand> {
   pager.and_then(|val| {
-    let less_less = val.split('|').next().unwrap_or(&val).trim();
-    let mut commands = less_less.split(' ').map(String::from);
-    commands.next().map(|program| SubprocessCommand {
-      program,
-      arguments: commands.collect(),
-    })
+    if val == "never" {
+      None
+    } else {
+      let less_less = val.split('|').next().unwrap_or(&val).trim();
+      let mut commands = less_less.split(' ').map(String::from);
+      commands.next().map(|program| SubprocessCommand {
+        program,
+        arguments: commands.collect(),
+      })
+    }
   })
 }

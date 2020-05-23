@@ -81,7 +81,7 @@ pub async fn displace(opts: &Options, payload: Payload) -> SadResult<String> {
         safe_write(&canonical, &meta, &after).await?;
         format!("{}\n", name)
       }
-      (Action::Pick, _) => {
+      (Action::Fzf, _) => {
         let ranges: DiffRanges = Picker::new(opts.unified, &before, &after);
         let mut fzf_lines = ranges
           .iter()
