@@ -19,17 +19,16 @@ impl Arguments {
   pub fn stream(&self) -> (Task, Receiver<SadResult<Payload>>) {
     if let Some(preview) = &self.internal_preview {
       stream_preview(preview)
-    }
-    else if let Some(patch) = &self.internal_patch {
+    } else if let Some(patch) = &self.internal_patch {
       stream_patch(patch)
-    }
-    else if self.input.is_empty() {
+    } else if self.input.is_empty() {
       stream_stdin(self.nul_delim)
     } else {
       stream_input(&self.input)
     }
   }
 }
+
 impl TryFrom<&str> for DiffRange {
   type Error = Failure;
 

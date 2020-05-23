@@ -2,7 +2,7 @@ use super::errors::*;
 use super::subprocess::SubprocessCommand;
 use aho_corasick::{AhoCorasick, AhoCorasickBuilder};
 use regex::{Regex, RegexBuilder};
-use std::{env, path::PathBuf};
+use std::path::PathBuf;
 use structopt::StructOpt;
 
 #[derive(StructOpt)]
@@ -80,15 +80,15 @@ pub struct Options {
 
 impl Options {
   pub fn new(args: Arguments) -> SadResult<Options> {
-    let auto_flags = p_auto_flags(&args.pattern);
-    let flags = args
-      .flags
-      .unwrap_or_default()
-      .split_terminator("")
-      .skip(1)
-      .map(String::from)
-      .collect::<Vec<String>>();
-    let flagset = itertools::chain(auto_flags, flags).collect::<Vec<String>>();
+    let mut flagset = p_auto_flags(&args.pattern);
+    flagset.extend(
+      args
+        .flags
+        .unwrap_or_default()
+        .split_terminator("")
+        .skip(1)
+        .map(String::from),
+    );
 
     let engine = {
       let replace = args.replace.unwrap_or_default();
