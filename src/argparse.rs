@@ -52,8 +52,8 @@ pub enum Engine {
 }
 
 pub enum Action {
-  Diff,
-  Write,
+  Preview,
+  Commit,
 }
 
 pub struct Options {
@@ -85,9 +85,9 @@ impl Options {
     };
 
     let action = if args.commit {
-      Action::Write
+      Action::Commit
     } else {
-      Action::Diff
+      Action::Preview
     };
 
     let pager = if args.no_pager { None } else { p_pager() };
