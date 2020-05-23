@@ -11,7 +11,6 @@ use tokio::{
   task,
 };
 
-
 fn stream_stdout(stream: Receiver<SadResult<String>>) -> Task {
   let mut stdout = BufWriter::new(io::stdout());
   task::spawn(async move {
