@@ -24,6 +24,7 @@ impl SubprocessCommand {
     let ta = Sender::clone(&tx);
 
     let subprocess = Command::new(&self.program)
+      .kill_on_drop(true)
       .args(&self.arguments)
       .stdin(Stdio::piped())
       .stdout(Stdio::piped())
@@ -133,6 +134,7 @@ impl SubprocessCommand {
 
     let subprocess = Command::new(&self.program)
       .args(&self.arguments)
+      .kill_on_drop(true)
       .stdin(Stdio::piped())
       .stdout(Stdio::inherit())
       .stderr(Stdio::inherit())
