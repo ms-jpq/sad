@@ -9,7 +9,10 @@ use tokio::{
   task,
 };
 
-enum OWO {}
+enum Payload {
+  Entire(PathBuf),
+  Piecewise(PathBuf, Vec<DiffRange>)
+}
 
 impl Arguments {
   pub fn stream(&self) -> (Task, Receiver<SadResult<PathBuf>>) {
