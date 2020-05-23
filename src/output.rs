@@ -36,7 +36,7 @@ pub fn stream_output(opts: Options, stream: Receiver<SadResult<String>>) -> Task
         "--read0".to_string(),
         "-m".to_string(),
         "--ansi".to_string(),
-        format!("--bind=enter:abort+execute({} {{+}})", preview_args),
+        format!("--bind=enter:abort+execute({} --internal-patch=\"{{+}}\")", preview_args),
         format!("--preview={} --internal-preview={{}}", preview_args),
         "--preview-window=70%:wrap".to_string(),
       ];
