@@ -1,7 +1,7 @@
 use super::argparse::{Action, Engine, Options};
 use super::errors::*;
 use super::input::Payload;
-use super::udiff::{udiff, Diffs, Patchable};
+use super::udiff::{udiff, DiffRanges, Diffs, Patchable, Picker};
 use std::{fs::Metadata, path::PathBuf};
 use tokio::fs;
 use uuid::Uuid;
@@ -74,7 +74,14 @@ pub async fn displace(opts: &Options, payload: Payload) -> SadResult<String> {
       }
       (Action::Commit, Payload::Piecewise(_, ranges)) => {
         let diffs: Diffs = Patchable::new(opts.unified, &before, &after);
-        diffs.patch(&ranges, &before)
+        let after = diffs.patch(&ranges, &before);
+        safe_write(&canonical, &meta, &after).await?;
+        format!("{}\n", name)
+      }
+      (Action::Pick, _) => {
+        let ranges: DiffRanges = Picker::new(opts.unified, &before, &after);
+        let fzf_lines = ranges.iter().map(|r| format!("{} - {}", &name, r));
+        itertools::join(fzf_lines, "\n")
       }
     };
     Ok(print)

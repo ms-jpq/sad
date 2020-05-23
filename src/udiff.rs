@@ -35,6 +35,26 @@ impl Display for DiffRange {
   }
 }
 
+pub type DiffRanges = Vec<DiffRange>;
+
+pub trait Picker {
+  fn new(unified: usize, before: &str, after: &str) -> Self;
+}
+
+impl Picker for DiffRanges {
+  fn new(unified: usize, before: &str, after: &str) -> Self {
+    let before = before.split_terminator('\n').collect::<Vec<&str>>();
+    let after = after.split_terminator('\n').collect::<Vec<&str>>();
+    let mut ret = Vec::new();
+    let mut matcher = SequenceMatcher::new(&before, &after);
+    for group in &matcher.get_grouped_opcodes(unified) {
+      let range = DiffRange::new(group).unwrap();
+      ret.push(range);
+    }
+    ret
+  }
+}
+
 pub struct Diff {
   range: DiffRange,
   new_lines: Vec<String>,

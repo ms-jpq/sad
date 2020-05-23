@@ -39,6 +39,9 @@ pub struct Arguments {
   )]
   pub unified: Option<usize>,
 
+  #[structopt(short, long, about = "Pick hunks using fzf")]
+  pub pick: bool,
+
   #[structopt(long, about = "*Internal use only*")]
   pub interna_preview: Option<String>,
 
@@ -54,6 +57,7 @@ pub enum Engine {
 pub enum Action {
   Preview,
   Commit,
+  Pick,
 }
 
 pub struct Options {
@@ -84,10 +88,10 @@ impl Options {
       }
     };
 
-    let action = if args.commit {
-      Action::Commit
-    } else {
-      Action::Preview
+    let action = match (args.pick, args.commit) {
+      (true, _) => Action::Pick,
+      (false, true) => Action::Commit,
+      (false, false) => Action::Preview,
     };
 
     let pager = if args.no_pager { None } else { p_pager() };
