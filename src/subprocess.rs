@@ -39,32 +39,9 @@ impl SubprocessCommand {
       }
     };
 
-    let mut stdin = match child.stdin.take() {
-      Some(stdin) => BufWriter::new(stdin),
-      None => {
-        let err = Err(Failure::Pager("Invalid stdin".into()));
-        let handle = task::spawn(async move { tx.send(err).await });
-        return (handle, rx);
-      }
-    };
-
-    let mut stdout = match child.stdout.take() {
-      Some(stdout) => BufReader::new(stdout),
-      None => {
-        let err = Err(Failure::Pager("Invalid stdout".into()));
-        let handle = task::spawn(async move { tx.send(err).await });
-        return (handle, rx);
-      }
-    };
-
-    let mut stderr = match child.stderr.take() {
-      Some(stderr) => BufReader::new(stderr),
-      None => {
-        let err = Err(Failure::Pager("Invalid stderr".into()));
-        let handle = task::spawn(async move { tx.send(err).await });
-        return (handle, rx);
-      }
-    };
+    let mut stdin = child.stdin.take().map(BufWriter::new).unwrap();
+    let mut stdout = child.stdout.take().map(BufReader::new).unwrap();
+    let mut stderr = child.stderr.take().map(BufReader::new).unwrap();
 
     let handle_in = task::spawn(async move {
       while let Some(print) = stream.recv().await {
@@ -148,14 +125,7 @@ impl SubprocessCommand {
       }
     };
 
-    let mut stdin = match child.stdin.take() {
-      Some(stdin) => BufWriter::new(stdin),
-      None => {
-        let err = Err(Failure::Fzf("Invalid stdin".into()));
-        let handle = task::spawn(async move { tx.send(err).await });
-        return (handle, rx);
-      }
-    };
+    let mut stdin = child.stdin.take().map(BufWriter::new).unwrap();
 
     let handle_in = task::spawn(async move {
       while let Some(print) = stream.recv().await {
