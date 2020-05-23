@@ -9,6 +9,7 @@ use std::{env, process};
 use tokio::{
   io::{self, AsyncWriteExt, BufWriter},
   task,
+  process::Command,
 };
 
 fn stream_stdout(stream: Receiver<SadResult<String>>) -> Task {
@@ -66,13 +67,13 @@ pub fn stream_output(opts: Options, stream: Receiver<SadResult<String>>) -> Task
 }
 
 pub async fn err_exit(err: Failure) -> ! {
-  io::stdout().flush().await.unwrap();
-  reset_term();
+  reset_term().await;
   eprintln!("{}", Colour::Red.paint(format!("\n{:#?}", err)));
   process::exit(1)
 }
 
-fn reset_term() {
+async fn reset_term() {
+  io::stdout().flush().await.unwrap();
   if let Some(mut out) = term::stdout() {
     out.reset().unwrap_or(());
     out.flush().unwrap_or(());
