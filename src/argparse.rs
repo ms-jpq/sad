@@ -46,19 +46,16 @@ pub struct Arguments {
   pub internal_patch: Option<String>,
 }
 
-#[derive(Clone)]
 pub enum Engine {
   AhoCorasick(AhoCorasick, String),
   Regex(Regex, String),
 }
 
-#[derive(Clone)]
 pub enum Action {
   Diff,
   Write,
 }
 
-#[derive(Clone)]
 pub struct Options {
   pub action: Action,
   pub engine: Engine,

@@ -21,10 +21,10 @@ mod types;
 mod udiff;
 
 fn stream_process(
-  opts: &Options,
+  opts: Options,
   stream: Receiver<SadResult<PathBuf>>,
 ) -> (TryJoinAll<Task>, Receiver<SadResult<String>>) {
-  let oo = Arc::new(opts.clone());
+  let oo = Arc::new(opts);
   let (tx, rx) = channel::<SadResult<String>>(1);
 
   let handles = (1..=num_cpus::get() * 2)
@@ -93,8 +93,9 @@ fn main() {
     let (reader, receiver) = args.stream();
     let end = match Options::new(args) {
       Ok(opts) => {
-        let (steps, rx) = stream_process(&opts, receiver);
-        let writer = stream_output(opts.pager, rx);
+        let pager = opts.pager.clone();
+        let (steps, rx) = stream_process(opts, receiver);
+        let writer = stream_output(pager, rx);
         try_join3(reader, steps, writer).await
       }
       Err(e) => err_exit(e),

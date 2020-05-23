@@ -126,8 +126,8 @@ impl SubprocessCommand {
   pub fn stream_connected(
     &self,
     stream: Receiver<SadResult<String>>,
-  ) -> (Task, Receiver<SadResult<String>>) {
-    let (tx, rx) = channel::<SadResult<String>>(1);
+  ) -> (Task, Receiver<SadResult<()>>) {
+    let (tx, rx) = channel::<SadResult<()>>(1);
     let tt = Sender::clone(&tx);
     let ta = Sender::clone(&tx);
 

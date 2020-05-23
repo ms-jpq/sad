@@ -1,12 +1,15 @@
 use super::argparse::Arguments;
 use super::errors::*;
 use super::types::Task;
+use super::udiff::DiffRange;
 use async_std::sync::{channel, Receiver};
 use std::path::PathBuf;
 use tokio::{
   io::{self, AsyncBufReadExt, BufReader},
   task,
 };
+
+enum OWO {}
 
 impl Arguments {
   pub fn stream(&self) -> (Task, Receiver<SadResult<PathBuf>>) {
