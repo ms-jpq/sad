@@ -1,3 +1,4 @@
+use super::argparse::Printer;
 use super::errors::*;
 use super::subprocess::SubprocessCommand;
 use super::types::Task;
@@ -27,9 +28,9 @@ fn stream_stdout(stream: Receiver<SadResult<String>>) -> Task {
   })
 }
 
-pub fn stream_output(cmd: Option<SubprocessCommand>, stream: Receiver<SadResult<String>>) -> Task {
-  match cmd {
-    Some(cmd) => {
+pub fn stream_output(printer: Printer, stream: Receiver<SadResult<String>>) -> Task {
+  match printer {
+    Printer::Pager(cmd) => {
       let (child, rx) = cmd.stream(stream);
       let recv = stream_stdout(rx);
       task::spawn(async {
@@ -38,7 +39,20 @@ pub fn stream_output(cmd: Option<SubprocessCommand>, stream: Receiver<SadResult<
         }
       })
     }
-    None => stream_stdout(stream),
+    Printer::Fzf => {
+      let cmd = SubprocessCommand {
+        program: "fzf".to_string(),
+        arguments: vec!["--read0".to_string()],
+      };
+      let (child, rx) = cmd.stream(stream);
+      let recv = stream_stdout(rx);
+      task::spawn(async {
+        if let Err(e) = try_join(child, recv).await {
+          err_exit(e.into())
+        }
+      })
+    }
+    Printer::Stdout => stream_stdout(stream),
   }
 }
 

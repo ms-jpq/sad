@@ -29,8 +29,12 @@ pub struct Arguments {
   #[structopt(short, long, about = "Standard regex flags: ie. -f imx")]
   pub flags: Option<String>,
 
-  #[structopt(long, about = "ignore $GIT_PAGER")]
-  pub no_pager: bool,
+  #[structopt(
+    long,
+    env = "GIT_PAGER",
+    about = "Colourizing program, disable = never, default = $GIT_PAGER"
+  )]
+  pub pager: Option<String>,
 
   #[structopt(
     short,
@@ -60,10 +64,17 @@ pub enum Action {
   Pick,
 }
 
+#[derive(Clone)]
+pub enum Printer {
+  Stdout,
+  Pager(SubprocessCommand),
+  Fzf,
+}
+
 pub struct Options {
   pub action: Action,
   pub engine: Engine,
-  pub pager: Option<SubprocessCommand>,
+  pub printer: Printer,
   pub unified: usize,
 }
 
@@ -94,12 +105,19 @@ impl Options {
       (false, false) => Action::Preview,
     };
 
-    let pager = if args.no_pager { None } else { p_pager() };
+    let printer = if args.pick {
+      Printer::Fzf
+    } else {
+      match p_pager(args.pager) {
+        Some(cmd) => Printer::Pager(cmd),
+        None => Printer::Stdout,
+      }
+    };
 
     Ok(Options {
       action,
       engine,
-      pager,
+      printer,
       unified: args.unified.unwrap_or(3),
     })
   }
@@ -142,8 +160,8 @@ fn p_regex(pattern: &str, flags: &[String]) -> SadResult<Regex> {
   re.build().into_sadness()
 }
 
-fn p_pager() -> Option<SubprocessCommand> {
-  env::var("GIT_PAGER").ok().and_then(|val| {
+fn p_pager(pager: Option<String>) -> Option<SubprocessCommand> {
+  pager.and_then(|val| {
     let less_less = val.split('|').next().unwrap_or(&val).trim();
     let mut commands = less_less.split(' ').map(String::from);
     commands.next().map(|program| SubprocessCommand {

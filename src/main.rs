@@ -58,9 +58,9 @@ fn main() {
     let (reader, receiver) = args.stream();
     let end = match Options::new(args) {
       Ok(opts) => {
-        let pager = opts.pager.clone();
+        let printer = opts.printer.clone();
         let (steps, rx) = stream_process(opts, receiver);
-        let writer = output::stream_output(pager, rx);
+        let writer = output::stream_output(printer, rx);
         try_join3(reader, steps, writer).await
       }
       Err(e) => output::err_exit(e),
