@@ -5,7 +5,7 @@ use super::types::Task;
 use ansi_term::Colour;
 use async_std::sync::Receiver;
 use futures::future::try_join;
-use std::process;
+use std::{env, process};
 use tokio::{
   io::{self, AsyncWriteExt, BufWriter},
   task,
@@ -40,9 +40,19 @@ pub fn stream_output(printer: Printer, stream: Receiver<SadResult<String>>) -> T
       })
     }
     Printer::Fzf => {
+      let args = env::args()
+        .filter(|a| a != "--pick")
+        .collect::<Vec<String>>()
+        .join(" ");
       let cmd = SubprocessCommand {
         program: "fzf".to_string(),
-        arguments: vec!["--read0".to_string()],
+        arguments: vec![
+          "--read0".to_string(),
+          "-m".to_string(),
+          "--ansi".to_string(),
+          format!("--preview={} --internal-preview={{}}", args),
+          "--preview-window=70%:wrap".to_string(),
+        ],
       };
       let (child, rx) = cmd.stream_connected(stream);
       let recv = stream_stdout(rx);

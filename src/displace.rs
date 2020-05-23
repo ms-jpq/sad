@@ -2,6 +2,7 @@ use super::argparse::{Action, Engine, Options};
 use super::errors::*;
 use super::input::Payload;
 use super::udiff::{udiff, DiffRanges, Diffs, Patchable, Picker};
+use ansi_term::Colour;
 use std::{fs::Metadata, path::PathBuf};
 use tokio::fs;
 use uuid::Uuid;
@@ -43,6 +44,7 @@ async fn safe_write(canonical: &PathBuf, meta: &Metadata, text: &str) -> SadResu
     .ok_or_else(|| Failure::Simple(format!("Bad file name - {}", canonical.to_string_lossy())))?;
   file_name.push_str("___");
   file_name.push_str(&uuid);
+
   let backup = canonical.with_file_name(file_name);
   fs::rename(&canonical, &backup).await.into_sadness()?;
   fs::write(&canonical, text).await.into_sadness()?;
@@ -50,6 +52,7 @@ async fn safe_write(canonical: &PathBuf, meta: &Metadata, text: &str) -> SadResu
     .await
     .into_sadness()?;
   fs::remove_file(&backup).await.into_sadness()?;
+
   Ok(())
 }
 
@@ -82,7 +85,10 @@ pub async fn displace(opts: &Options, payload: Payload) -> SadResult<String> {
         let ranges: DiffRanges = Picker::new(opts.unified, &before, &after);
         let mut fzf_lines = ranges
           .iter()
-          .map(|r| format!("{}\n\n\n\n{}", &name, r))
+          .map(|r| {
+            let repr = Colour::Blue.paint(format!("{}", r));
+            format!("{}\n\n\n\n{}", &name, repr)
+          })
           .collect::<Vec<String>>()
           .join("\0");
         fzf_lines.push('\0');

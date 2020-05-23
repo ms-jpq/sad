@@ -29,11 +29,19 @@ impl Arguments {
   }
 }
 
-impl TryFrom<&str> for DiffRange {
+fn p_path(name: &[u8]) -> SadResult<PathBuf> {
+  String::from_utf8(name.to_vec())
+    .map(|p| PathBuf::from(p.as_str()))
+    .into_sadness()
+}
+
+struct DiffLine(PathBuf, DiffRange);
+
+impl TryFrom<&str> for DiffLine {
   type Error = Failure;
 
   fn try_from(candidate: &str) -> SadResult<Self> {
-    let preg = r"^@@ -(\d+),(\d+) \+(\d+),(\d+) @@$";
+    let preg = "\n\n\n\n@@ -(\\d+),(\\d+) \\+(\\d+),(\\d+) @@$";
     let re = Regex::new(preg).into_sadness()?;
     let captures = re
       .captures(candidate)
@@ -63,37 +71,42 @@ impl TryFrom<&str> for DiffRange {
       .parse::<usize>()
       .into_sadness()?;
 
-    Ok(DiffRange {
+    let range = DiffRange {
       before: (before_start - 1, before_inc),
       after: (after_start - 1, after_inc),
-    })
+    };
+    let name = re.replace(candidate, "");
+    let buf = p_path(&name.as_bytes())?;
+    Ok(DiffLine(buf, range))
   }
 }
 
-fn p_path(name: &[u8]) -> SadResult<PathBuf> {
-  String::from_utf8(name.to_vec())
-    .map(|p| PathBuf::from(p.as_str()))
-    .into_sadness()
-}
-
 fn stream_preview(preview: &str) -> (Task, Receiver<SadResult<Payload>>) {
-  let preview = preview.to_owned();
+  let line = DiffLine::try_from(preview);
   let (tx, rx) = channel::<SadResult<Payload>>(1);
   let handle = task::spawn(async move {
-    let ranges = HashSet::new();
-    let step = p_path(preview.as_bytes()).map(|p| Payload::Piecewise(p, ranges));
+    let step = line.map(|line| {
+      let mut ranges = HashSet::new();
+      ranges.insert(line.1);
+      Payload::Piecewise(line.0, ranges)
+    });
     tx.send(step).await;
   });
   (handle, rx)
 }
 
 fn stream_patch(patch: &str) -> (Task, Receiver<SadResult<Payload>>) {
-  let patch = patch.to_owned();
+  let lines = patch.split_terminator('\0').map(DiffLine::try_from).collect::<Vec<SadResult<DiffLine>>>();
   let (tx, rx) = channel::<SadResult<Payload>>(1);
   let handle = task::spawn(async move {
-    let ranges = HashSet::new();
-    let cord = p_path(patch.as_bytes()).map(|p| Payload::Piecewise(p, ranges));
-    tx.send(cord).await
+    for line in lines {
+      let step = line.map(|line| {
+        let mut ranges = HashSet::new();
+        ranges.insert(line.1);
+        Payload::Piecewise(line.0, ranges)
+      });
+      tx.send(step).await
+    }
   });
   (handle, rx)
 }
