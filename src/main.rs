@@ -2,11 +2,11 @@ use argparse::{Arguments, Options};
 use async_std::sync::{channel, Receiver, Sender};
 use errors::*;
 use futures::future::{try_join3, try_join_all, TryJoinAll};
+use input::Payload;
 use std::sync::Arc;
 use structopt::StructOpt;
 use tokio::{runtime, task};
 use types::Task;
-use input::Payload;
 
 mod argparse;
 mod displace;

@@ -3,7 +3,8 @@ use super::errors::*;
 use super::types::Task;
 use super::udiff::DiffRange;
 use async_std::sync::{channel, Receiver};
-use std::path::PathBuf;
+use regex::Regex;
+use std::{convert::TryFrom, path::PathBuf};
 use tokio::{
   io::{self, AsyncBufReadExt, BufReader},
   task,
@@ -19,8 +20,49 @@ impl Arguments {
     if self.input.is_empty() {
       stream_stdin(&self)
     } else {
-      stream_list(self.input.clone())
+      stream_input(self.input.clone())
     }
+  }
+}
+
+impl TryFrom<&str> for DiffRange {
+  type Error = Failure;
+
+  fn try_from(candidate: &str) -> SadResult<Self> {
+    let preg = r"^@@ -(\d+),(\d+) \+(\d+),(\d+) @@$";
+    let re = Regex::new(preg).into_sadness()?;
+    let captures = re
+      .captures(candidate)
+      .ok_or_else(|| Failure::Parse(candidate.into()))?;
+    let before_start = captures
+      .get(1)
+      .ok_or_else(|| Failure::Parse(candidate.into()))?
+      .as_str()
+      .parse::<usize>()
+      .into_sadness()?;
+    let before_inc = captures
+      .get(2)
+      .ok_or_else(|| Failure::Parse(candidate.into()))?
+      .as_str()
+      .parse::<usize>()
+      .into_sadness()?;
+    let after_start = captures
+      .get(3)
+      .ok_or_else(|| Failure::Parse(candidate.into()))?
+      .as_str()
+      .parse::<usize>()
+      .into_sadness()?;
+    let after_inc = captures
+      .get(4)
+      .ok_or_else(|| Failure::Parse(candidate.into()))?
+      .as_str()
+      .parse::<usize>()
+      .into_sadness()?;
+
+    Ok(DiffRange {
+      before: (before_start - 1, before_inc),
+      after: (after_start - 1, after_inc),
+    })
   }
 }
 
@@ -54,7 +96,7 @@ fn stream_stdin(args: &Arguments) -> (Task, Receiver<SadResult<Payload>>) {
   (handle, rx)
 }
 
-fn stream_list(paths: Vec<PathBuf>) -> (Task, Receiver<SadResult<Payload>>) {
+fn stream_input(paths: Vec<PathBuf>) -> (Task, Receiver<SadResult<Payload>>) {
   let (tx, rx) = channel::<SadResult<Payload>>(1);
   let handle = task::spawn(async move {
     for path in paths {
@@ -63,5 +105,3 @@ fn stream_list(paths: Vec<PathBuf>) -> (Task, Receiver<SadResult<Payload>>) {
   });
   (handle, rx)
 }
-
-

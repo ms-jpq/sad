@@ -1,10 +1,5 @@
-use super::errors::*;
 use difflib::{sequencematcher::Opcode, sequencematcher::SequenceMatcher};
-use regex::Regex;
-use std::{
-  convert::TryFrom,
-  fmt::{self, Display, Formatter},
-};
+use std::fmt::{self, Display, Formatter};
 
 pub struct DiffRange {
   before: (usize, usize),
@@ -33,47 +28,6 @@ impl Display for DiffRange {
       self.after.0 + 1,
       self.after.1,
     )
-  }
-}
-
-impl TryFrom<&str> for DiffRange {
-  type Error = Failure;
-
-  fn try_from(candidate: &str) -> SadResult<Self> {
-    let preg = r"^@@ -(\d+),(\d+) \+(\d+),(\d+) @@$";
-    let re = Regex::new(preg).into_sadness()?;
-    let captures = re
-      .captures(candidate)
-      .ok_or_else(|| Failure::Parse(candidate.into()))?;
-    let before_start = captures
-      .get(1)
-      .ok_or_else(|| Failure::Parse(candidate.into()))?
-      .as_str()
-      .parse::<usize>()
-      .into_sadness()?;
-    let before_inc = captures
-      .get(2)
-      .ok_or_else(|| Failure::Parse(candidate.into()))?
-      .as_str()
-      .parse::<usize>()
-      .into_sadness()?;
-    let after_start = captures
-      .get(3)
-      .ok_or_else(|| Failure::Parse(candidate.into()))?
-      .as_str()
-      .parse::<usize>()
-      .into_sadness()?;
-    let after_inc = captures
-      .get(4)
-      .ok_or_else(|| Failure::Parse(candidate.into()))?
-      .as_str()
-      .parse::<usize>()
-      .into_sadness()?;
-
-    Ok(DiffRange {
-      before: (before_start - 1, before_inc),
-      after: (after_start - 1, after_inc),
-    })
   }
 }
 
