@@ -60,37 +60,23 @@ pub async fn displace(opts: &Options, payload: Payload) -> SadResult<String> {
   let before = fs::read_to_string(&canonical).await.into_sadness()?;
   let after = opts.engine.replace(&before);
 
-  let print = match (&opts.action, &payload) {
-    (Action::Preview, Payload::Entire(_)) => {
-      if before == after {
-        String::new()
-      } else {
-        udiff(None, opts.unified, &name, &before, &after)
-      }
-    }
-    (Action::Preview, Payload::Piecewise(_, ranges)) => {
-      if before == after {
-        String::new()
-      } else {
+  if before == after {
+    Ok(String::new())
+  } else {
+    let print = match (&opts.action, &payload) {
+      (Action::Preview, Payload::Entire(_)) => udiff(None, opts.unified, &name, &before, &after),
+      (Action::Preview, Payload::Piecewise(_, ranges)) => {
         udiff(Some(ranges), opts.unified, &name, &before, &after)
       }
-    }
-    (Action::Commit, Payload::Entire(_)) => {
-      if before == after {
-        String::new()
-      } else {
+      (Action::Commit, Payload::Entire(_)) => {
         safe_write(&canonical, &meta, &after).await?;
         format!("{}\n", name)
       }
-    }
-    (Action::Commit, Payload::Piecewise(_, ranges)) => {
-      if before == after {
-        String::new()
-      } else {
+      (Action::Commit, Payload::Piecewise(_, ranges)) => {
         let diffs: Diffs = Patchable::new(opts.unified, &before, &after);
         diffs.patch(&ranges, &before)
       }
-    }
-  };
-  Ok(print)
+    };
+    Ok(print)
+  }
 }
