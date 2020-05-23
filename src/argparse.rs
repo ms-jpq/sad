@@ -106,7 +106,7 @@ impl Options {
 
     let action = if args.commit || args.internal_patch != None {
       Action::Commit
-    } else if args.internal_preview != None {
+    } else if args.internal_preview != None || fzf == None {
       Action::Preview
     } else {
       Action::Fzf
