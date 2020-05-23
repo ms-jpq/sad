@@ -65,12 +65,10 @@ pub async fn displace(opts: &Options, payload: Payload) -> SadResult<String> {
       if before == after {
         String::new()
       } else {
-        udiff(opts.unified, &name, &before, &after)
+        udiff(None, opts.unified, &name, &before, &after)
       }
-    },
-    (Action::Preview, Payload::Piecewise(_, _)) => {
-      String::new()
-    },
+    }
+    (Action::Preview, Payload::Piecewise(_, _)) => String::new(),
     (Action::Commit, Payload::Entire(_)) => {
       if before == after {
         String::new()
@@ -78,10 +76,8 @@ pub async fn displace(opts: &Options, payload: Payload) -> SadResult<String> {
         safe_write(&canonical, &meta, &after).await?;
         format!("{}\n", name)
       }
-    },
-    (Action::Commit, Payload::Piecewise(_, _)) => {
-      String::new()
-    },
+    }
+    (Action::Commit, Payload::Piecewise(_, _)) => String::new(),
   };
   Ok(print)
 }

@@ -1,6 +1,10 @@
 use difflib::{sequencematcher::Opcode, sequencematcher::SequenceMatcher};
-use std::fmt::{self, Display, Formatter};
+use std::{
+  collections::HashSet,
+  fmt::{self, Display, Formatter},
+};
 
+#[derive(Eq, Hash, PartialEq)]
 pub struct DiffRange {
   pub before: (usize, usize),
   pub after: (usize, usize),
@@ -99,7 +103,13 @@ impl Patchable for Diffs {
   }
 }
 
-pub fn udiff(unified: usize, name: &str, before: &str, after: &str) -> String {
+pub fn udiff(
+  ranges: Option<HashSet<DiffRange>>,
+  unified: usize,
+  name: &str,
+  before: &str,
+  after: &str,
+) -> String {
   let before = before.split_terminator('\n').collect::<Vec<&str>>();
   let after = after.split_terminator('\n').collect::<Vec<&str>>();
   let mut ret = String::new();
@@ -109,7 +119,13 @@ pub fn udiff(unified: usize, name: &str, before: &str, after: &str) -> String {
 
   let mut matcher = SequenceMatcher::new(&before, &after);
   for group in &matcher.get_grouped_opcodes(unified) {
-    ret.push_str(&format!("\n{}", DiffRange::new(group).unwrap()));
+    let range = DiffRange::new(group).unwrap();
+    if let Some(ranges) = &ranges {
+      if !ranges.contains(&range) {
+        continue;
+      }
+    };
+    ret.push_str(&format!("\n{}", range));
     for code in group {
       if code.tag == "equal" {
         for line in before.iter().take(code.first_end).skip(code.first_start) {

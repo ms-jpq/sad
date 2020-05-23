@@ -4,7 +4,7 @@ use super::types::Task;
 use super::udiff::DiffRange;
 use async_std::sync::{channel, Receiver};
 use regex::Regex;
-use std::{convert::TryFrom, path::PathBuf};
+use std::{collections::HashSet, convert::TryFrom, path::PathBuf};
 use tokio::{
   io::{self, AsyncBufReadExt, BufReader},
   task,
@@ -12,7 +12,7 @@ use tokio::{
 
 pub enum Payload {
   Entire(PathBuf),
-  Piecewise(PathBuf, Vec<DiffRange>),
+  Piecewise(PathBuf, HashSet<DiffRange>),
 }
 
 impl Arguments {
