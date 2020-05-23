@@ -18,15 +18,15 @@ pub enum Payload {
 impl Arguments {
   pub fn stream(&self) -> (Task, Receiver<SadResult<Payload>>) {
     if let Some(preview) = &self.internal_preview {
-      stream_preview(&self)
+      stream_preview(preview)
     }
     else if let Some(patch) = &self.internal_patch {
-      stream_patch(&self)
+      stream_patch(patch)
     }
     else if self.input.is_empty() {
-      stream_stdin(&self)
+      stream_stdin(self.nul_delim)
     } else {
-      stream_input(&self)
+      stream_input(&self.input)
     }
   }
 }
@@ -72,7 +72,7 @@ impl TryFrom<&str> for DiffRange {
 }
 
 
-fn stream_preview(args: &Arguments) -> (Task, Receiver<SadResult<Payload>>) {
+fn stream_preview(preview: &str) -> (Task, Receiver<SadResult<Payload>>) {
   let (tx, rx) = channel::<SadResult<Payload>>(1);
   let handle = task::spawn(async move {
     for path in Vec::new() {
@@ -82,7 +82,7 @@ fn stream_preview(args: &Arguments) -> (Task, Receiver<SadResult<Payload>>) {
   (handle, rx)
 }
 
-fn stream_patch(args: &Arguments) -> (Task, Receiver<SadResult<Payload>>) {
+fn stream_patch(patch: &str) -> (Task, Receiver<SadResult<Payload>>) {
   let (tx, rx) = channel::<SadResult<Payload>>(1);
   let handle = task::spawn(async move {
     for path in Vec::new() {
@@ -98,8 +98,8 @@ fn p_path(name: &[u8]) -> SadResult<PathBuf> {
     .into_sadness()
 }
 
-fn stream_stdin(args: &Arguments) -> (Task, Receiver<SadResult<Payload>>) {
-  let delim = if args.nul_delim { b'\0' } else { b'\n' };
+fn stream_stdin(use_nul: bool) -> (Task, Receiver<SadResult<Payload>>) {
+  let delim = if use_nul { b'\0' } else { b'\n' };
   let (tx, rx) = channel::<SadResult<Payload>>(1);
   let mut reader = BufReader::new(io::stdin());
   let mut buf = Vec::new();
@@ -122,8 +122,8 @@ fn stream_stdin(args: &Arguments) -> (Task, Receiver<SadResult<Payload>>) {
   (handle, rx)
 }
 
-fn stream_input(args: &Arguments) -> (Task, Receiver<SadResult<Payload>>) {
-  let paths = args.input.clone();
+fn stream_input(paths: &[PathBuf]) -> (Task, Receiver<SadResult<Payload>>) {
+  let paths = paths.to_vec();
   let (tx, rx) = channel::<SadResult<Payload>>(1);
   let handle = task::spawn(async move {
     for path in paths {
