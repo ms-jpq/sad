@@ -156,18 +156,9 @@ impl SubprocessCommand {
           };
           match maybe_failure {
             Some(err) => {
-              let err = match child.kill().into_sadness() {
-                Ok(_) => err,
-                Err(e) => Failure::Fzf(format!("{:#?}\n{:#?}", err, e)),
-              };
-              let err = match child.await.into_sadness() {
-                Ok(_) => err,
-                Err(e) => Failure::Fzf(format!("{:#?}\n{:#?}", err, e)),
-              };
-              let err = match reset_term().await {
-                Ok(_) => err,
-                Err(e) => Failure::Fzf(format!("{:#?}\n{:#?}", err, e)),
-              };
+              let err = combine_err(err, child.kill().into_sadness());
+              let err = combine_err(err, child.await.into_sadness());
+              let err = combine_err(err, reset_term().await);
               tx.send(Err(err)).await
             }
             None => match child.await.into_sadness() {
@@ -189,6 +180,13 @@ impl SubprocessCommand {
   }
 }
 
+fn combine_err<T>(err: Failure, res: SadResult<T>) -> Failure {
+  match res {
+    Ok(_) => err,
+    Err(e) => Failure::Fzf(format!("{:#?}\n{:#?}", err, e)),
+  }
+}
+
 async fn process_status_code(code: Option<i32>, tx: Sender<SadResult<String>>) {
   match code {
     Some(0) | Some(1) | Some(130) | None => {}
@@ -203,7 +201,11 @@ async fn reset_term() -> SadResult<()> {
   io::stdout().flush().await.into_sadness()?;
   io::stderr().flush().await.into_sadness()?;
   if let Ok(_) = which::which("tput") {
-    Command::new("tput").arg("reset").status().await.into_sadness()?;
+    Command::new("tput")
+      .arg("reset")
+      .status()
+      .await
+      .into_sadness()?;
   } else if let Ok(_) = which::which("reset") {
     Command::new("reset").status().await.into_sadness()?;
   };

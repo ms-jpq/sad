@@ -69,4 +69,3 @@ pub async fn err_exit(err: Failure) -> ! {
   eprintln!("{}", Colour::Red.paint(format!("\n{:#?}", err)));
   process::exit(1)
 }
-
