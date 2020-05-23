@@ -80,11 +80,12 @@ pub async fn displace(opts: &Options, payload: Payload) -> SadResult<String> {
       }
       (Action::Pick, _) => {
         let ranges: DiffRanges = Picker::new(opts.unified, &before, &after);
-        let fzf_lines = ranges
+        let mut fzf_lines = ranges
           .iter()
           .map(|r| format!("{}\n\n\n\n{}", &name, r))
           .collect::<Vec<String>>()
           .join("\0");
+        fzf_lines.push('\0');
         fzf_lines
       }
     };
