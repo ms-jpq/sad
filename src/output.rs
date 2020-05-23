@@ -76,8 +76,8 @@ async fn reset_term() {
   io::stdout().flush().await.unwrap();
   io::stderr().flush().await.unwrap();
   if let Ok(_) = which::which("tput") {
-    let _ = Command::new("tput").arg("reset").status().await;
+    Command::new("tput").arg("reset").status().await.unwrap();
   } else if let Ok(_) = which::which("reset") {
-    let _ = Command::new("reset").status().await;
+    Command::new("reset").status().await.unwrap();
   };
 }
