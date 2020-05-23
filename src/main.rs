@@ -58,9 +58,8 @@ fn main() {
     let (reader, receiver) = args.stream();
     let end = match Options::new(args) {
       Ok(opts) => {
-        let printer = opts.printer.clone();
-        let (steps, rx) = stream_process(opts, receiver);
-        let writer = output::stream_output(printer, rx);
+        let (steps, rx) = stream_process(opts.clone(), receiver);
+        let writer = output::stream_output(opts, rx);
         try_join3(reader, steps, writer).await
       }
       Err(e) => output::err_exit(e),

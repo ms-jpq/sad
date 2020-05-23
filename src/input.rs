@@ -96,7 +96,10 @@ fn stream_preview(preview: &str) -> (Task, Receiver<SadResult<Payload>>) {
 }
 
 fn stream_patch(patch: &str) -> (Task, Receiver<SadResult<Payload>>) {
-  let lines = patch.split_terminator('\0').map(DiffLine::try_from).collect::<Vec<SadResult<DiffLine>>>();
+  let lines = patch
+    .split_terminator('\0')
+    .map(DiffLine::try_from)
+    .collect::<Vec<SadResult<DiffLine>>>();
   let (tx, rx) = channel::<SadResult<Payload>>(1);
   let handle = task::spawn(async move {
     for line in lines {

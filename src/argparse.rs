@@ -53,11 +53,13 @@ pub struct Arguments {
   pub internal_patch: Option<String>,
 }
 
+#[derive(Clone)]
 pub enum Engine {
   AhoCorasick(AhoCorasick, String),
   Regex(Regex, String),
 }
 
+#[derive(Clone)]
 pub enum Action {
   Preview,
   Commit,
@@ -68,9 +70,9 @@ pub enum Action {
 pub enum Printer {
   Stdout,
   Pager(SubprocessCommand),
-  Fzf,
 }
 
+#[derive(Clone)]
 pub struct Options {
   pub action: Action,
   pub engine: Engine,
@@ -102,21 +104,17 @@ impl Options {
 
     let fzf = p_fzf(args.fzf);
 
-    let action = if args.commit {
+    let action = if args.commit || args.internal_patch != None {
       Action::Commit
-    } else if fzf != None {
-      Action::Fzf
-    } else {
+    } else if args.internal_preview != None {
       Action::Preview
+    } else {
+      Action::Fzf
     };
 
-    let printer = if fzf != None {
-      Printer::Fzf
-    } else {
-      match p_pager(args.pager) {
-        Some(cmd) => Printer::Pager(cmd),
-        None => Printer::Stdout,
-      }
+    let printer = match p_pager(args.pager) {
+      Some(cmd) => Printer::Pager(cmd),
+      None => Printer::Stdout,
     };
 
     Ok(Options {
@@ -167,13 +165,16 @@ fn p_regex(pattern: &str, flags: &[String]) -> SadResult<Regex> {
 }
 
 fn p_fzf(fzf: Option<String>) -> Option<Vec<String>> {
-  fzf.and_then(|val| {
-    if val == "never" {
-      None
-    } else {
-      Some(val.split(' ').map(String::from).collect())
+  match fzf {
+    Some(val) => {
+      if val == "never" {
+        None
+      } else {
+        Some(val.split(' ').map(String::from).collect())
+      }
     }
-  })
+    None => Some(Vec::new()),
+  }
 }
 
 fn p_pager(pager: Option<String>) -> Option<SubprocessCommand> {

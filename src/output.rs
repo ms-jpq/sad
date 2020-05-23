@@ -1,4 +1,4 @@
-use super::argparse::Printer;
+use super::argparse::{Action, Options, Printer};
 use super::errors::*;
 use super::subprocess::SubprocessCommand;
 use super::types::Task;
@@ -28,31 +28,21 @@ fn stream_stdout(stream: Receiver<SadResult<String>>) -> Task {
   })
 }
 
-pub fn stream_output(printer: Printer, stream: Receiver<SadResult<String>>) -> Task {
-  match printer {
-    Printer::Pager(cmd) => {
-      let (child, rx) = cmd.stream(stream);
-      let recv = stream_stdout(rx);
-      task::spawn(async {
-        if let Err(e) = try_join(child, recv).await {
-          err_exit(e.into())
-        }
-      })
-    }
-    Printer::Fzf => {
-      let args = env::args()
-        .filter(|a| a != "--pick")
-        .collect::<Vec<String>>()
-        .join(" ");
+pub fn stream_output(opts: Options, stream: Receiver<SadResult<String>>) -> Task {
+  match (opts.action, opts.printer) {
+    (Action::Fzf, _) => {
+      let preview_args = env::args().collect::<Vec<String>>().join(" ");
+      let mut arguments = vec![
+        "--read0".to_string(),
+        "-m".to_string(),
+        "--ansi".to_string(),
+        format!("--preview={} --internal-preview={{}}", preview_args),
+        "--preview-window=70%:wrap".to_string(),
+      ];
+      arguments.extend(opts.fzf.unwrap_or_default());
       let cmd = SubprocessCommand {
         program: "fzf".to_string(),
-        arguments: vec![
-          "--read0".to_string(),
-          "-m".to_string(),
-          "--ansi".to_string(),
-          format!("--preview={} --internal-preview={{}}", args),
-          "--preview-window=70%:wrap".to_string(),
-        ],
+        arguments,
       };
       let (child, rx) = cmd.stream_connected(stream);
       let recv = stream_stdout(rx);
@@ -62,7 +52,16 @@ pub fn stream_output(printer: Printer, stream: Receiver<SadResult<String>>) -> T
         }
       })
     }
-    Printer::Stdout => stream_stdout(stream),
+    (_, Printer::Pager(cmd)) => {
+      let (child, rx) = cmd.stream(stream);
+      let recv = stream_stdout(rx);
+      task::spawn(async {
+        if let Err(e) = try_join(child, recv).await {
+          err_exit(e.into())
+        }
+      })
+    }
+    (_, Printer::Stdout) => stream_stdout(stream),
   }
 }
 
