@@ -50,7 +50,7 @@ pub struct Arguments {
   pub internal_preview: Option<String>,
 
   #[structopt(long, about = "*Internal use only*")]
-  pub internal_patch: Option<String>,
+  pub internal_patch: Option<Vec<String>>,
 }
 
 #[derive(Clone)]

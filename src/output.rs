@@ -32,7 +32,7 @@ pub fn stream_output(opts: Options, stream: Receiver<SadResult<String>>) -> Task
   match (opts.action, opts.printer) {
     (Action::Fzf, _) => {
       let preview_args = env::args().collect::<Vec<String>>().join(" ");
-      let execute = format!("abort+execute({}, --internal-patch=\"{{+}}\")", preview_args);
+      let execute = format!("abort+execute({}, --internal-patch={{+}})", preview_args);
       let mut arguments = vec![
         "--read0".to_string(),
         "-m".to_string(),
