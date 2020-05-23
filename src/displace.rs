@@ -1,5 +1,6 @@
 use super::argparse::{Action, Engine, Options};
 use super::errors::*;
+use super::input::Payload;
 use super::udiff::udiff;
 use std::{fs::Metadata, path::PathBuf};
 use tokio::fs;
@@ -10,6 +11,15 @@ impl Engine {
     match self {
       Engine::AhoCorasick(ac, replace) => ac.replace_all(&before, &[replace.as_str()]),
       Engine::Regex(re, replace) => re.replace_all(&before, replace.as_str()).into(),
+    }
+  }
+}
+
+impl Payload {
+  fn path(&self) -> PathBuf {
+    match self {
+      Payload::Entire(path) => path,
+      Payload::Piecewise(path, _) => path,
     }
   }
 }
@@ -33,7 +43,8 @@ async fn safe_write(canonical: &PathBuf, meta: &Metadata, text: &str) -> SadResu
   Ok(())
 }
 
-pub async fn displace(path: PathBuf, opts: &Options) -> SadResult<String> {
+pub async fn displace(opts: &Options, payload: Payload) -> SadResult<String> {
+  let path = payload.path();
   let name = path.to_string_lossy();
   let canonical = fs::canonicalize(&path).await.into_sadness()?;
   let meta = fs::metadata(&canonical).await.into_sadness()?;

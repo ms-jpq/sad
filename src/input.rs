@@ -9,13 +9,13 @@ use tokio::{
   task,
 };
 
-enum Payload {
+pub enum Payload {
   Entire(PathBuf),
-  Piecewise(PathBuf, Vec<DiffRange>)
+  Piecewise(PathBuf, Vec<DiffRange>),
 }
 
 impl Arguments {
-  pub fn stream(&self) -> (Task, Receiver<SadResult<PathBuf>>) {
+  pub fn stream(&self) -> (Task, Receiver<SadResult<Payload>>) {
     if self.input.is_empty() {
       stream_stdin(&self)
     } else {
@@ -24,9 +24,15 @@ impl Arguments {
   }
 }
 
-fn stream_stdin(args: &Arguments) -> (Task, Receiver<SadResult<PathBuf>>) {
+fn p_path(name: &[u8]) -> SadResult<PathBuf> {
+  String::from_utf8(name.to_vec())
+    .map(|p| PathBuf::from(p.as_str()))
+    .into_sadness()
+}
+
+fn stream_stdin(args: &Arguments) -> (Task, Receiver<SadResult<Payload>>) {
   let delim = if args.nul_delim { b'\0' } else { b'\n' };
-  let (tx, rx) = channel::<SadResult<PathBuf>>(1);
+  let (tx, rx) = channel::<SadResult<Payload>>(1);
   let mut reader = BufReader::new(io::stdin());
   let mut buf = Vec::new();
   let handle = task::spawn(async move {
@@ -38,7 +44,8 @@ fn stream_stdin(args: &Arguments) -> (Task, Receiver<SadResult<PathBuf>>) {
           buf.pop();
           let path = p_path(&buf);
           buf.clear();
-          tx.send(path).await;
+          let step = path.map(|p| Payload::Entire(p));
+          tx.send(step).await;
         }
         Err(err) => tx.send(Err(err)).await,
       }
@@ -47,18 +54,14 @@ fn stream_stdin(args: &Arguments) -> (Task, Receiver<SadResult<PathBuf>>) {
   (handle, rx)
 }
 
-fn stream_list(paths: Vec<PathBuf>) -> (Task, Receiver<SadResult<PathBuf>>) {
-  let (tx, rx) = channel::<SadResult<PathBuf>>(1);
+fn stream_list(paths: Vec<PathBuf>) -> (Task, Receiver<SadResult<Payload>>) {
+  let (tx, rx) = channel::<SadResult<Payload>>(1);
   let handle = task::spawn(async move {
     for path in paths {
-      tx.send(Ok(path)).await;
+      tx.send(Ok(Payload::Entire(path))).await;
     }
   });
   (handle, rx)
 }
 
-fn p_path(name: &[u8]) -> SadResult<PathBuf> {
-  String::from_utf8(name.to_vec())
-    .map(|p| PathBuf::from(p.as_str()))
-    .into_sadness()
-}
+

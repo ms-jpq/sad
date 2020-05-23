@@ -2,10 +2,11 @@ use argparse::{Arguments, Options};
 use async_std::sync::{channel, Receiver, Sender};
 use errors::*;
 use futures::future::{try_join3, try_join_all, TryJoinAll};
-use std::{path::PathBuf, sync::Arc};
+use std::sync::Arc;
 use structopt::StructOpt;
 use tokio::{runtime, task};
 use types::Task;
+use input::Payload;
 
 mod argparse;
 mod displace;
@@ -18,7 +19,7 @@ mod udiff;
 
 fn stream_process(
   opts: Options,
-  stream: Receiver<SadResult<PathBuf>>,
+  stream: Receiver<SadResult<Payload>>,
 ) -> (TryJoinAll<Task>, Receiver<SadResult<String>>) {
   let oo = Arc::new(opts);
   let (tx, rx) = channel::<SadResult<String>>(1);
@@ -33,7 +34,7 @@ fn stream_process(
         while let Some(path) = stream.recv().await {
           match path {
             Ok(val) => {
-              let displaced = displace::displace(val, &opts).await;
+              let displaced = displace::displace(&opts, val).await;
               sender.send(displaced).await
             }
             Err(err) => sender.send(Err(err)).await,
