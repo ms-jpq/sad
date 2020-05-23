@@ -71,31 +71,32 @@ impl TryFrom<&str> for DiffRange {
   }
 }
 
+fn p_path(name: &[u8]) -> SadResult<PathBuf> {
+  String::from_utf8(name.to_vec())
+    .map(|p| PathBuf::from(p.as_str()))
+    .into_sadness()
+}
 
 fn stream_preview(preview: &str) -> (Task, Receiver<SadResult<Payload>>) {
+  let preview = preview.to_owned();
   let (tx, rx) = channel::<SadResult<Payload>>(1);
   let handle = task::spawn(async move {
-    for path in Vec::new() {
-      tx.send(Ok(Payload::Entire(path))).await;
-    }
+    let ranges = HashSet::new();
+    let step = p_path(preview.as_bytes()).map(|p| Payload::Piecewise(p, ranges));
+    tx.send(step).await;
   });
   (handle, rx)
 }
 
 fn stream_patch(patch: &str) -> (Task, Receiver<SadResult<Payload>>) {
+  let patch = patch.to_owned();
   let (tx, rx) = channel::<SadResult<Payload>>(1);
   let handle = task::spawn(async move {
-    for path in Vec::new() {
-      tx.send(Ok(Payload::Entire(path))).await;
-    }
+    let ranges = HashSet::new();
+    let cord = p_path(patch.as_bytes()).map(|p| Payload::Piecewise(p, ranges));
+    tx.send(cord).await
   });
   (handle, rx)
-}
-
-fn p_path(name: &[u8]) -> SadResult<PathBuf> {
-  String::from_utf8(name.to_vec())
-    .map(|p| PathBuf::from(p.as_str()))
-    .into_sadness()
 }
 
 fn stream_stdin(use_nul: bool) -> (Task, Receiver<SadResult<Payload>>) {
