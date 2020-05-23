@@ -66,6 +66,10 @@ pub fn stream_output(opts: Options, stream: Receiver<SadResult<String>>) -> Task
 }
 
 pub fn err_exit(err: Failure) -> ! {
+  if let Some(mut out) = term::stdout() {
+    out.reset().unwrap_or(());
+    out.flush().unwrap_or(());
+  };
   eprintln!("{}", Colour::Red.paint(format!("\n{:#?}", err)));
   process::exit(1)
 }

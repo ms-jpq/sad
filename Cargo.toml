@@ -17,3 +17,5 @@ aho-corasick = "0.7"
 difflib = "0.4"
 uuid = { version = "0.8", features = ["v4"] }
 ansi_term = "0.12"
+atty = "0.2"
+term = "0.6"
