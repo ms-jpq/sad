@@ -18,10 +18,10 @@ fn stream_stdout(stream: Receiver<SadResult<String>>) -> Task {
       match print {
         Ok(val) => match stdout.write(val.as_bytes()).await {
           Err(e) if e.kind() == std::io::ErrorKind::BrokenPipe => process::exit(1),
-          Err(e) => err_exit(e.into()),
+          Err(e) => err_exit(e.into()).await,
           _ => {}
         },
-        Err(e) => err_exit(e),
+        Err(e) => err_exit(e).await,
       }
     }
     stdout.shutdown().await.unwrap()
@@ -48,7 +48,7 @@ pub fn stream_output(opts: Options, stream: Receiver<SadResult<String>>) -> Task
       let recv = stream_stdout(rx);
       task::spawn(async {
         if let Err(e) = try_join(child, recv).await {
-          err_exit(e.into())
+          err_exit(e.into()).await
         }
       })
     }
@@ -57,7 +57,7 @@ pub fn stream_output(opts: Options, stream: Receiver<SadResult<String>>) -> Task
       let recv = stream_stdout(rx);
       task::spawn(async {
         if let Err(e) = try_join(child, recv).await {
-          err_exit(e.into())
+          err_exit(e.into()).await
         }
       })
     }
@@ -65,11 +65,16 @@ pub fn stream_output(opts: Options, stream: Receiver<SadResult<String>>) -> Task
   }
 }
 
-pub fn err_exit(err: Failure) -> ! {
+pub async fn err_exit(err: Failure) -> ! {
+  io::stdout().flush().await.unwrap();
+  reset_term();
+  eprintln!("{}", Colour::Red.paint(format!("\n{:#?}", err)));
+  process::exit(1)
+}
+
+fn reset_term() {
   if let Some(mut out) = term::stdout() {
     out.reset().unwrap_or(());
     out.flush().unwrap_or(());
-  };
-  eprintln!("{}", Colour::Red.paint(format!("\n{:#?}", err)));
-  process::exit(1)
+  }
 }

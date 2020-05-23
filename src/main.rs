@@ -62,10 +62,10 @@ fn main() {
         let writer = output::stream_output(opts, rx);
         try_join3(reader, steps, writer).await
       }
-      Err(e) => output::err_exit(e),
+      Err(e) => output::err_exit(e).await,
     };
     if let Err(err) = end {
-      output::err_exit(err.into())
+      output::err_exit(err.into()).await
     }
   })
 }
