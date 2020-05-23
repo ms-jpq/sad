@@ -102,10 +102,12 @@ impl Options {
 
     let fzf = p_fzf(args.fzf);
 
-    let action = match (fzf != None, args.commit) {
-      (true, _) => Action::Fzf,
-      (false, true) => Action::Commit,
-      (false, false) => Action::Preview,
+    let action = if args.commit {
+      Action::Commit
+    } else if fzf != None {
+      Action::Fzf
+    } else {
+      Action::Preview
     };
 
     let printer = if fzf != None {
