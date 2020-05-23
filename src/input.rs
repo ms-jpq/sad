@@ -86,7 +86,7 @@ fn stream_stdin(args: &Arguments) -> (Task, Receiver<SadResult<Payload>>) {
           buf.pop();
           let path = p_path(&buf);
           buf.clear();
-          let step = path.map(|p| Payload::Entire(p));
+          let step = path.map(Payload::Entire);
           tx.send(step).await;
         }
         Err(err) => tx.send(Err(err)).await,

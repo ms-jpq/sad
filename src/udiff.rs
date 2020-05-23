@@ -2,8 +2,8 @@ use difflib::{sequencematcher::Opcode, sequencematcher::SequenceMatcher};
 use std::fmt::{self, Display, Formatter};
 
 pub struct DiffRange {
-  before: (usize, usize),
-  after: (usize, usize),
+  pub before: (usize, usize),
+  pub after: (usize, usize),
 }
 
 impl DiffRange {

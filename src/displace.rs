@@ -16,12 +16,22 @@ impl Engine {
 }
 
 impl Payload {
-  fn path(&self) -> PathBuf {
+  fn path(&self) -> &PathBuf {
     match self {
       Payload::Entire(path) => path,
       Payload::Piecewise(path, _) => path,
     }
   }
+}
+
+async fn read_meta(path: &PathBuf) -> SadResult<(PathBuf, Metadata)> {
+  let canonical = fs::canonicalize(&path).await.into_sadness()?;
+  let meta = fs::metadata(&canonical).await.into_sadness()?;
+  if !meta.is_file() {
+    let msg = format!("Not a file - {}", canonical.to_string_lossy());
+    return Err(Failure::Simple(msg));
+  }
+  Ok((canonical, meta))
 }
 
 async fn safe_write(canonical: &PathBuf, meta: &Metadata, text: &str) -> SadResult<()> {
@@ -46,12 +56,7 @@ async fn safe_write(canonical: &PathBuf, meta: &Metadata, text: &str) -> SadResu
 pub async fn displace(opts: &Options, payload: Payload) -> SadResult<String> {
   let path = payload.path();
   let name = path.to_string_lossy();
-  let canonical = fs::canonicalize(&path).await.into_sadness()?;
-  let meta = fs::metadata(&canonical).await.into_sadness()?;
-  if !meta.is_file() {
-    let msg = format!("Not a file - {}", canonical.to_string_lossy());
-    return Err(Failure::Simple(msg));
-  }
+  let (canonical, meta) = read_meta(path).await?;
   let before = fs::read_to_string(&canonical).await.into_sadness()?;
   let after = opts.engine.replace(&before);
   if before == after {
