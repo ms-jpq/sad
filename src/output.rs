@@ -73,10 +73,11 @@ pub async fn err_exit(err: Failure) -> ! {
 }
 
 async fn reset_term() {
+  io::stdout().flush().await.unwrap();
+  io::stderr().flush().await.unwrap();
   if let Ok(_) = which::which("tput") {
     let _ = Command::new("tput").arg("reset").status().await;
   } else if let Ok(_) = which::which("reset") {
     let _ = Command::new("reset").status().await;
   };
-  io::stdout().flush().await.unwrap();
 }
