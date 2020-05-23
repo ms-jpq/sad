@@ -8,7 +8,6 @@ edition = "2018"
 
 [dependencies]
 futures = "0.3"
-itertools = "0.9"
 structopt = "0.3"
 tokio = { version = "0.2", features = ["fs", "io-std", "io-util", "process", "sync", "rt-threaded"] }
 async-std = { version = "1.5", features = ["unstable"] }
