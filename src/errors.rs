@@ -14,6 +14,7 @@ pub enum Failure {
   Regex(regex::Error),
   JoinError,
   Pager(String),
+  Fzf(String),
   Parse(String),
 }
 

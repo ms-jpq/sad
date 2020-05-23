@@ -41,7 +41,7 @@ impl SubprocessCommand {
     let mut stdin = match child.stdin.take() {
       Some(stdin) => BufWriter::new(stdin),
       None => {
-        let err = Err(Failure::Pager("Invalid stin".into()));
+        let err = Err(Failure::Pager("Invalid stdin".into()));
         let handle = task::spawn(async move { tx.send(err).await });
         return (handle, rx);
       }
@@ -149,7 +149,7 @@ impl SubprocessCommand {
     let mut stdin = match child.stdin.take() {
       Some(stdin) => BufWriter::new(stdin),
       None => {
-        let err = Err(Failure::Pager("Invalid stin".into()));
+        let err = Err(Failure::Fzf("Invalid stdin".into()));
         let handle = task::spawn(async move { tx.send(err).await });
         return (handle, rx);
       }
@@ -172,8 +172,15 @@ impl SubprocessCommand {
     });
 
     let handle_child = task::spawn(async move {
-      if let Err(err) = child.await {
-        tt.send(Err(err.into())).await;
+      match child.await {
+        Err(err) =>
+        tt.send(Err(err.into())).await,
+        Ok(status) => {
+          match status.code() {
+            Some(0) | Some(1) | Some(130) | None => {},
+            Some(c) => tt.send(Err(Failure::Fzf(format!("Error exit - {}", c)))).await
+          }
+        }
       }
     });
 

@@ -11,6 +11,7 @@ use tokio::{
   task,
 };
 
+
 fn stream_stdout(stream: Receiver<SadResult<String>>) -> Task {
   let mut stdout = BufWriter::new(io::stdout());
   task::spawn(async move {
@@ -66,6 +67,6 @@ pub fn stream_output(opts: Options, stream: Receiver<SadResult<String>>) -> Task
 }
 
 pub fn err_exit(err: Failure) -> ! {
-  eprintln!("{}", Colour::Red.paint(format!("{:#?}", err)));
+  eprintln!("{}", Colour::Red.paint(format!("\n{:#?}", err)));
   process::exit(1)
 }
