@@ -180,7 +180,7 @@ fn p_fzf(fzf: Option<String>) -> Option<Vec<String>> {
 }
 
 fn p_pager(pager: Option<String>) -> Option<SubprocessCommand> {
-  pager.and(env::var("GIT_PAGER").ok()).and_then(|val| {
+  pager.or(env::var("GIT_PAGER").ok()).and_then(|val| {
     if val == "never" {
       None
     } else {

@@ -86,7 +86,7 @@ pub async fn displace(opts: &Options, payload: Payload) -> SadResult<String> {
         let mut fzf_lines = ranges
           .iter()
           .map(|r| {
-            let repr = Colour::Blue.paint(format!("{}", r));
+            let repr = Colour::Red.paint(format!("{}", r));
             format!("{}\n\n\n\n{}", &name, repr)
           })
           .collect::<Vec<String>>()
