@@ -27,6 +27,8 @@ impl SubprocessCommand {
     let subprocess = Command::new(&self.program)
       .kill_on_drop(true)
       .args(&self.arguments)
+      .envs(&self.env)
+      .kill_on_drop(true)
       .stdin(Stdio::piped())
       .stdout(Stdio::piped())
       .stderr(Stdio::piped())
@@ -112,6 +114,7 @@ impl SubprocessCommand {
 
     let subprocess = Command::new(&self.program)
       .args(&self.arguments)
+      .envs(&self.env)
       .kill_on_drop(true)
       .stdin(Stdio::piped())
       .stdout(Stdio::inherit())

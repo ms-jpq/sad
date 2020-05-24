@@ -2,7 +2,7 @@ use super::errors::*;
 use super::subprocess::SubprocessCommand;
 use aho_corasick::{AhoCorasick, AhoCorasickBuilder};
 use regex::{Regex, RegexBuilder};
-use std::{collections::HashMap, env};
+use std::{collections::HashMap, env, fs, path::PathBuf};
 use structopt::StructOpt;
 
 #[derive(StructOpt)]
@@ -65,7 +65,7 @@ impl Arguments {
         println!("{}", rhs);
         Arguments::from_args()
       }
-      _ => Arguments::from_args()
+      _ => Arguments::from_args(),
     }
   }
 }
@@ -101,7 +101,17 @@ pub struct Options {
 
 impl Options {
   pub fn new(args: Arguments) -> SadResult<Options> {
-    let name = env::args().next().unwrap_or("sad".to_owned());
+    let name = env::args()
+      .next()
+      .and_then(|s| {
+        let path = PathBuf::from(s);
+        fs::canonicalize(path).ok()
+      })
+      .or(which::which("sad").ok())
+      .unwrap_or(PathBuf::from("sad"))
+      .to_string_lossy()
+      .to_string();
+
     let mut flagset = p_auto_flags(&args.pattern);
     flagset.extend(
       args
