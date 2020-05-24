@@ -206,11 +206,13 @@ mod tests {
 
   fn regexes() -> Vec<(Regex, String)> {
     vec![
-      (r"std", r"owo"),
-      (r"<([^\)])>", r"\|$1"),
+      (r"std", "owo"),
+      (r"<([^\)])>", "\\|$1"),
       (r"\n", r""),
-      (r"use [^\n]+\n", r""),
-      (r"use [^\n]+\n", r"\n\nowo\n\nowo"),
+      (r"use [^\n]+\n", ""),
+      (r"use [^\n]+\n", "\n\nowo\n\nowo"),
+      (r"\n+", ""),
+      (r"\n+", "\n"),
     ]
     .into_iter()
     .map(|(s1, s2)| (Regex::new(s1).unwrap(), s2.to_owned()))
