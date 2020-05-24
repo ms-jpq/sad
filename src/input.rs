@@ -10,6 +10,7 @@ use std::{
   path::PathBuf,
 };
 use tokio::{
+  fs::File,
   io::{self, AsyncBufReadExt, BufReader},
   task,
 };
@@ -25,7 +26,7 @@ impl Arguments {
     if let Some(preview) = &self.internal_preview {
       stream_preview(preview)
     } else if let Some(patch) = &self.internal_patch {
-      stream_patch(patch)
+      stream_patch(patch.clone())
     } else {
       stream_stdin(self.nul_delim)
     }
@@ -85,8 +86,9 @@ impl TryFrom<&str> for DiffLine {
 }
 
 fn stream_preview(preview: &str) -> (Task, Receiver<SadResult<Payload>>) {
-  let line = DiffLine::try_from(preview);
   let (tx, rx) = channel::<SadResult<Payload>>(1);
+  let line = DiffLine::try_from(preview);
+
   let handle = task::spawn(async move {
     let step = line.map(|patch| {
       let mut ranges = HashSet::new();
@@ -95,48 +97,66 @@ fn stream_preview(preview: &str) -> (Task, Receiver<SadResult<Payload>>) {
     });
     tx.send(step).await;
   });
+
   (handle, rx)
 }
 
-fn stream_patch(patch: &[String]) -> (Task, Receiver<SadResult<Payload>>) {
-  let lines = patch
-    .iter()
-    .map(|p| DiffLine::try_from((*p).as_str()))
-    .collect::<Vec<_>>();
-  let (tx, rx) = channel::<SadResult<Payload>>(1);
-  let handle = task::spawn(async move {
-    let mut patches: HashMap<PathBuf, HashSet<DiffRange>> = HashMap::new();
-    for line in lines {
-      match line {
-        Ok(patch) => match patches.get_mut(&patch.0) {
+async fn read_patches(path: &PathBuf) -> SadResult<HashMap<PathBuf, HashSet<DiffRange>>> {
+  let mut acc: HashMap<PathBuf, HashSet<DiffRange>> = HashMap::new();
+  let fd = File::open(path).await.into_sadness()?;
+  let mut reader = BufReader::new(fd);
+
+  loop {
+    let mut buf = Vec::new();
+    let n = reader.read_until(b'\0', &mut buf).await.into_sadness()?;
+    match n {
+      0 => break,
+      _ => {
+        buf.pop();
+        let line = String::from_utf8(buf).into_sadness()?;
+        let patch = DiffLine::try_from(line.as_str()).into_sadness()?;
+        match acc.get_mut(&patch.0) {
           Some(ranges) => {
             ranges.insert(patch.1);
           }
           None => {
             let mut ranges = HashSet::new();
             ranges.insert(patch.1);
-            patches.insert(patch.0, ranges);
+            acc.insert(patch.0, ranges);
           }
-        },
-        Err(err) => tx.send(Err(err)).await,
+        }
       }
     }
-    for patch in patches {
-      tx.send(Ok(Payload::Piecewise(patch.0, patch.1))).await
+  }
+
+  Ok(acc)
+}
+
+fn stream_patch(patch: PathBuf) -> (Task, Receiver<SadResult<Payload>>) {
+  let (tx, rx) = channel::<SadResult<Payload>>(1);
+  let handle = task::spawn(async move {
+    match read_patches(&patch).await {
+      Ok(patches) => {
+        for patch in patches {
+          tx.send(Ok(Payload::Piecewise(patch.0, patch.1))).await
+        }
+      }
+      Err(err) => tx.send(Err(err)).await,
     }
   });
   (handle, rx)
 }
 
 fn stream_stdin(use_nul: bool) -> (Task, Receiver<SadResult<Payload>>) {
-  let delim = if use_nul { b'\0' } else { b'\n' };
   let (tx, rx) = channel::<SadResult<Payload>>(1);
-  let mut reader = BufReader::new(io::stdin());
-  let mut buf = Vec::new();
   let handle = task::spawn(async move {
+    let delim = if use_nul { b'\0' } else { b'\n' };
+    let mut reader = BufReader::new(io::stdin());
+    let mut buf = Vec::new();
+
     loop {
-      let line = reader.read_until(delim, &mut buf).await.into_sadness();
-      match line {
+      let n = reader.read_until(delim, &mut buf).await.into_sadness();
+      match n {
         Ok(0) => return,
         Ok(_) => {
           buf.pop();

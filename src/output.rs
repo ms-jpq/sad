@@ -33,10 +33,14 @@ fn stream_stdout(stream: Receiver<SadResult<String>>) -> Task {
 pub fn stream_output(opts: Options, stream: Receiver<SadResult<String>>) -> Task {
   match (opts.action, opts.printer) {
     (Action::Fzf, _) => {
-      let preview_args = env::args().skip(1).collect::<Vec<_>>().join("\x04");
-      let execute = format!("abort+execute:{}\x04--internal-patch\x04{{+}}", preview_args);
+      let preview_args = env::args().collect::<Vec<_>>().join("\x04");
+      let execute = format!(
+        "abort+execute:{}\x04--internal-patch\x04{{+f}}",
+        preview_args
+      );
       let mut arguments = vec![
         "--read0".to_owned(),
+        "--print0".to_owned(),
         "-m".to_owned(),
         "--ansi".to_owned(),
         format!("--bind=enter:{}", execute),
