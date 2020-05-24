@@ -17,7 +17,9 @@ fn stream_stdout(stream: Receiver<SadResult<String>>) -> Task {
     while let Some(print) = stream.recv().await {
       match print {
         Ok(val) => match stdout.write(val.as_bytes()).await {
-          Err(e) if e.kind() == std::io::ErrorKind::BrokenPipe => process::exit(1),
+          Err(e) if e.kind() == std::io::ErrorKind::BrokenPipe => {
+            err_exit(Failure::Interrupt).await
+          }
           Err(e) => err_exit(e.into()).await,
           _ => {}
         },
@@ -69,6 +71,8 @@ pub fn stream_output(opts: Options, stream: Receiver<SadResult<String>>) -> Task
 }
 
 pub async fn err_exit(err: Failure) -> ! {
-  eprintln!("{}", Colour::Red.paint(format!("\n{:#?}", err)));
+  if !err.silent_exit() {
+    eprintln!("{}", Colour::Red.paint(format!("\n{:#?}", err)));
+  }
   process::exit(1)
 }

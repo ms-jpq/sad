@@ -8,14 +8,24 @@ use tokio::task::JoinError;
 
 #[derive(Debug)]
 pub enum Failure {
-  Simple(String),
+  Fzf(String),
+  Interrupt,
   IO(io::Error),
-  Str(string::FromUtf8Error),
-  Regex(regex::Error),
   JoinError,
   Pager(String),
-  Fzf(String),
   Parse(String),
+  Regex(regex::Error),
+  Simple(String),
+  Str(string::FromUtf8Error),
+}
+
+impl Failure {
+  pub fn silent_exit(&self) -> bool {
+    match self {
+      Failure::Interrupt => true,
+      _ => false,
+    }
+  }
 }
 
 pub type SadResult<T> = Result<T, Failure>;

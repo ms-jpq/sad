@@ -189,7 +189,8 @@ fn combine_err<T>(err: Failure, res: SadResult<T>) -> Failure {
 
 async fn process_status_code(code: Option<i32>, tx: Sender<SadResult<String>>) {
   match code {
-    Some(0) | Some(1) | Some(130) | None => {}
+    Some(0) | Some(1) | None => {}
+    Some(130) => tx.send(Err(Failure::Interrupt)).await,
     Some(c) => {
       tx.send(Err(Failure::Fzf(format!("Error exit - {}", c))))
         .await
