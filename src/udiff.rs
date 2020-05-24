@@ -183,7 +183,7 @@ mod tests {
   use super::*;
   use difflib::unified_diff;
   use regex::Regex;
-  use std::{collections::HashSet, cmp::max, fs, path::PathBuf};
+  use std::{cmp::max, collections::HashSet, fs, path::PathBuf};
 
   fn read_files() -> Vec<String> {
     let path = PathBuf::from("src");
@@ -232,6 +232,7 @@ mod tests {
       for i in 0..len {
         assert_eq!(canon[i], imp[i]);
       }
+      assert_eq!(after, patched);
       unified += 1;
     }
   }
