@@ -52,7 +52,7 @@ export GIT_PAGER='<highlighter-of-your-choice>'
 find "$FIND_ARGS" | sad '<pattern>' '<replacement>'
 ```
 
-**maximum speed**
+**gotta go fast**
 
 If you wanna go fast.
 
