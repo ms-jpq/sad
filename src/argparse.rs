@@ -46,7 +46,7 @@ pub struct Arguments {
 
   /// *Internal use only*
   #[structopt(long)]
-  pub internal_preview: Option<String>,
+  pub internal_preview: Option<PathBuf>,
 
   /// *Internal use only*
   #[structopt(long)]

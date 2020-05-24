@@ -24,7 +24,7 @@ pub enum Payload {
 impl Arguments {
   pub fn stream(&self) -> (Task, Receiver<SadResult<Payload>>) {
     if let Some(preview) = &self.internal_preview {
-      stream_preview(preview)
+      stream_patch(preview.clone())
     } else if let Some(patch) = &self.internal_patch {
       stream_patch(patch.clone())
     } else {
@@ -83,22 +83,6 @@ impl TryFrom<&str> for DiffLine {
     let buf = p_path(&name.as_bytes())?;
     Ok(DiffLine(buf, range))
   }
-}
-
-fn stream_preview(preview: &str) -> (Task, Receiver<SadResult<Payload>>) {
-  let (tx, rx) = channel::<SadResult<Payload>>(1);
-  let line = DiffLine::try_from(preview);
-
-  let handle = task::spawn(async move {
-    let step = line.map(|patch| {
-      let mut ranges = HashSet::new();
-      ranges.insert(patch.1);
-      Payload::Piecewise(patch.0, ranges)
-    });
-    tx.send(step).await;
-  });
-
-  (handle, rx)
 }
 
 async fn read_patches(path: &PathBuf) -> SadResult<HashMap<PathBuf, HashSet<DiffRange>>> {

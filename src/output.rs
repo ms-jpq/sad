@@ -45,7 +45,7 @@ pub fn stream_output(opts: Options, stream: Receiver<SadResult<String>>) -> Task
         "--ansi".to_owned(),
         format!("--bind=enter:{}", execute),
         format!("--bind=double-click:{}", execute),
-        format!("--preview={}\x04--internal-preview\x04{{}}", preview_args),
+        format!("--preview={}\x04--internal-preview\x04{{f}}", preview_args),
         "--preview-window=70%:wrap".to_owned(),
       ];
       arguments.extend(opts.fzf.unwrap_or_default());
