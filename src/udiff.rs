@@ -248,7 +248,7 @@ mod tests {
         .skip(2)
         .map(|s| {
           if s.starts_with("@@") {
-            s.trim_end().to_string()
+            "@@".to_string()
           } else {
             s.to_string()
           }
@@ -257,7 +257,13 @@ mod tests {
       let imp = udiff(None, unified, "", &before, &after)
         .lines()
         .skip(4)
-        .map(String::from)
+        .map(|s| {
+          if s.starts_with("@@") {
+            "@@".to_string()
+          } else {
+            s.to_string()
+          }
+        })
         .collect::<Vec<String>>();
       let len = max(canon.len(), imp.len());
       for i in 0..len {
