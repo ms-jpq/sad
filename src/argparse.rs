@@ -2,7 +2,7 @@ use super::errors::*;
 use super::subprocess::SubprocessCommand;
 use aho_corasick::{AhoCorasick, AhoCorasickBuilder};
 use regex::{Regex, RegexBuilder};
-use std::path::PathBuf;
+use std::{env, path::PathBuf};
 use structopt::StructOpt;
 
 #[derive(StructOpt)]
@@ -17,7 +17,7 @@ pub struct Arguments {
   #[structopt(short, long, about = "Skip stdin, supply files to edit")]
   pub input: Vec<PathBuf>,
 
-  #[structopt(short = "0", about = r"Use \0 as stdin delimiter")]
+  #[structopt(short = "0", long = "read0", about = r"Use \0 as stdin delimiter")]
   pub nul_delim: bool,
 
   #[structopt(short = "k", long, about = "No preview, write changes to file")]
@@ -30,8 +30,8 @@ pub struct Arguments {
   pub flags: Option<String>,
 
   #[structopt(
+    short,
     long,
-    env = "GIT_PAGER",
     about = "Colourizing program, disable = never, default = $GIT_PAGER"
   )]
   pub pager: Option<String>,
@@ -180,7 +180,7 @@ fn p_fzf(fzf: Option<String>) -> Option<Vec<String>> {
 }
 
 fn p_pager(pager: Option<String>) -> Option<SubprocessCommand> {
-  pager.and_then(|val| {
+  pager.and(env::var("GIT_PAGER").ok()).and_then(|val| {
     if val == "never" {
       None
     } else {
