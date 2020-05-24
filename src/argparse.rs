@@ -172,7 +172,7 @@ fn p_fzf(fzf: Option<String>) -> Option<Vec<String>> {
   match (which::which("fzf"), p_tty()) {
     (Ok(_), true) => match fzf {
       Some(v) if v == "never" => None,
-      Some(val) => Some(val.split(' ').map(String::from).collect()),
+      Some(val) => Some(val.split_whitespace().map(String::from).collect()),
       None => Some(Vec::new()),
     },
     _ => None,
@@ -185,7 +185,7 @@ fn p_pager(pager: Option<String>) -> Option<SubprocessCommand> {
       None
     } else {
       let less_less = val.split('|').next().unwrap_or(&val).trim();
-      let mut commands = less_less.split(' ').map(String::from);
+      let mut commands = less_less.split_whitespace().map(String::from);
       commands.next().map(|program| SubprocessCommand {
         program,
         arguments: commands.collect(),

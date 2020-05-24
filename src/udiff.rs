@@ -43,8 +43,8 @@ pub trait Picker {
 
 impl Picker for DiffRanges {
   fn new(unified: usize, before: &str, after: &str) -> Self {
-    let before = before.split_terminator('\n').collect::<Vec<&str>>();
-    let after = after.split_terminator('\n').collect::<Vec<&str>>();
+    let before = before.lines().collect::<Vec<&str>>();
+    let after = after.lines().collect::<Vec<&str>>();
     let mut ret = Vec::new();
     let mut matcher = SequenceMatcher::new(&before, &after);
     for group in &matcher.get_grouped_opcodes(unified) {
@@ -69,8 +69,8 @@ pub trait Patchable {
 
 impl Patchable for Diffs {
   fn new(unified: usize, before: &str, after: &str) -> Self {
-    let before = before.split_terminator('\n').collect::<Vec<&str>>();
-    let after = after.split_terminator('\n').collect::<Vec<&str>>();
+    let before = before.lines().collect::<Vec<&str>>();
+    let after = after.lines().collect::<Vec<&str>>();
 
     let mut ret = Vec::new();
     let mut matcher = SequenceMatcher::new(&before, &after);
@@ -100,7 +100,7 @@ impl Patchable for Diffs {
   }
 
   fn patch(&self, ranges: &HashSet<DiffRange>, before: &str) -> String {
-    let before = before.split_terminator('\n').collect::<Vec<&str>>();
+    let before = before.lines().collect::<Vec<&str>>();
     let mut ret = String::new();
     let mut prev = 0;
 
@@ -139,8 +139,8 @@ pub fn udiff(
   before: &str,
   after: &str,
 ) -> String {
-  let before = before.split_terminator('\n').collect::<Vec<&str>>();
-  let after = after.split_terminator('\n').collect::<Vec<&str>>();
+  let before = before.lines().collect::<Vec<&str>>();
+  let after = after.lines().collect::<Vec<&str>>();
 
   let mut ret = String::new();
   ret.push_str(&format!("\ndiff --git {} {}", name, name));
@@ -176,4 +176,70 @@ pub fn udiff(
     }
   }
   ret
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use difflib::unified_diff;
+  use regex::Regex;
+  use std::{fs, path::PathBuf, collections::HashSet};
+
+  fn read_files() -> Vec<String> {
+    let path = PathBuf::from("src");
+    fs::read_dir(path)
+      .unwrap()
+      .map(|entry| {
+        let path = entry.unwrap().path();
+        fs::read_to_string(path).unwrap()
+      })
+      .collect::<Vec<String>>()
+  }
+
+  fn regexes() -> Vec<(Regex, String)> {
+    vec![("std", "owo")]
+      .into_iter()
+      .map(|(s1, s2)| (Regex::new(s1).unwrap(), s2.to_string()))
+      .collect::<Vec<(Regex, String)>>()
+  }
+
+  fn diffs() -> Vec<(String, String)> {
+    let texts = read_files();
+    let regexes = regexes();
+    let mut acc = Vec::new();
+    for text in texts {
+      for re in &regexes {
+        let before = text.clone();
+        let after = re.0.replace_all(text.as_str(), re.1.as_str());
+        acc.push((before, after.to_string()))
+      }
+    }
+    acc
+  }
+
+  #[test]
+  fn patch() {
+    let diffs = diffs();
+    for (before, after) in diffs {
+        let unified = 3;
+        let ranges: DiffRanges = Picker::new(unified, &before, &after);
+        let rangeset = ranges.into_iter().collect::<HashSet<DiffRange>>();
+        let diffs: Diffs = Patchable::new(unified, &before, &after);
+        let patched = diffs.patch(&rangeset, &before);
+        assert_eq!(after, patched);
+    }
+  }
+
+  #[test]
+  fn unified() {
+    let diffs = diffs();
+    for (before, after) in diffs {
+        let unified = 3;
+        let bb = before.lines().collect::<Vec<&str>>();
+        let aa = after.lines().collect::<Vec<&str>>();
+        let canon = unified_diff(&bb, &aa, "", "", "", "", unified).join("\n");
+        let imp = udiff(None, unified, "", &before, &after);
+        assert_eq!(canon, imp);
+    }
+  }
 }
