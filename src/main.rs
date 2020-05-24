@@ -47,7 +47,7 @@ fn stream_process(
 }
 
 async fn run() -> SadResult<()> {
-  let args = Arguments::new();
+  let args = Arguments::new()?;
   let (reader, receiver) = args.stream();
   let opts = Options::new(args)?;
   let (steps, rx) = stream_process(opts.clone(), receiver);

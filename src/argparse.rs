@@ -54,11 +54,17 @@ pub struct Arguments {
 }
 
 impl Arguments {
-  pub fn new() -> Arguments {
+  pub fn new() -> SadResult<Arguments> {
     let args = env::args().collect::<Vec<_>>();
     match (args.get(1), args.get(2)) {
-      (Some(lhs), Some(rhs)) if lhs == "-c" => Arguments::from_iter(rhs.split("\x04")),
-      _ => Arguments::from_args(),
+      (Some(lhs), Some(rhs)) if lhs == "-c" => {
+        if rhs.contains('\x04') {
+          Ok(Arguments::from_iter(rhs.split('\x04')))
+        } else {
+          Err(Failure::Simple("`-c` is a reserved flag, use --k, or --commit".to_owned()))
+        }
+      }
+      _ => Ok(Arguments::from_args()),
     }
   }
 }
