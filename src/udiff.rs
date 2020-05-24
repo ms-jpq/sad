@@ -246,6 +246,7 @@ mod tests {
       for i in 0..len {
         assert_eq!(canon[i], imp[i]);
       }
+      // TODO: last new line!
       assert_eq!(after.trim_end(), patched.trim_end());
       unified += 1;
     }
