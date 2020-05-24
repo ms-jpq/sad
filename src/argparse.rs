@@ -5,7 +5,7 @@ use regex::{Regex, RegexBuilder};
 use std::{collections::HashMap, env, fs, path::PathBuf};
 use structopt::StructOpt;
 
-#[derive(StructOpt)]
+#[derive(Debug, StructOpt)]
 #[structopt(name = "sad", author, about)]
 pub struct Arguments {
   /// Search pattern
