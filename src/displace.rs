@@ -83,15 +83,12 @@ async fn displace_impl(opts: &Options, payload: &Payload) -> SadResult<String> {
       }
       (Action::Fzf, _) => {
         let ranges: DiffRanges = Picker::new(opts.unified, &before, &after);
-        let mut fzf_lines = ranges
-          .iter()
-          .map(|r| {
-            let repr = Colour::Red.paint(format!("{}", r));
-            format!("{}\n\n\n\n{}", &name, repr)
-          })
-          .collect::<Vec<_>>()
-          .join("\0");
-        fzf_lines.push('\0');
+        let mut fzf_lines = String::new();
+        for range in ranges {
+          let repr = Colour::Red.paint(format!("{}", range));
+          let line = format!("{}\n\n\n\n{}\0", &name, repr);
+          fzf_lines.push_str(&line);
+        }
         fzf_lines
       }
     };
