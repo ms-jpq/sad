@@ -25,10 +25,8 @@ impl Arguments {
       stream_preview(preview)
     } else if let Some(patch) = &self.internal_patch {
       stream_patch(patch)
-    } else if self.input.is_empty() {
-      stream_stdin(self.nul_delim)
     } else {
-      stream_input(&self.input)
+      stream_stdin(self.nul_delim)
     }
   }
 }
@@ -148,17 +146,6 @@ fn stream_stdin(use_nul: bool) -> (Task, Receiver<SadResult<Payload>>) {
         }
         Err(err) => tx.send(Err(err)).await,
       }
-    }
-  });
-  (handle, rx)
-}
-
-fn stream_input(paths: &[PathBuf]) -> (Task, Receiver<SadResult<Payload>>) {
-  let paths = paths.to_vec();
-  let (tx, rx) = channel::<SadResult<Payload>>(1);
-  let handle = task::spawn(async move {
-    for path in paths {
-      tx.send(Ok(Payload::Entire(path))).await;
     }
   });
   (handle, rx)

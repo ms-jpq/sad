@@ -2,54 +2,54 @@ use super::errors::*;
 use super::subprocess::SubprocessCommand;
 use aho_corasick::{AhoCorasick, AhoCorasickBuilder};
 use regex::{Regex, RegexBuilder};
-use std::{env, path::PathBuf};
+use std::env;
 use structopt::StructOpt;
 
 #[derive(StructOpt)]
 #[structopt(name = "sad", author, about)]
 pub struct Arguments {
-  #[structopt(about = "Search pattern")]
+  /// Search pattern
+  #[structopt()]
   pub pattern: String,
 
-  #[structopt(about = "Replacement pattern")]
+  /// Replacement pattern, empty = delete
+  #[structopt()]
   pub replace: Option<String>,
 
-  #[structopt(short, long, about = "Skip stdin, supply files to edit")]
-  pub input: Vec<PathBuf>,
-
-  #[structopt(short = "0", long = "read0", about = r"Use \0 as stdin delimiter")]
+  /// Use \0 as stdin delimiter
+  #[structopt(short = "0", long = "read0")]
   pub nul_delim: bool,
 
-  #[structopt(short = "k", long, about = "No preview, write changes to file")]
+  /// No preview, write changes to file
+  #[structopt(short = "k", long)]
   pub commit: bool,
 
-  #[structopt(short, long, about = "String literal mode")]
+  /// String literal mode
+  #[structopt(short, long)]
   pub exact: bool,
 
-  #[structopt(short, long, about = "Standard regex flags: ie. -f imx")]
+  /// Standard regex flags: ie. -f imx, full list: https://github.com/ms-jpq/sad
+  #[structopt(short, long)]
   pub flags: Option<String>,
 
-  #[structopt(
-    short,
-    long,
-    about = "Colourizing program, disable = never, default = $GIT_PAGER"
-  )]
+  /// Colourizing program, disable = never, default = $GIT_PAGER
+  #[structopt(short, long)]
   pub pager: Option<String>,
 
-  #[structopt(long, about = "Additional Fzf options, disable = never")]
+  /// Additional Fzf options, disable = never
+  #[structopt(long)]
   pub fzf: Option<String>,
 
-  #[structopt(
-    short,
-    long,
-    about = "Same as in GNU diff --unified={size}, affects hunk size"
-  )]
+  /// Same as in GNU diff --unified={size}, affects hunk size
+  #[structopt(short, long)]
   pub unified: Option<usize>,
 
-  #[structopt(long, about = "*Internal use only*")]
+  /// *Internal use only*
+  #[structopt(long)]
   pub internal_preview: Option<String>,
 
-  #[structopt(long, about = "*Internal use only*")]
+  /// *Internal use only*
+  #[structopt(long)]
   pub internal_patch: Option<Vec<String>>,
 }
 
