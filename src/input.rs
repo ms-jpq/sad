@@ -79,8 +79,8 @@ impl TryFrom<&str> for DiffLine {
       before: (before_start - 1, before_inc),
       after: (after_start - 1, after_inc),
     };
-    let name = re.replace(candidate, "");
-    let buf = p_path(&name.as_bytes())?;
+    let name = re.replace(candidate, "").as_bytes().to_vec();
+    let buf = p_path(name)?;
     Ok(DiffLine(buf, range))
   }
 }
