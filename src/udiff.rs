@@ -183,7 +183,7 @@ mod tests {
   use super::*;
   use difflib::unified_diff;
   use regex::Regex;
-  use std::{fs, path::PathBuf, collections::HashSet};
+  use std::{collections::HashSet, fs, path::PathBuf};
 
   fn read_files() -> Vec<String> {
     let path = PathBuf::from("src");
@@ -221,12 +221,12 @@ mod tests {
   fn patch() {
     let diffs = diffs();
     for (before, after) in diffs {
-        let unified = 3;
-        let ranges: DiffRanges = Picker::new(unified, &before, &after);
-        let rangeset = ranges.into_iter().collect::<HashSet<DiffRange>>();
-        let diffs: Diffs = Patchable::new(unified, &before, &after);
-        let patched = diffs.patch(&rangeset, &before);
-        assert_eq!(after, patched);
+      let unified = 3;
+      let ranges: DiffRanges = Picker::new(unified, &before, &after);
+      let rangeset = ranges.into_iter().collect::<HashSet<DiffRange>>();
+      let diffs: Diffs = Patchable::new(unified, &before, &after);
+      let patched = diffs.patch(&rangeset, &before);
+      assert_eq!(after, patched);
     }
   }
 
@@ -234,12 +234,26 @@ mod tests {
   fn unified() {
     let diffs = diffs();
     for (before, after) in diffs {
-        let unified = 3;
-        let bb = before.lines().collect::<Vec<&str>>();
-        let aa = after.lines().collect::<Vec<&str>>();
-        let canon = unified_diff(&bb, &aa, "", "", "", "", unified).join("\n");
-        let imp = udiff(None, unified, "", &before, &after);
-        assert_eq!(canon, imp);
+      let unified = 3;
+      let bb = before.lines().collect::<Vec<&str>>();
+      let aa = after.lines().collect::<Vec<&str>>();
+      let canon = unified_diff(&bb, &aa, "", "", "", "", unified)
+        .iter()
+        .skip(2)
+        .map(|s| {
+          if s.starts_with("@@") {
+            s.trim_end().to_string()
+          } else {
+            s.to_string()
+          }
+        })
+        .collect::<Vec<String>>();
+      let imp = udiff(None, unified, "", &before, &after)
+        .lines()
+        .skip(4)
+        .map(String::from)
+        .collect::<Vec<String>>();
+      assert_eq!(canon, imp);
     }
   }
 }
