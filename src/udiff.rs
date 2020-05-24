@@ -219,22 +219,23 @@ mod tests {
 
   #[test]
   fn patch() {
+    let mut unified = 0;
     let diffs = diffs();
     for (before, after) in diffs {
-      let unified = 3;
       let ranges: DiffRanges = Picker::new(unified, &before, &after);
       let rangeset = ranges.into_iter().collect::<HashSet<DiffRange>>();
       let diffs: Diffs = Patchable::new(unified, &before, &after);
       let patched = diffs.patch(&rangeset, &before);
       assert_eq!(after, patched);
+      unified += 1;
     }
   }
 
   #[test]
   fn unified() {
+    let mut unified = 1;
     let diffs = diffs();
     for (before, after) in diffs {
-      let unified = 3;
       let bb = before.lines().collect::<Vec<&str>>();
       let aa = after.lines().collect::<Vec<&str>>();
       let canon = unified_diff(&bb, &aa, "", "", "", "", unified)
@@ -254,6 +255,7 @@ mod tests {
         .map(String::from)
         .collect::<Vec<String>>();
       assert_eq!(canon, imp);
+      unified += 1;
     }
   }
 }
