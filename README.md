@@ -58,7 +58,7 @@ If you wanna go fast.
 
 * preview to verify you really want the changes.
 
-* run with `--commit`, and redirect `stdout` to a file or `dev/null`
+* run with `--commit`, and redirect `stdout` to a file or `/dev/null`
 
 ---
 
