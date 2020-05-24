@@ -8,6 +8,8 @@ use tokio::task::JoinError;
 
 #[derive(Debug)]
 pub enum Failure {
+  Compound(Box<Failure>, Box<Failure>),
+  Displace(String, Box<Failure>),
   Fzf(String),
   Interrupt,
   IO(io::Error),

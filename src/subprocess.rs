@@ -183,7 +183,7 @@ impl SubprocessCommand {
 fn combine_err<T>(err: Failure, res: SadResult<T>) -> Failure {
   match res {
     Ok(_) => err,
-    Err(e) => Failure::Fzf(format!("{:#?}\n{:#?}", e, err)),
+    Err(e) => Failure::Compound(Box::new(err), Box::new(e)),
   }
 }
 

@@ -4,7 +4,7 @@ use std::{
   fmt::{self, Display, Formatter},
 };
 
-#[derive(Eq, Hash, PartialEq)]
+#[derive(Debug, Eq, Hash, PartialEq)]
 pub struct DiffRange {
   pub before: (usize, usize),
   pub after: (usize, usize),

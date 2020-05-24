@@ -14,6 +14,7 @@ use tokio::{
   task,
 };
 
+#[derive(Debug)]
 pub enum Payload {
   Entire(PathBuf),
   Piecewise(PathBuf, HashSet<DiffRange>),

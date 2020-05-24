@@ -56,7 +56,7 @@ async fn safe_write(canonical: &PathBuf, meta: &Metadata, text: &str) -> SadResu
   Ok(())
 }
 
-pub async fn displace(opts: &Options, payload: Payload) -> SadResult<String> {
+async fn displace_impl(opts: &Options, payload: &Payload) -> SadResult<String> {
   let path = payload.path().clone();
   let name = path.to_string_lossy();
   let (canonical, meta) = read_meta(&path).await?;
@@ -96,5 +96,12 @@ pub async fn displace(opts: &Options, payload: Payload) -> SadResult<String> {
       }
     };
     Ok(print)
+  }
+}
+
+pub async fn displace(opts: &Options, payload: Payload) -> SadResult<String> {
+  match displace_impl(opts, &payload).await {
+    Ok(ret) => Ok(ret),
+    Err(err) => Err(Failure::Displace(format!("{:#?}", payload), Box::new(err))),
   }
 }
