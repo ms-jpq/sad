@@ -33,8 +33,8 @@ impl Arguments {
   }
 }
 
-fn p_path(name: &[u8]) -> SadResult<PathBuf> {
-  String::from_utf8(name.to_vec())
+fn p_path(name: Vec<u8>) -> SadResult<PathBuf> {
+  String::from_utf8(name)
     .map(|p| PathBuf::from(p.as_str()))
     .into_sadness()
 }
@@ -136,16 +136,15 @@ fn stream_stdin(use_nul: bool) -> (Task, Receiver<SadResult<Payload>>) {
   let handle = task::spawn(async move {
     let delim = if use_nul { b'\0' } else { b'\n' };
     let mut reader = BufReader::new(io::stdin());
-    let mut buf = Vec::new();
 
     loop {
+      let mut buf = Vec::new();
       let n = reader.read_until(delim, &mut buf).await.into_sadness();
       match n {
         Ok(0) => return,
         Ok(_) => {
           buf.pop();
-          let path = p_path(&buf);
-          buf.clear();
+          let path = p_path(buf);
           let step = path.map(Payload::Entire);
           tx.send(step).await;
         }
