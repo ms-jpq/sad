@@ -10,66 +10,92 @@ It will show you a really nice diff of proposed changes *before* you commit them
 
 Unlike `sed`, you can double check before you fat finger your edit.
 
+## Preview (with fzf)
+
+Selectively replace `std` -> `joseph joestar` in the `sad` repo.
+
+![preview1](https://github.com/ms-jpq/sad/raw/master/previews/preview1.gif)
+
+## Preview (no fzf)
+
+Replace all`'(\d+)'` -> `'🌈$1🌈'` in the `chromium` repo. `3GB+`
+
+![preview2](https://github.com/ms-jpq/sad/raw/master/previews/preview2.gif)
+
+
 ## How to use sad?
+
+**with fzf**
+
+```sh
+export GIT_PAGER='<highlighter-of-your-choice>'
+# ^ can be done in your bash/zsh/rc file.
+find "$FIND_ARGS" | sad '<pattern>' '<replacement>'
+```
+
+**without fzf**
 
 ```sh
 find "$FIND_ARGS" | sad '<pattern>' '<replacement>' | highlighter-of-your-choice
 ```
 
-Feed `sad` a list of files from `stdin`, a search pattern (regex by default), a replacement pattern, and you are good to go!
+or
 
-You can use regex capture groups. For example: `sad '"(\d+)"' '🌈$1🌈'` will replace the double quotes around integers with `🌈`.
+```sh
+find "$FIND_ARGS" | sad '<pattern>' '<replacement>' --pager=<highlighter-of-your-choice>
+```
 
-If a replacement pattern is omitted, `sad` will assume deletion.
+or
+
+```sh
+export GIT_PAGER='<highlighter-of-your-choice>'
+find "$FIND_ARGS" | sad '<pattern>' '<replacement>'
+```
 
 ---
 
-use `-k` or `--commit` to write to files
-
-
 ## Requirements
 
-`sad` is designed to work with a diff colorizer. Any would work.
+Technically none of these are "required", but they make `sad` so much happier.
 
-My recommendations are:
+If you install the things below, `sad` will automatically use them. It's progressive enhancement!
 
-[diff-so-fancy](https://github.com/so-fancy/diff-so-fancy)
+### Commandline fuzzer
 
-`fd <files> | sad <pattern> <replacement> | diff-so-fancy | less`
+[**fzf**](https://github.com/junegunn/fzf)
 
-[delta](https://github.com/dandavison/delta)
+`sad` does not come with a UI, it uses `fzf` to perform selection.
+
+### Diff Colorizer
+
+Any `git` compatible colourize would work. I perfer these two:
+
+[**delta**](https://github.com/dandavison/delta)
 
 `fd <files> | sad <pattern> <replacement> | delta`
 
-## Previews
+[**diff-so-fancy**](https://github.com/so-fancy/diff-so-fancy)
 
-Replace all `"(\d+)"` -> `🌈$1🌈` in the Chromium repo.
+`fd <files> | sad <pattern> <replacement> | diff-so-fancy | less`
 
-Highlighter -- `diff-so-fancy`
-
-![preview1](https://github.com/ms-jpq/sad/raw/master/previews/preview1.gif)
-
-Replace all `std` -> `josephjoestar` in the Chromium repo.
-
-Highlighter -- `delta`
-
-![preview2](https://github.com/ms-jpq/sad/raw/master/previews/preview2.gif)
 
 ## Environmental Variables
 
 Name        | Function
 ------------|---------
-`GIT_PAGER` | `sad` will automatically pipe it's output to the standard git pager as of v0.2. If set to `<highlighter>`, no need to do `... \| <highlighter>`
+`GIT_PAGER` | `sad` will use the same pager as `git`
 
 ## Flags
 
 Name                                | Function
 ------------------------------------|---------
-`-i file1 file2` `--input files...` | instead of reading from `stdin`, read file names from argument list
-`-k --commit`                       | instead of printing out a preview, write edits to files
-`-0`                                | use `\0` instead of `\n` when reading from `stdin`
-`-e` `--exact`                      | use string literal match instead of regex
-`-f isx` `--flags mI`               | flags for the regex engine
+`-f` `--flags`                      | Regex flags, see below
+`-k` `--commit`                     | No preview, write changes to file
+`-0` `--read0`                      | Use `\x00` as stdin delimiter
+`-e` `--exact`                      | String literal mode
+`-p` `--pager`                      | Colourizing program, disable = `never`
+`--fzf`                             | Additional Fzf options, disable = `never`
+`-u` `--unified`                    | Same as in GNU `diff`, affects hunk size
 
 ## Regex Flags
 
@@ -85,7 +111,6 @@ Name | Function
 
 You can download `sad` from the [github release page](https://github.com/ms-jpq/sad/releases).
 
-
 ## What about stdin -> stdout
 
 If you just want to edit the shell stream, I would recommand [`sd`](https://github.com/chmln/sd), it uses the same concept, but its more for in stream edits. `sad` was inspired by my initial useage of `sd`.
@@ -93,3 +118,7 @@ If you just want to edit the shell stream, I would recommand [`sd`](https://gith
 ```sh
 command1 | sd '<pattern>' '<replacement>' | command2
 ```
+
+## Bugs
+
+Please file an issue if you see one `<3`
