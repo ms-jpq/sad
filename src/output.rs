@@ -72,7 +72,7 @@ pub fn stream_output(opts: Options, stream: Receiver<SadResult<String>>) -> Task
 
 pub async fn err_exit(err: Failure) -> ! {
   if !err.silent_exit() {
-    eprintln!("{}", Colour::Red.paint(format!("\n{:#?}", err)));
+    eprintln!("{}", Colour::Red.paint(format!("Error:\n{:#?}", err)));
   }
   process::exit(1)
 }
