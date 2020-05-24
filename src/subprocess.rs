@@ -2,7 +2,7 @@ use super::errors::*;
 use super::types::Task;
 use async_std::sync::{channel, Receiver, Sender};
 use futures::future::{select, try_join, try_join4, Either};
-use std::process::Stdio;
+use std::{collections::HashMap, process::Stdio};
 use tokio::{
   io::{self, AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader, BufWriter},
   process::Command,
@@ -13,6 +13,7 @@ use tokio::{
 pub struct SubprocessCommand {
   pub program: String,
   pub arguments: Vec<String>,
+  pub env: HashMap<String, String>,
 }
 
 impl SubprocessCommand {

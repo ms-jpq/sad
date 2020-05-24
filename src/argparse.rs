@@ -2,7 +2,7 @@ use super::errors::*;
 use super::subprocess::SubprocessCommand;
 use aho_corasick::{AhoCorasick, AhoCorasickBuilder};
 use regex::{Regex, RegexBuilder};
-use std::env;
+use std::{collections::HashMap, env};
 use structopt::StructOpt;
 
 #[derive(StructOpt)]
@@ -53,6 +53,12 @@ pub struct Arguments {
   pub internal_patch: Option<Vec<String>>,
 }
 
+impl Arguments {
+  pub fn new() -> Arguments {
+    Arguments::from_args()
+  }
+}
+
 #[derive(Clone, Debug)]
 pub enum Engine {
   AhoCorasick(AhoCorasick, String),
@@ -74,6 +80,7 @@ pub enum Printer {
 
 #[derive(Clone, Debug)]
 pub struct Options {
+  pub name: String,
   pub action: Action,
   pub engine: Engine,
   pub fzf: Option<Vec<String>>,
@@ -83,6 +90,7 @@ pub struct Options {
 
 impl Options {
   pub fn new(args: Arguments) -> SadResult<Options> {
+    let name = std::env::args().next().unwrap_or("sad".to_owned());
     let mut flagset = p_auto_flags(&args.pattern);
     flagset.extend(
       args
@@ -118,6 +126,7 @@ impl Options {
     };
 
     Ok(Options {
+      name,
       action,
       engine,
       fzf,
@@ -189,6 +198,7 @@ fn p_pager(pager: Option<String>) -> Option<SubprocessCommand> {
       commands.next().map(|program| SubprocessCommand {
         program,
         arguments: commands.collect(),
+        env: HashMap::new(),
       })
     }
   })

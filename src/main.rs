@@ -4,7 +4,6 @@ use errors::*;
 use futures::future::{try_join3, try_join_all, TryJoinAll};
 use input::Payload;
 use std::sync::Arc;
-use structopt::StructOpt;
 use tokio::{runtime, task};
 use types::Task;
 
@@ -54,7 +53,7 @@ fn main() {
     .build()
     .unwrap();
   rt.block_on(async {
-    let args = Arguments::from_args();
+    let args = Arguments::new();
     let (reader, receiver) = args.stream();
     let end = match Options::new(args) {
       Ok(opts) => {
