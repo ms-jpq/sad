@@ -22,10 +22,17 @@ pub enum Failure {
 }
 
 impl Failure {
-  pub fn silent_exit(&self) -> bool {
+  pub fn exit_message(&self) -> Option<String> {
     match self {
-      Failure::Interrupt => true,
-      _ => false,
+      Failure::Interrupt => None,
+      _ => Some(format!("Error:\n{:#?}", self)),
+    }
+  }
+
+  pub fn exit_code(&self) -> i32 {
+    match self {
+      Failure::Interrupt => 130,
+      _ => 1,
     }
   }
 }

@@ -78,8 +78,8 @@ pub fn stream_output(opts: Options, stream: Receiver<SadResult<String>>) -> Task
 }
 
 pub async fn err_exit(err: Failure) -> ! {
-  if !err.silent_exit() {
-    eprintln!("{}", Colour::Red.paint(format!("Error:\n{:#?}", err)));
+  if let Some(msg) = err.exit_message() {
+    eprintln!("{}", Colour::Red.paint(msg));
   }
-  process::exit(1)
+  process::exit(err.exit_code())
 }
