@@ -9,7 +9,7 @@ use tokio::{
   task,
 };
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SubprocessCommand {
   pub program: String,
   pub arguments: Vec<String>,

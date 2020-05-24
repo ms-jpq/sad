@@ -53,26 +53,26 @@ pub struct Arguments {
   pub internal_patch: Option<Vec<String>>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Engine {
   AhoCorasick(AhoCorasick, String),
   Regex(Regex, String),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Action {
   Preview,
   Commit,
   Fzf,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Printer {
   Stdout,
   Pager(SubprocessCommand),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Options {
   pub action: Action,
   pub engine: Engine,
