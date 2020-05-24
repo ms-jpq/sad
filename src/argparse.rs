@@ -65,6 +65,7 @@ impl Arguments {
         let params = rhs.split("\x04").enumerate().collect::<Vec<_>>();
         let last = params.len() - 1;
         let mut args = vec![name.to_owned()];
+
         for (i, param) in params {
           if i == last {
             let splits = shlex::split(param).unwrap_or(Vec::new());
@@ -73,6 +74,7 @@ impl Arguments {
             args.push(param.to_owned())
           }
         }
+
         Arguments::from_iter(args)
       }
       _ => Arguments::from_args(),
