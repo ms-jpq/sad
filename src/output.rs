@@ -33,22 +33,22 @@ fn stream_stdout(stream: Receiver<SadResult<String>>) -> Task {
 pub fn stream_output(opts: Options, stream: Receiver<SadResult<String>>) -> Task {
   match (opts.action, opts.printer) {
     (Action::Fzf, _) => {
-      let preview_args = env::args().collect::<Vec<_>>().join("\x00");
-      let execute = format!("abort+execute:{}\x00--internal-patch={{+}}", preview_args);
+      let preview_args = env::args().collect::<Vec<_>>().join("\x0c");
+      let execute = format!("abort+execute:{}\x0c--internal-patch={{+}}", preview_args);
       let mut arguments = vec![
         "--read0".to_string(),
         "-m".to_string(),
         "--ansi".to_string(),
         format!("--bind=enter:{}", execute),
         format!("--bind=double-click:{}", execute),
-        format!("--preview={}\x00--internal-preview={{}}", preview_args),
+        format!("--preview={}\x0c--internal-preview={{}}", preview_args),
         "--preview-window=70%:wrap".to_string(),
       ];
       arguments.extend(opts.fzf.unwrap_or_default());
       let mut env = HashMap::new();
       env.insert("SHELL".to_owned(), opts.name);
       let cmd = SubprocessCommand {
-        program: "fzf".to_string(),
+        program: "fzf".to_owned(),
         arguments,
         env,
       };

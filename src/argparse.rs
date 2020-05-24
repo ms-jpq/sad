@@ -51,11 +51,22 @@ pub struct Arguments {
   /// *Internal use only*
   #[structopt(long)]
   pub internal_patch: Option<Vec<String>>,
+
+  /// *Internal use only*
+  #[structopt(short = "c")]
+  pub shell: Option<String>,
 }
 
 impl Arguments {
   pub fn new() -> Arguments {
-    Arguments::from_args()
+    let args = env::args().collect::<Vec<_>>();
+    match (args.get(1), args.get(2)) {
+      (Some(lhs), Some(rhs)) if lhs == "-c" => {
+        println!("{}", rhs);
+        Arguments::from_args()
+      }
+      _ => Arguments::from_args()
+    }
   }
 }
 
@@ -90,7 +101,7 @@ pub struct Options {
 
 impl Options {
   pub fn new(args: Arguments) -> SadResult<Options> {
-    let name = std::env::args().next().unwrap_or("sad".to_owned());
+    let name = env::args().next().unwrap_or("sad".to_owned());
     let mut flagset = p_auto_flags(&args.pattern);
     flagset.extend(
       args
