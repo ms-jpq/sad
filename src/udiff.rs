@@ -183,7 +183,7 @@ mod tests {
   use super::*;
   use difflib::unified_diff;
   use regex::Regex;
-  use std::{collections::HashSet, fs, path::PathBuf};
+  use std::{collections::HashSet, cmp::max, fs, path::PathBuf};
 
   fn read_files() -> Vec<String> {
     let path = PathBuf::from("src");
@@ -197,7 +197,7 @@ mod tests {
   }
 
   fn regexes() -> Vec<(Regex, String)> {
-    vec![("std", "owo")]
+    vec![(r"std", r"owo"), (r"<([^\)])>", r"\|$1"), (r"\n", r"")]
       .into_iter()
       .map(|(s1, s2)| (Regex::new(s1).unwrap(), s2.to_string()))
       .collect::<Vec<(Regex, String)>>()
@@ -226,7 +226,12 @@ mod tests {
       let rangeset = ranges.into_iter().collect::<HashSet<DiffRange>>();
       let diffs: Diffs = Patchable::new(unified, &before, &after);
       let patched = diffs.patch(&rangeset, &before);
-      assert_eq!(after, patched);
+      let canon = after.lines().map(String::from).collect::<Vec<String>>();
+      let imp = patched.lines().map(String::from).collect::<Vec<String>>();
+      let len = max(canon.len(), imp.len());
+      for i in 0..len {
+        assert_eq!(canon[i], imp[i]);
+      }
       unified += 1;
     }
   }
@@ -254,7 +259,10 @@ mod tests {
         .skip(4)
         .map(String::from)
         .collect::<Vec<String>>();
-      assert_eq!(canon, imp);
+      let len = max(canon.len(), imp.len());
+      for i in 0..len {
+        assert_eq!(canon[i], imp[i]);
+      }
       unified += 1;
     }
   }
