@@ -43,8 +43,8 @@ pub trait Picker {
 
 impl Picker for DiffRanges {
   fn new(unified: usize, before: &str, after: &str) -> Self {
-    let before = before.lines().collect::<Vec<&str>>();
-    let after = after.lines().collect::<Vec<&str>>();
+    let before = before.lines().collect::<Vec<_>>();
+    let after = after.lines().collect::<Vec<_>>();
     let mut ret = Vec::new();
     let mut matcher = SequenceMatcher::new(&before, &after);
     for group in &matcher.get_grouped_opcodes(unified) {
@@ -69,8 +69,8 @@ pub trait Patchable {
 
 impl Patchable for Diffs {
   fn new(unified: usize, before: &str, after: &str) -> Self {
-    let before = before.lines().collect::<Vec<&str>>();
-    let after = after.lines().collect::<Vec<&str>>();
+    let before = before.lines().collect::<Vec<_>>();
+    let after = after.lines().collect::<Vec<_>>();
 
     let mut ret = Vec::new();
     let mut matcher = SequenceMatcher::new(&before, &after);
@@ -100,7 +100,7 @@ impl Patchable for Diffs {
   }
 
   fn patch(&self, ranges: &HashSet<DiffRange>, before: &str) -> String {
-    let before = before.lines().collect::<Vec<&str>>();
+    let before = before.lines().collect::<Vec<_>>();
     let mut ret = String::new();
     let mut prev = 0;
 
@@ -139,8 +139,8 @@ pub fn udiff(
   before: &str,
   after: &str,
 ) -> String {
-  let before = before.lines().collect::<Vec<&str>>();
-  let after = after.lines().collect::<Vec<&str>>();
+  let before = before.lines().collect::<Vec<_>>();
+  let after = after.lines().collect::<Vec<_>>();
 
   let mut ret = String::new();
   ret.push_str(&format!("\ndiff --git {} {}", name, name));
@@ -193,14 +193,14 @@ mod tests {
         let path = entry.unwrap().path();
         fs::read_to_string(path).unwrap()
       })
-      .collect::<Vec<String>>()
+      .collect::<Vec<_>>()
   }
 
   fn regexes() -> Vec<(Regex, String)> {
     vec![(r"std", r"owo"), (r"<([^\)])>", r"\|$1"), (r"\n", r"")]
       .into_iter()
       .map(|(s1, s2)| (Regex::new(s1).unwrap(), s2.to_string()))
-      .collect::<Vec<(Regex, String)>>()
+      .collect::<_>()
   }
 
   fn diffs() -> Vec<(String, String)> {
@@ -223,11 +223,11 @@ mod tests {
     let diffs = diffs();
     for (before, after) in diffs {
       let ranges: DiffRanges = Picker::new(unified, &before, &after);
-      let rangeset = ranges.into_iter().collect::<HashSet<DiffRange>>();
+      let rangeset = ranges.into_iter().collect::<HashSet<_>>();
       let diffs: Diffs = Patchable::new(unified, &before, &after);
       let patched = diffs.patch(&rangeset, &before);
-      let canon = after.lines().map(String::from).collect::<Vec<String>>();
-      let imp = patched.lines().map(String::from).collect::<Vec<String>>();
+      let canon = after.lines().map(String::from).collect::<Vec<_>>();
+      let imp = patched.lines().map(String::from).collect::<Vec<_>>();
       let len = max(canon.len(), imp.len());
       for i in 0..len {
         assert_eq!(canon[i], imp[i]);
@@ -242,8 +242,8 @@ mod tests {
     let mut unified = 1;
     let diffs = diffs();
     for (before, after) in diffs {
-      let bb = before.lines().collect::<Vec<&str>>();
-      let aa = after.lines().collect::<Vec<&str>>();
+      let bb = before.lines().collect::<Vec<_>>();
+      let aa = after.lines().collect::<Vec<_>>();
       let canon = unified_diff(&bb, &aa, "", "", "", "", unified)
         .iter()
         .skip(2)
@@ -254,7 +254,7 @@ mod tests {
             s.to_string()
           }
         })
-        .collect::<Vec<String>>();
+        .collect::<Vec<_>>();
       let imp = udiff(None, unified, "", &before, &after)
         .lines()
         .skip(4)
@@ -265,7 +265,7 @@ mod tests {
             s.to_string()
           }
         })
-        .collect::<Vec<String>>();
+        .collect::<Vec<_>>();
       let len = max(canon.len(), imp.len());
       for i in 0..len {
         assert_eq!(canon[i], imp[i]);

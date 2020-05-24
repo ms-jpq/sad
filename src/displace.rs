@@ -89,7 +89,7 @@ async fn displace_impl(opts: &Options, payload: &Payload) -> SadResult<String> {
             let repr = Colour::Red.paint(format!("{}", r));
             format!("{}\n\n\n\n{}", &name, repr)
           })
-          .collect::<Vec<String>>()
+          .collect::<Vec<_>>()
           .join("\0");
         fzf_lines.push('\0');
         fzf_lines

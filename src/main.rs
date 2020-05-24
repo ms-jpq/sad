@@ -42,7 +42,7 @@ fn stream_process(
         }
       })
     })
-    .collect::<Vec<Task>>();
+    .collect::<Vec<_>>();
   let handle = try_join_all(handles);
   (handle, rx)
 }

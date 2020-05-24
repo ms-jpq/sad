@@ -102,7 +102,7 @@ fn stream_patch(patch: &[String]) -> (Task, Receiver<SadResult<Payload>>) {
   let lines = patch
     .iter()
     .map(|p| DiffLine::try_from((*p).as_str()))
-    .collect::<Vec<SadResult<DiffLine>>>();
+    .collect::<Vec<_>>();
   let (tx, rx) = channel::<SadResult<Payload>>(1);
   let handle = task::spawn(async move {
     let mut patches: HashMap<PathBuf, HashSet<DiffRange>> = HashMap::new();
