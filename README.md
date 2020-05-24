@@ -22,7 +22,6 @@ Replace all`'(\d+)'` -> `'🌈$1🌈'` in the `chromium` repo. `3GB+`
 
 ![preview2](https://github.com/ms-jpq/sad/raw/master/previews/preview2.gif)
 
-
 ## How to use sad?
 
 **with fzf**
@@ -86,7 +85,6 @@ Any `git` compatible colourize would work. I perfer these two:
 
 `fd <files> | sad <pattern> <replacement> | diff-so-fancy | less`
 
-
 ## Environmental Variables
 
 Name        | Function
@@ -126,7 +124,6 @@ If you just want to edit the shell stream, I would recommand [`sd`](https://gith
 ```sh
 command1 | sd '<pattern>' '<replacement>' | command2
 ```
-
 ## Bugs
 
 Please file an issue if you see one `<3`
