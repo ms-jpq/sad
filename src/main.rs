@@ -46,6 +46,18 @@ fn stream_process(
   (handle, rx)
 }
 
+async fn run() -> SadResult<()> {
+  let args = Arguments::new();
+  let (reader, receiver) = args.stream();
+  let opts = Options::new(args)?;
+  let (steps, rx) = stream_process(opts.clone(), receiver);
+  let writer = output::stream_output(opts, rx);
+  try_join3(reader, steps, writer)
+    .await
+    .map(|_| ())
+    .into_sadness()
+}
+
 fn main() {
   let mut rt = runtime::Builder::new()
     .threaded_scheduler()
@@ -53,17 +65,7 @@ fn main() {
     .build()
     .unwrap();
   rt.block_on(async {
-    let args = Arguments::new();
-    let (reader, receiver) = args.stream();
-    let end = match Options::new(args) {
-      Ok(opts) => {
-        let (steps, rx) = stream_process(opts.clone(), receiver);
-        let writer = output::stream_output(opts, rx);
-        try_join3(reader, steps, writer).await
-      }
-      Err(e) => output::err_exit(e).await,
-    };
-    if let Err(err) = end {
+    if let Err(err) = run().await {
       output::err_exit(err.into()).await
     }
   })
