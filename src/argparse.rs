@@ -63,10 +63,10 @@ impl Arguments {
     match (args.get(0), args.get(1), args.get(2)) {
       (Some(name), Some(lhs), Some(rhs)) if lhs == "-c" => {
         let params = rhs.split("\x04").enumerate().collect::<Vec<_>>();
-        let len = params.len();
+        let last = params.len() - 1;
         let mut args = vec![name.to_owned()];
         for (i, param) in params {
-          if i == len - 1 {
+          if i == last {
             let splits = shlex::split(param).unwrap_or(Vec::new());
             args.extend(splits)
           } else {
