@@ -113,6 +113,14 @@ Name | Function
 `s`  | allow `.` match `\n`
 `x`  | ignore whitespace and allow `#` comments
 
+## Exit Codes
+
+Code  | Meaning
+------|---------
+`0`   | Good
+`1`   | Bad
+`130` | Interrupted (ie. user cancel), or if using `fzf`, [it will always exit `130`](https://github.com/ms-jpq/sad/issues/5).
+
 ## GET SAD NOW!
 
 You can download `sad` from the [github release page](https://github.com/ms-jpq/sad/releases).
