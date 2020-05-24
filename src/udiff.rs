@@ -80,13 +80,13 @@ impl Patchable for Diffs {
       for code in group {
         if code.tag == "equal" {
           for line in before.iter().take(code.first_end).skip(code.first_start) {
-            new_lines.push((*line).to_string());
+            new_lines.push((*line).to_owned());
           }
           continue;
         }
         if code.tag == "replace" || code.tag == "insert" {
           for line in after.iter().take(code.second_end).skip(code.second_start) {
-            new_lines.push((*line).to_string());
+            new_lines.push((*line).to_owned());
           }
         }
       }
@@ -213,7 +213,7 @@ mod tests {
       (r"use [^\n]+\n", r"\n\nowo\n\nowo"),
     ]
     .into_iter()
-    .map(|(s1, s2)| (Regex::new(s1).unwrap(), s2.to_string()))
+    .map(|(s1, s2)| (Regex::new(s1).unwrap(), s2.to_owned()))
     .collect::<_>()
   }
 
@@ -264,9 +264,9 @@ mod tests {
         .skip(2)
         .map(|s| {
           if s.starts_with("@@") {
-            "@@".to_string()
+            "@@".to_owned()
           } else {
-            s.to_string()
+            s.to_owned()
           }
         })
         .collect::<Vec<_>>();
@@ -275,9 +275,9 @@ mod tests {
         .skip(4)
         .map(|s| {
           if s.starts_with("@@") {
-            "@@".to_string()
+            "@@".to_owned()
           } else {
-            s.to_string()
+            s.to_owned()
           }
         })
         .collect::<Vec<_>>();

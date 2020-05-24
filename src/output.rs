@@ -36,13 +36,13 @@ pub fn stream_output(opts: Options, stream: Receiver<SadResult<String>>) -> Task
       let preview_args = env::args().collect::<Vec<_>>().join("\x0c");
       let execute = format!("abort+execute:{}\x0c--internal-patch={{+}}", preview_args);
       let mut arguments = vec![
-        "--read0".to_string(),
-        "-m".to_string(),
-        "--ansi".to_string(),
+        "--read0".to_owned(),
+        "-m".to_owned(),
+        "--ansi".to_owned(),
         format!("--bind=enter:{}", execute),
         format!("--bind=double-click:{}", execute),
         format!("--preview={}\x0c--internal-preview={{}}", preview_args),
-        "--preview-window=70%:wrap".to_string(),
+        "--preview-window=70%:wrap".to_owned(),
       ];
       arguments.extend(opts.fzf.unwrap_or_default());
       let mut env = HashMap::new();

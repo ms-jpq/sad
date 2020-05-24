@@ -211,7 +211,7 @@ async fn reset_term() -> SadResult<()> {
   } else if let Ok(_) = which::which("reset") {
     Command::new("reset").status().await.into_sadness()?;
   } else {
-    Err(Failure::Fzf("Unable to clear screen".to_string()))?;
+    Err(Failure::Fzf("Unable to clear screen".to_owned()))?;
   };
   Ok(())
 }
