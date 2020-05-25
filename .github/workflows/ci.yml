@@ -2,6 +2,9 @@ name: CI
 
 on:
   push:
+    paths:
+      - "src/**"
+      - "tests/**"
   pull_request:
   schedule:
     - cron: '0 0 * * 0' # weekly
@@ -14,10 +17,6 @@ jobs:
         os:
           - ubuntu-latest
           - macos-latest
-
-    defaults:
-      run:
-        shell: bash
 
     steps:
       - name: Checkout

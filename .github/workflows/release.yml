@@ -7,16 +7,28 @@ on:
 
 jobs:
   build:
-    runs-on:
-      - ubuntu-latest
-      - macos-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v2
 
+      - name: Test
+        run: cargo test --verbose
+
+      - name: Build
+        run: cargo build --verbose
+
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
       - name: Create Release
-        id: create_release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
