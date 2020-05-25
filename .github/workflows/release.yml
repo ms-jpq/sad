@@ -35,6 +35,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
       - name: Download Artifacts macos
         uses: actions/download-artifact@v2
         with:
@@ -56,7 +59,7 @@ jobs:
       - name: Set ENV
         id: set_env
         run: |-
-          ../scripts/ci.py --release
+          ./scripts/ci.py --release
 
       - name: Create Release
         id: new_release
