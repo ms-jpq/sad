@@ -42,7 +42,8 @@ def macos_build() -> None:
   if sys.platform != "darwin":
     return
   arch = "x86_64-apple-darwin"
-  args = ["cargo", "build", "--release", "--target-dir", arch]
+  artifact_dir = path.join(build_dir, arch)
+  args = ["cargo", "build", "--release", "--target-dir", artifact_dir]
   run(args)
   release = path.join(build_dir, arch, prog_name)
   dest = path.join(release_dir, arch)
