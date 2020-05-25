@@ -1,4 +1,4 @@
-name: Release
+name: Testing
 
 on:
   push:
@@ -17,7 +17,7 @@ jobs:
           repository: ms-jpq/homebrew-sad
           path: packages
 
-      - name: Configure Git
+      - name: Test Git
         env:
           CI_TOKEN: ${{ secrets.CI_TOKEN }}
         run: |-
