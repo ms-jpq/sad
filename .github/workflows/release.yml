@@ -112,7 +112,7 @@ jobs:
       - name: Checkout CI Artifacts Repo
         uses: actions/checkout@v2
         with:
-          repository: https://github.com/ms-jpq/homebrew-sad.git
+          repository: ms-jpq/homebrew-sad
           path: packages
 
       - name: Build Packages
