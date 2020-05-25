@@ -47,6 +47,12 @@ jobs:
           name: ubuntu-latest
           path: artifacts/ubuntu
 
+      - name: Setup Python
+        uses: actions/setup-python@v2
+
+      - name: Pip Packages
+        run: pip install toml
+
       - name: Set ENV
         id: set_env
         run: "./scripts/ci.py --release"
