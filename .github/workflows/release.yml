@@ -127,7 +127,7 @@ jobs:
           asset_path: artifacts/ubuntu-latest.zip
           asset_name: ubuntu.zip
 
-      - name: Upload Asset - Ubuntu
+      - name: Upload Asset - Debian deb
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
