@@ -24,37 +24,38 @@ jobs:
       - name: Build
         run: cargo build --release
 
+      - name: Package Artifacts
+        run: |-
+          chmod +x artifacts/${{ matrix.os }}/sad
+          mkdir -p artifacts
+          zip -j artifacts/${{ matrix.os }} target/release/sad
+
       - name: Upload Artifacts
         uses: actions/upload-artifact@v2
         with:
           name: ${{ matrix.os }}
-          path: target/release/sad
+          path: artifacts/${{ matrix.os }}
 
   release:
     needs:
       - build
-    strategy:
-      matrix:
-        os:
-          - ubuntu-latest
-          - macos-latest
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Download Artifacts
+      - name: Download Artifacts macos
         uses: actions/download-artifact@v2
         with:
-          name: ${{ matrix.os }}
-          path: artifacts/${{ matrix.os }}
+          name: macos-latest
+          path: artifacts
 
-      - name: Package Artifacts
-        run: |-
-          chmod +x artifacts/${{ matrix.os }}/sad
-          mkdir -p release
-          zip -j release/${{ matrix.os }} artifacts/${{ matrix.os }}
+      - name: Download Artifacts ubuntu
+        uses: actions/download-artifact@v2
+        with:
+          name: ubuntu-latest
+          path: artifacts
 
       - name: Setup Python
         uses: actions/setup-python@v2
@@ -78,12 +79,22 @@ jobs:
           draft: false
           prerelease: false
 
-      - name: Upload Asset
+      - name: Upload Asset - Macos
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.new_release.outputs.upload_url }}
           asset_content_type: application/zip
-          asset_path: release/${{ matrix.os }}.zip
-          asset_name: ${{ matrix.os }}.zip
+          asset_path: artifacts/macos-latest
+          asset_name: macos.zip
+
+      - name: Upload Asset - Ubuntu
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.new_release.outputs.upload_url }}
+          asset_content_type: application/zip
+          asset_path: artifacts/ubuntu-latest
+          asset_name: ubuntu.zip
