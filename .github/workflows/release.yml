@@ -34,7 +34,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: ${{ matrix.os }}
-          path: artifacts/${{ matrix.os }}
+          path: artifacts/${{ matrix.os }}.zip
 
   release:
     needs:
@@ -86,7 +86,7 @@ jobs:
         with:
           upload_url: ${{ steps.new_release.outputs.upload_url }}
           asset_content_type: application/zip
-          asset_path: artifacts/macos-latest
+          asset_path: artifacts/macos-latest.zip
           asset_name: macos.zip
 
       - name: Upload Asset - Ubuntu
@@ -96,5 +96,5 @@ jobs:
         with:
           upload_url: ${{ steps.new_release.outputs.upload_url }}
           asset_content_type: application/zip
-          asset_path: artifacts/ubuntu-latest
+          asset_path: artifacts/ubuntu-latest.zip
           asset_name: ubuntu.zip
