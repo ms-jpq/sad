@@ -26,7 +26,7 @@ jobs:
 
       - name: Package Artifacts
         run: |-
-          chmod +x artifacts/${{ matrix.os }}/sad
+          chmod +x target/release/sad
           mkdir -p artifacts
           zip -j artifacts/${{ matrix.os }} target/release/sad
 
