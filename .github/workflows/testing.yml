@@ -21,7 +21,7 @@ jobs:
           CI_TOKEN: ${{ secrets.CI_TOKEN }}
         run: |-
           git config --global user.email "git@bigly.dog"
-          git config --global user.name "GITHUB CI"
+          git config --global user.name "ms-jpq"
           cd packages
           touch testing.txt
           git remote set-url origin "https://ms-jpq:$CI_TOKEN@github.com/ms-jpq/homebrew-sad.git"
