@@ -127,6 +127,16 @@ jobs:
           asset_path: artifacts/ubuntu-latest.zip
           asset_name: ubuntu.zip
 
+      - name: Upload Asset - Ubuntu
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.new_release.outputs.upload_url }}
+          asset_content_type: application/vnd.debian.binary-package
+          asset_path: artifacts/sad.deb
+          asset_name: sad.deb
+
       - name: Checkout CI Artifacts Repo
         uses: actions/checkout@v2
         with:
@@ -139,6 +149,8 @@ jobs:
           git config --global user.name "GITHUB CI"
 
       - name: Build Packages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: >-
           ./ci/release.py
           --brew-artifact=macos-latest.zip
