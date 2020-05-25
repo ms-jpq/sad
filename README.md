@@ -1,6 +1,6 @@
 # SAD!
 
-Super Accelerated Diff
+**Space Age seD**
 
 ## What does it do?
 
