@@ -1,0 +1,3 @@
+[submodule "packages"]
+	path = packages
+	url = https://github.com/ms-jpq/homebrew-sad.git
