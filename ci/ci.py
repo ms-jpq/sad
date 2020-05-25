@@ -30,7 +30,7 @@ def set_release_env() -> None:
   version = cargo["package"]["version"]
   time = datetime.now()
   tag_name = f"{version}_{time.strftime('%Y-%m-%d_%H-%M')}"
-  release_name = f"CI - {tag_name.strftime('%Y-%m-%d %H:%M')}"
+  release_name = f"CI - {version} | {time.strftime('%Y-%m-%d %H:%M')}"
   release_notes = read("release_notes.md")
   release_info = {"tag_name": tag_name,
                   "release_name": release_name,
