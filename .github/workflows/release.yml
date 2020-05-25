@@ -2,8 +2,8 @@ name: Release
 
 on:
   push:
-    # tags:
-    #   - "*"
+    tags:
+      - "v*"
 
 jobs:
   build:
@@ -49,13 +49,17 @@ jobs:
           name: ubuntu-latest.zip
           path: artifacts/ubuntu.zip
 
+      - name: Set ENV
+        run: "export TAG_NAME=$(date)"
+
       - name: Create Release
         id: new_release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          release_name: auto-release test
+          tag: ${{ env.TAG_NAME }}
+          release_name: ${{ env.GITHUB_SHA }}
           draft: false
           prerelease: false
 
