@@ -22,18 +22,24 @@ jobs:
         run: cargo test --verbose
 
       - name: Build
-        run: cargo build --verbose
+        run: cargo build --release
 
-  release:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Create Release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v2
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          draft: false
-          prerelease: false
+          - name: sad-${{ matrix.os }}
+            path: ${{ github.workspace }}/target/release/sad
+
+#   release:
+#     runs-on: ubuntu-latest
+
+#     steps:
+#       - name: Create Release
+#         uses: actions/create-release@v1
+#         env:
+#           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#         with:
+#           tag_name: ${{ github.ref }}
+#           release_name: Release ${{ github.ref }}
+#           draft: false
+#           prerelease: false
