@@ -2,22 +2,23 @@
 
 import argparse
 import hashlib
-import jinja2
 import os
 import subprocess
 import sys
-import toml
-import yaml
 from argparse import Namespace
 from os import path
 from typing import Iterator, List
+
+import jinja2
+import toml
+import yaml
 
 artifacts_dir = "artifacts"
 
 
 def cwd() -> None:
-  cwd = path.dirname(path.abspath(__file__))
-  os.chdir(cwd)
+  root = path.dirname(path.dirname(path.abspath(__file__)))
+  os.chdir(root)
 
 
 def run(args: List[str], cwd=os.getcwd()) -> None:
@@ -52,6 +53,7 @@ def homebrew_release(artifact: str) -> None:
 
 def parse_args() -> Namespace:
   parser = argparse.ArgumentParser()
+  parser.add_argument("--homebrew", action="store_true")
   return parser.parse_args()
 
 

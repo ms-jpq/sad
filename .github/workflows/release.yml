@@ -2,8 +2,6 @@ name: Release
 
 on:
   push:
-    tag:
-      - "*"
 
 jobs:
   build:
@@ -50,7 +48,8 @@ jobs:
           path: artifacts/ubuntu
 
       - name: Set ENV
-        run: "./scripts/release.py"
+        id: set_env
+        run: "./scripts/ci.py --release"
 
       - name: Create Release
         id: new_release
@@ -58,8 +57,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ env.TAG_NAME }}
-          release_name: ${{ env.GITHUB_SHA }}
+          tag_name: ${{ steps.set_env.outputs.TAG_NAME }}
+          release_name: ${{ steps.set_env.outputs.RELEASE_NAME }}
           draft: false
           prerelease: false
 
