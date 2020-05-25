@@ -75,7 +75,7 @@ jobs:
         with:
           upload_url: ${{ steps.new_release.outputs.upload_url }}
           asset_content_type: application/zip
-          asset_path: artifacts/macos
+          asset_path: artifacts/macos.zip
           asset_name: macos
 
       - name: Upload Asset - Ubuntu
@@ -85,5 +85,5 @@ jobs:
         with:
           upload_url: ${{ steps.new_release.outputs.upload_url }}
           asset_content_type: application/zip
-          asset_path: artifacts/ubuntu
+          asset_path: artifacts/ubuntu.zip
           asset_name: ubuntu
