@@ -89,7 +89,7 @@ jobs:
           release_name: |-
             ${{ fromJSON(steps.set_env.outputs.RELEASE_INFO).release_name }}
           body: |-
-            ${{ fromJSON(steps.set_env.outputs.RELEASE_INFO).release_body }}
+            ${{ fromJSON(steps.set_env.outputs.RELEASE_INFO).release_notes }}
           draft: false
           prerelease: false
 
