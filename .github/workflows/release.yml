@@ -31,6 +31,9 @@ jobs:
           path: ${{ github.workspace }}/target/release/sad
 
   release:
+    needs:
+      - build
+
     runs-on: ubuntu-latest
 
     steps:
