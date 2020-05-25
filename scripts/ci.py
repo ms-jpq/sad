@@ -28,7 +28,7 @@ def run(args: List[str], cwd=os.getcwd()) -> None:
     exit(ret.returncode)
 
 
-def set_tag() -> None:
+def set_release_env() -> None:
   cargo = toml.load("Cargo.toml")
   version = cargo["package"]["version"]
   time = datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -46,8 +46,8 @@ def parse_args() -> Namespace:
 def main() -> None:
   cwd()
   args = parse_args()
-  if args.tag:
-    set_tag()
+  if args.release:
+    set_release_env()
 
 
 main()
