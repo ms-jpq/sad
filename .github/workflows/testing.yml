@@ -27,4 +27,4 @@ jobs:
           git add -A
           git commit -m "testing"
           ls -la
-          git push "https://ms-jpq:$CI_TOKEN:@github.com/ms-jpq/homebrew-sad" master
+          echo "https://ms-jpq:$CI_TOKEN:@github.com/ms-jpq/homebrew-sad"
