@@ -56,25 +56,11 @@ def build_j2(src: str, filters: Dict[str, Callable] = {}) -> Environment:
   return j2
 
 
-def install_plugin(uri: str, name: str) -> None:
-  if path.isdir(name):
-    subprocess.run(
-        ["git", "pull"],
-        cwd=name.encode(),
-        stdout=sys.stdout,
-        stderr=sys.stderr)
-  else:
-    subprocess.run(
-        ["git", "clone", "--depth=1", uri,
-         name],
-        stdout=sys.stdout,
-        stderr=sys.stderr)
-
-
 def git_commit(repo: str) -> None:
   time = datetime.now().strftime("%Y-%m-%d %H:%M")
+  msg = f"CI - {time}"
   run(["git", "add", "-A"], cwd=repo)
-  run(["git", "commit", "-m", time], cwd=repo)
+  run(["git", "commit", "-m", msg], cwd=repo)
   run(["git", "push"], cwd=repo)
 
 
@@ -117,6 +103,8 @@ def main() -> None:
         values=values,
         artifact=path.join(artifacts_dir, args.brew_artifact),
         uri=args.brew_uri)
+  else:
+    exit(1)
 
 
 main()
