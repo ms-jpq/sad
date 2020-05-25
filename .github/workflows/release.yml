@@ -41,8 +41,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
+      - name: Install Deb Builder
+        run: cargo install cargo-deb
+
       - name: Test
         run: cargo test --verbose
+
+      - name: Build
+        run: cargo deb --output target/debian/sad.deb
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: debian_deb
+          path: target/debian/sad.deb
 
   release:
     needs:
@@ -64,6 +76,12 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: ubuntu-latest
+          path: artifacts
+
+      - name: Download Artifacts debian deb
+        uses: actions/download-artifact@v2
+        with:
+          name: debian_deb
           path: artifacts
 
       - name: Setup Python
@@ -114,6 +132,11 @@ jobs:
         with:
           repository: ms-jpq/homebrew-sad
           path: packages
+
+      - name: Configure git
+        run: |-
+          git config --global user.email "ci@bigly.dog"
+          git config --global user.name "GITHUB CI"
 
       - name: Build Packages
         run: >-
