@@ -12,7 +12,6 @@ jobs:
         os:
           - ubuntu-latest
           - macos-latest
-
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -34,13 +33,11 @@ jobs:
   release:
     needs:
       - build
-
     strategy:
       matrix:
         os:
           - ubuntu-latest
           - macos-latest
-
     runs-on: ubuntu-latest
 
     steps:
