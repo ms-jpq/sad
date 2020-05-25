@@ -57,11 +57,8 @@ def build_j2(src: str, filters: Dict[str, Callable] = {}) -> Environment:
 
 
 def git_commit(repo: str) -> None:
-  token = os.environ["CI_TOKEN"]
-  uri = f"https://ms-jpq:{token}@github.com/ms-jpq/homebrew-sad"
   time = datetime.now().strftime("%Y-%m-%d %H:%M")
   msg = f"CI - {time}"
-  run(["git", "remote", "set-url", "origin", uri], cwd=repo)
   run(["git", "add", "-A"], cwd=repo)
   run(["git", "commit", "-m", msg], cwd=repo)
   run(["git", "push", "--force"], cwd=repo)

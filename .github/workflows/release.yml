@@ -144,13 +144,15 @@ jobs:
           path: packages
 
       - name: Configure Git
+        env:
+          CI_TOKEN: ${{ secrets.CI_TOKEN }}
         run: |-
           git config --global user.email "ci@bigly.dog"
           git config --global user.name "GITHUB CI"
+          git config --global credential.helper "store --file=$HOME/git_credentials"
+          echo "https://$CI_TOKEN:@github.com" > "$HOME/git_credentials"
 
       - name: Build Packages
-        env:
-          CI_TOKEN: ${{ secrets.CI_TOKEN }}
         run: >-
           ./ci/release.py
           --brew-artifact=macos-latest.zip
