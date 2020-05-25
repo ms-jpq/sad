@@ -31,7 +31,7 @@ def run(args: List[str], cwd=os.getcwd()) -> None:
 def set_release_env() -> None:
   cargo = toml.load("Cargo.toml")
   version = cargo["package"]["version"]
-  time = datetime.now().strftime("%Y-%m-%d_%H:%M")
+  time = datetime.now().strftime("%Y-%m-%d_%H-%M")
   tag = f"{version}_{time}"
   set_output("TAG_NAME", tag)
   set_output("RELEASE_NAME", tag)
