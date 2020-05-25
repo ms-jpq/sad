@@ -6,7 +6,6 @@ on:
     #   - "*"
 
 jobs:
-
   release:
     runs-on: ubuntu-latest
 
@@ -21,13 +20,11 @@ jobs:
         env:
           CI_TOKEN: ${{ secrets.CI_TOKEN }}
         run: |-
-          git config --global user.email "ci@bigly.dog"
+          git config --global user.email "git@bigly.dog"
           git config --global user.name "GITHUB CI"
-          git config --global credential.helper "store --file=$HOME/git_credentials"
-          echo "https://ms-jpq:$CI_TOKEN:@github.com" > "$HOME/git_credentials"
-          touch packages/testing.txt
           cd packages
-          ls -la
+          touch testing.txt
           git add -A
           git commit -m "testing"
-          git push https://ms-jpq:$CI_TOKEN:@github.com/ms-jpq/homebrew-sad master
+          ls -la
+          git push "https://ms-jpq:$CI_TOKEN:@github.com/ms-jpq/homebrew-sad" master
