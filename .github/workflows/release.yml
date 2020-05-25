@@ -2,8 +2,8 @@ name: Release
 
 on:
   push:
-    # tags:
-    #   - '*'
+    tags:
+      - "*"
 
 jobs:
   build:
@@ -27,8 +27,8 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v2
         with:
-          - name: sad-${{ matrix.os }}
-            path: ${{ github.workspace }}/target/release/sad
+          name: sad-${{ matrix.os }}
+          path: ${{ github.workspace }}/target/release/sad
 
   release:
     runs-on: ubuntu-latest
