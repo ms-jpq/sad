@@ -1,24 +1,25 @@
+name: Release
+
 on:
   push:
     tags:
       - '*'
 
-name: Create Release
-
 jobs:
   build:
-    name: Create Release
-    runs-on: ubuntu-latest
+    runs-on:
+      - ubuntu-latest
+      - macos-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-        
+
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.ref }}
           release_name: Release ${{ github.ref }}
