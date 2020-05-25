@@ -6,7 +6,7 @@ on:
     #   - "*"
 
 jobs:
-  build_naked:
+  build_zips:
     strategy:
       matrix:
         os:
@@ -46,7 +46,7 @@ jobs:
 
   release:
     needs:
-      - build_naked
+      - build_zips
       - build_debs
     runs-on: ubuntu-latest
 
