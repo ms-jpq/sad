@@ -29,6 +29,6 @@ apps:
     command: bin/sad
 
 parts:
-  my-part:
-    # See 'snapcraft plugins'
-    plugin: nil
+  sad:
+    plugin: rust
+    source: git@github.com:ms-jpq/sad.git
