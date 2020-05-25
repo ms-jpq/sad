@@ -29,7 +29,7 @@ def set_release_env() -> None:
   cargo = toml.load("Cargo.toml")
   version = cargo["package"]["version"]
   time = datetime.now()
-  tag_name = f"{version}_{time.strftime('%Y-%m-%d_%H-%M')}"
+  tag_name = f"ci_{version}_{time.strftime('%Y-%m-%d_%H-%M')}"
   release_name = f"CI - {version} | {time.strftime('%Y-%m-%d %H:%M')}"
   release_notes = read("release_notes.md")
   release_info = {"tag_name": tag_name,
