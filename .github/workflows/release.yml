@@ -24,22 +24,38 @@ jobs:
       - name: Build
         run: cargo build --release
 
-      - name: Upload Artifact
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v2
         with:
           - name: sad-${{ matrix.os }}
             path: ${{ github.workspace }}/target/release/sad
 
-#   release:
-#     runs-on: ubuntu-latest
+  release:
+    runs-on: ubuntu-latest
 
-#     steps:
-#       - name: Create Release
-#         uses: actions/create-release@v1
-#         env:
-#           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#         with:
-#           tag_name: ${{ github.ref }}
-#           release_name: Release ${{ github.ref }}
-#           draft: false
-#           prerelease: false
+    steps:
+      - name: Download Artifacts macos
+        uses: actions/download-artifact@v2
+        with:
+          name: sad-macos-latest
+          path: ${{ github.workspace }}/artifacts/sad-macos
+
+      - name: Download Artifacts ubuntu
+        uses: actions/download-artifact@v2
+        with:
+          name: sad-ubuntu-latest
+          path: ${{ github.workspace }}/artifacts/sad-ubuntu
+
+      - name: Show
+        run: ls -R
+        working-directory: ${{ github.workspace }}/artifacts
+
+      # - name: Create Release
+      #   uses: actions/create-release@v1
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   with:
+      #     tag_name: ${{ github.ref }}
+      #     release_name: Release ${{ github.ref }}
+      #     draft: false
+      #     prerelease: false
