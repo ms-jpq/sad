@@ -2,7 +2,7 @@
 /.venv/
 .DS_Store
 /target/
-/release/
+/artifacts/
 release.zip
 Cargo.lock
 temp*

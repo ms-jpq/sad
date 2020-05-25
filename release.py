@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import hashlib
 import jinja2
 import os
 import subprocess
@@ -8,10 +9,9 @@ import sys
 import shutil
 from argparse import Namespace
 from os import path
-from typing import List
+from typing import Iterator, List
 
-
-release_dir = "release"
+artifacts_dir = "artifacts"
 build_dir = "target"
 prog_name = "sad"
 
@@ -21,33 +21,60 @@ def cwd() -> None:
   os.chdir(cwd)
 
 
-def run(args: List[str]) -> None:
-  ret = subprocess.run(args, stdout=sys.stdout, stderr=sys.stderr)
+def run(args: List[str], cwd=os.getcwd()) -> None:
+  ret = subprocess.run(args, cwd=cwd.encode(),
+                       stdout=sys.stdout, stderr=sys.stderr)
   if ret.returncode != 0:
     exit(ret.returncode)
 
 
-def cross_build() -> None:
+def cross_build() -> Iterator[str]:
   targets = ["x86_64-unknown-linux-gnu",
              "x86_64-unknown-linux-musl"]
   for arch in targets:
     args = ["cross", "build", "--release", "--target", arch]
     run(args)
-    release = path.join(build_dir, arch, release_dir, prog_name)
-    dest = path.join(release_dir, arch)
+    release = path.join(build_dir, arch, "release", prog_name)
+    dest = path.join(artifacts_dir, arch)
     shutil.copy2(release, dest)
+    yield dest
 
 
-def macos_build() -> None:
+def sha(resource: str) -> str:
+  with open(resource, "rb") as fd:
+    binary = fd.read()
+    sha = hashlib.sha1(binary).hexdigest()
+    return sha
+
+
+def macos_build() -> str:
   if sys.platform != "darwin":
     return
   arch = "x86_64-apple-darwin"
   artifact_dir = path.join(build_dir, arch)
   args = ["cargo", "build", "--release", "--target-dir", artifact_dir]
   run(args)
-  release = path.join(build_dir, arch, release_dir, prog_name)
-  dest = path.join(release_dir, arch)
+  release = path.join(build_dir, arch, "release", prog_name)
+  dest = path.join(artifacts_dir, arch)
   shutil.copy2(release, dest)
+  return dest
+
+
+def git_repo(name, uri: str) -> None:
+  install_target = path.join(artifacts_dir, name)
+  if path.isdir(install_target):
+    run(["git", "pull"], cwd=install_target)
+  else:
+    run(["git", "clone", "--depth=1", uri,
+         install_target])
+
+
+def homebrew_release() -> None:
+  git_repo("homebrew", "https://github.com/ms-jpq/homebrew-sad")
+  artifact = macos_build()
+  sha1 = sha(artifact)
+
+  print(sha1)
 
 
 def parse_args() -> Namespace:
@@ -58,9 +85,10 @@ def parse_args() -> Namespace:
 def main() -> None:
   cwd()
   args = parse_args()
-  os.makedirs(release_dir, exist_ok=True)
-  macos_build()
-  cross_build()
+  os.makedirs(artifacts_dir, exist_ok=True)
+
+  homebrew_release()
+  # cross_build()
 
 
 main()
