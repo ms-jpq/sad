@@ -40,13 +40,13 @@ jobs:
       - name: Download Artifacts macos
         uses: actions/download-artifact@v2
         with:
-          name: sad-macos-latest
+          name: macos-latest
           path: artifacts/macos
 
       - name: Download Artifacts ubuntu
         uses: actions/download-artifact@v2
         with:
-          name: sad-ubuntu-latest
+          name: ubuntu-latest
           path: artifacts/ubuntu
 
       - name: Create Release
