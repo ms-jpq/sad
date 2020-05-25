@@ -7,12 +7,13 @@ on:
 
 jobs:
   build:
-    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os:
           - ubuntu-latest
           - macos-latest
+
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout
@@ -34,23 +35,23 @@ jobs:
     needs:
       - build
 
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Download Artifacts macos
+      - name: Download Artifacts
         uses: actions/download-artifact@v2
         with:
-          name: macos-latest
-          path: artifacts/macos
-
-      - name: Download Artifacts ubuntu
-        uses: actions/download-artifact@v2
-        with:
-          name: ubuntu-latest
-          path: artifacts/ubuntu
+          name: ${{ matrix.os }}
+          path: artifacts/${{ matrix.os }}
 
       - name: Setup Python
         uses: actions/setup-python@v2
@@ -74,22 +75,12 @@ jobs:
           draft: false
           prerelease: false
 
-      - name: Upload Asset - Macos
+      - name: Upload Asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.new_release.outputs.upload_url }}
           asset_content_type: application/zip
-          asset_path: artifacts/macos/sad
-          asset_name: macos
-
-      - name: Upload Asset - Ubuntu
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.new_release.outputs.upload_url }}
-          asset_content_type: application/zip
-          asset_path: artifacts/ubuntu/sad
-          asset_name: ubuntu
+          asset_path: artifacts/${{ matrix.os }}/sad
+          asset_name: ${{ matrix.os }}

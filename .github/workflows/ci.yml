@@ -13,12 +13,13 @@ on:
 
 jobs:
   build:
-    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os:
           - ubuntu-latest
           - macos-latest
+
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout
