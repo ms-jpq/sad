@@ -55,7 +55,10 @@ jobs:
 
       - name: Set ENV
         id: set_env
-        run: "python3 scripts/ci.py --release"
+        run: |-
+          ls -R
+          pwd
+          ./scripts/ci.py --release
 
       - name: Create Release
         id: new_release
