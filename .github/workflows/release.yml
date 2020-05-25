@@ -56,9 +56,7 @@ jobs:
       - name: Set ENV
         id: set_env
         run: |-
-          ls -R
-          pwd
-          ./scripts/ci.py --release
+          ../scripts/ci.py --release
 
       - name: Create Release
         id: new_release
@@ -78,7 +76,7 @@ jobs:
         with:
           upload_url: ${{ steps.new_release.outputs.upload_url }}
           asset_content_type: application/zip
-          asset_path: artifacts/macos.zip
+          asset_path: artifacts/macos/sad
           asset_name: macos
 
       - name: Upload Asset - Ubuntu
@@ -88,5 +86,5 @@ jobs:
         with:
           upload_url: ${{ steps.new_release.outputs.upload_url }}
           asset_content_type: application/zip
-          asset_path: artifacts/ubuntu.zip
+          asset_path: artifacts/ubuntu/sad
           asset_name: ubuntu
