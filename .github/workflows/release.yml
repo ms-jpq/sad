@@ -133,7 +133,7 @@ jobs:
           repository: ms-jpq/homebrew-sad
           path: packages
 
-      - name: Configure git
+      - name: Configure Git
         run: |-
           git config --global user.email "ci@bigly.dog"
           git config --global user.name "GITHUB CI"
