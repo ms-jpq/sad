@@ -54,6 +54,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+        with:
+          submodules: True
 
       - name: Download Artifacts macos
         uses: actions/download-artifact@v2
@@ -71,7 +73,7 @@ jobs:
         uses: actions/setup-python@v2
 
       - name: Pip Packages
-        run: pip install toml
+        run: pip install toml pyyaml jinja2
 
       - name: Set ENV
         id: set_env
@@ -84,12 +86,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: |-
-            ${{ fromJSON(steps.set_env.outputs.RELEASE_INFO).tag_name }}
-          release_name: |-
-            ${{ fromJSON(steps.set_env.outputs.RELEASE_INFO).release_name }}
-          body: |-
-            ${{ fromJSON(steps.set_env.outputs.RELEASE_INFO).release_notes }}
+          tag_name: ${{ fromJSON(steps.set_env.outputs.RELEASE_INFO).tag_name }}
+          release_name: ${{ fromJSON(steps.set_env.outputs.RELEASE_INFO).release_name }}
+          body: ${{ fromJSON(steps.set_env.outputs.RELEASE_INFO).release_notes }}
           draft: false
           prerelease: false
 
@@ -112,3 +111,9 @@ jobs:
           asset_content_type: application/zip
           asset_path: artifacts/ubuntu-latest.zip
           asset_name: ubuntu.zip
+
+      - name: Build Packages
+        run: >-
+          ./ci/release.py
+          --brew-artifact=macos-latest.zip
+          --brew-uri=${{ steps.new_release.outputs.html_url }}
