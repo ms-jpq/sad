@@ -33,7 +33,6 @@ jobs:
 
       - name: Package Artifacts
         run: |-
-          mkdir -p artifacts
           chmod +x target/debug/sad
           zip -j artifacts/${{ matrix.os }} target/debug/sad
 

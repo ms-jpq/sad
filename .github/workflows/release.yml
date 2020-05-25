@@ -27,7 +27,6 @@ jobs:
       - name: Package Artifacts
         run: |-
           chmod +x target/release/sad
-          mkdir -p artifacts
           zip -j artifacts/${{ matrix.os }} target/release/sad
 
       - name: Upload Artifacts
@@ -54,8 +53,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-        with:
-          submodules: True
 
       - name: Download Artifacts macos
         uses: actions/download-artifact@v2

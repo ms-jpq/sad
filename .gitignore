@@ -3,4 +3,5 @@
 .DS_Store
 /target/
 /artifacts/
+/packages/
 Cargo.lock

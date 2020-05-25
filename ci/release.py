@@ -6,6 +6,7 @@ import os
 import subprocess
 import sys
 from argparse import Namespace
+from datetime import datetime
 from os import path
 from typing import Any, Callable, Dict, List
 
@@ -13,7 +14,6 @@ import jinja2
 import toml
 import yaml
 from jinja2 import Environment
-
 
 artifacts_dir = "artifacts"
 packages_dir = "packages"
@@ -56,6 +56,28 @@ def build_j2(src: str, filters: Dict[str, Callable] = {}) -> Environment:
   return j2
 
 
+def install_plugin(uri: str, name: str) -> None:
+  if path.isdir(name):
+    subprocess.run(
+        ["git", "pull"],
+        cwd=name.encode(),
+        stdout=sys.stdout,
+        stderr=sys.stderr)
+  else:
+    subprocess.run(
+        ["git", "clone", "--depth=1", uri,
+         name],
+        stdout=sys.stdout,
+        stderr=sys.stderr)
+
+
+def git_commit(repo: str) -> None:
+  time = datetime.now().strftime("%Y-%m-%d %H:%M")
+  run(["git", "add", "-A"], cwd=repo)
+  run(["git", "commit", "-m", time], cwd=repo)
+  run(["git", "push"], cwd=repo)
+
+
 def write(filename: str, text: str) -> None:
   with open(filename, "w") as fd:
     fd.write(text)
@@ -72,6 +94,9 @@ def homebrew_release(j2: Environment, values: Dict[str, str], artifact: str, uri
   sha = sha256(artifact)
   vals = {**values, "sha256": sha, "release_uri": uri}
   render = j2.get_template("homebrew.rb.j2").render(**vals)
+  dest = path.join(packages_dir, "sad.rb")
+  write(dest, render)
+  git_commit(packages_dir)
 
 
 def parse_args() -> Namespace:
@@ -84,7 +109,6 @@ def parse_args() -> Namespace:
 def main() -> None:
   cwd()
   args = parse_args()
-  os.makedirs(artifacts_dir, exist_ok=True)
   j2 = build_j2(path.join("ci", "templates"))
   values = load_values()
   if args.brew_artifact and args.brew_uri:
