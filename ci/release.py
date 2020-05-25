@@ -61,9 +61,10 @@ def git_commit(repo: str) -> None:
   uri = f"https://ms-jpq:{token}@github.com/ms-jpq/homebrew-sad"
   time = datetime.now().strftime("%Y-%m-%d %H:%M")
   msg = f"CI - {time}"
+  run(["git", "remote", "set-url", "origin", uri])
   run(["git", "add", "-A"], cwd=repo)
   run(["git", "commit", "-m", msg], cwd=repo)
-  run(["git", "push", "-f", uri], cwd=repo)
+  run(["git", "push", "--force"], cwd=repo)
 
 
 def write(filename: str, text: str) -> None:
