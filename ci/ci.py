@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 
 import argparse
+import json
 import os
-import subprocess
-import sys
 from argparse import Namespace
 from datetime import datetime
 from os import path
@@ -17,24 +16,28 @@ def cwd() -> None:
   os.chdir(root)
 
 
+def read(name: str) -> str:
+  with open(name, "r") as fd:
+    return fd.read()
+
+
 def set_output(name: str, value: str) -> None:
   print(f"::set-output name={name}::{value}")
-
-
-def run(args: List[str], cwd=os.getcwd()) -> None:
-  ret = subprocess.run(args, cwd=cwd.encode(),
-                       stdout=sys.stdout, stderr=sys.stderr)
-  if ret.returncode != 0:
-    exit(ret.returncode)
 
 
 def set_release_env() -> None:
   cargo = toml.load("Cargo.toml")
   version = cargo["package"]["version"]
   time = datetime.now().strftime("%Y-%m-%d_%H-%M")
-  tag = f"{version}_{time}"
-  set_output("TAG_NAME", tag)
-  set_output("RELEASE_NAME", tag)
+  tag_name = f"{version}_{time}"
+  release_name = f"CI - {tag_name}"
+  release_notes = read("release_notes.md")
+  release_info = {"tag_name": tag_name,
+                  "release_name": release_name,
+                  "release_notes": release_notes}
+
+  dump = json.dumps(release_info)
+  set_output("RELEASE_INFO", dump)
 
 
 def parse_args() -> Namespace:

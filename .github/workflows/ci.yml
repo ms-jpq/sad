@@ -2,11 +2,12 @@ name: CI
 
 on:
   push:
-    branches:
-      - master
     paths:
       - "src/**"
       - "tests/**"
+      - ".github/**"
+    branches:
+      - master
   pull_request:
   schedule:
     - cron: "0 0 * * *" # daily

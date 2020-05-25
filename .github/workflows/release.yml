@@ -6,7 +6,7 @@ on:
     #   - "*"
 
 jobs:
-  build:
+  build_naked:
     strategy:
       matrix:
         os:
@@ -36,9 +36,19 @@ jobs:
           name: ${{ matrix.os }}
           path: artifacts/${{ matrix.os }}.zip
 
+  build_debs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Test
+        run: cargo test --verbose
+
   release:
     needs:
-      - build
+      - build_naked
+      - build_debs
     runs-on: ubuntu-latest
 
     steps:
@@ -74,8 +84,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ steps.set_env.outputs.TAG_NAME }}
-          release_name: ${{ steps.set_env.outputs.RELEASE_NAME }}
+          tag_name: |-
+            ${{ fromJSON(steps.set_env.outputs.RELEASE_INFO).tag_name }}
+          release_name: |-
+            ${{ fromJSON(steps.set_env.outputs.RELEASE_INFO).release_name }}
+          body: |-
+            ${{ fromJSON(steps.set_env.outputs.RELEASE_INFO).release_body }}
           draft: false
           prerelease: false
 
