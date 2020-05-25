@@ -28,7 +28,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v2
         with:
-          name: ${{ matrix.os }}.zip
+          name: ${{ matrix.os }}
           path: target/release/sad
 
   release:
@@ -41,14 +41,14 @@ jobs:
       - name: Download Artifacts macos
         uses: actions/download-artifact@v2
         with:
-          name: macos-latest.zip
-          path: artifacts/macos.zip
+          name: macos-latest
+          path: artifacts/macos
 
       - name: Download Artifacts ubuntu
         uses: actions/download-artifact@v2
         with:
-          name: ubuntu-latest.zip
-          path: artifacts/ubuntu.zip
+          name: ubuntu-latest
+          path: artifacts/ubuntu
 
       - name: Set ENV
         run: "export TAG_NAME=$(date)"
@@ -71,8 +71,8 @@ jobs:
         with:
           upload_url: ${{ steps.new_release.outputs.upload_url }}
           asset_content_type: application/zip
-          asset_path: artifacts/macos.zip
-          asset_name: macos.zip
+          asset_path: artifacts/macos
+          asset_name: macos
 
       - name: Upload Asset - Ubuntu
         uses: actions/upload-release-asset@v1
@@ -81,5 +81,5 @@ jobs:
         with:
           upload_url: ${{ steps.new_release.outputs.upload_url }}
           asset_content_type: application/zip
-          asset_path: artifacts/ubuntu.zip
-          asset_name: ubuntu.zip
+          asset_path: artifacts/ubuntu
+          asset_name: ubuntu
