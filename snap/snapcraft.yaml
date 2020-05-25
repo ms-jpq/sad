@@ -1,0 +1,34 @@
+name: sad
+
+base: core18 # the base snap is the execution environment for this snap
+
+version: '0.1'
+
+summary: |-
+  Search and replace | Space Age seD
+
+description: |-
+  sad is a regex search / replace tool. it provides vastly
+  improved ergonomics over sed.
+
+  -- amazing terminal UI.
+  -- preview changes
+  -- selectively apply changes
+  -- batch mode
+
+  integrates with fzf, diff-so-fancy, delta
+
+  https://github.com/ms-jpq/sad
+
+
+grade: stable
+confinement: classic
+
+apps:
+  sad:
+    command: bin/sad
+
+parts:
+  my-part:
+    # See 'snapcraft plugins'
+    plugin: nil
