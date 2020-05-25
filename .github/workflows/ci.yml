@@ -34,8 +34,8 @@ jobs:
       - name: Package Artifacts
         run: |-
           mkdir -p artifacts
-          chmod +x target/release/sad
-          zip -j artifacts/${{ matrix.os }} target/release/sad
+          chmod +x target/debug/sad
+          zip -j artifacts/${{ matrix.os }} target/debug/sad
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v2
