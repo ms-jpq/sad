@@ -10,7 +10,7 @@ edition = "2018"
 futures = "0.3"
 structopt = "0.3"
 tokio = { version = "0.2", features = ["fs", "io-std", "io-util", "process", "sync", "rt-threaded"] }
-async-std = { version = "1.5", features = ["unstable"] }
+async-std = { version = "1.6", features = ["unstable"] }
 num_cpus = "1"
 regex = "1"
 aho-corasick = "0.7"

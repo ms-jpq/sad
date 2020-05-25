@@ -47,7 +47,7 @@ impl SubprocessCommand {
     let mut stderr = child.stderr.take().map(BufReader::new).unwrap();
 
     let handle_in = task::spawn(async move {
-      while let Some(print) = stream.recv().await {
+      while let Ok(print) = stream.recv().await {
         match print {
           Ok(val) => {
             if let Err(err) = stdin.write(val.as_bytes()).await.into_sadness() {
@@ -132,7 +132,7 @@ impl SubprocessCommand {
     let mut stdin = child.stdin.take().map(BufWriter::new).unwrap();
 
     let handle_in = task::spawn(async move {
-      while let Some(print) = stream.recv().await {
+      while let Ok(print) = stream.recv().await {
         match print {
           Ok(val) => {
             if let Err(err) = stdin.write(val.as_bytes()).await.into_sadness() {
@@ -147,7 +147,12 @@ impl SubprocessCommand {
       }
     });
 
-    let handle_kill = task::spawn(async move { rix.recv().await });
+    let handle_kill = task::spawn(async move {
+      match rix.recv().await {
+        Ok(err) => Some(err),
+        Err(_) => None,
+      }
+    });
 
     let handle_child = task::spawn(async move {
       match select(child, handle_kill).await {

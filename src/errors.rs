@@ -1,4 +1,8 @@
-use std::{io, num, string};
+use std::{
+  error::Error,
+  fmt::{self, Display, Formatter},
+  io, num, string,
+};
 use tokio::task::JoinError;
 
 /*
@@ -25,7 +29,7 @@ impl Failure {
   pub fn exit_message(&self) -> Option<String> {
     match self {
       Failure::Interrupt => None,
-      _ => Some(format!("Error:\n{:#?}", self)),
+      _ => Some(format!("{}", self)),
     }
   }
 
@@ -36,6 +40,14 @@ impl Failure {
     }
   }
 }
+
+impl Display for Failure {
+  fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+    write!(f, "Error:\n{:#?}", self)
+  }
+}
+
+impl Error for Failure {}
 
 pub type SadResult<T> = Result<T, Failure>;
 

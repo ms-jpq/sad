@@ -30,7 +30,7 @@ fn stream_process(
       let sender = Sender::clone(&tx);
 
       task::spawn(async move {
-        while let Some(path) = stream.recv().await {
+        while let Ok(path) = stream.recv().await {
           match path {
             Ok(val) => {
               let displaced = displace::displace(&opts, val).await;

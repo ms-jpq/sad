@@ -61,7 +61,9 @@ impl Arguments {
         if rhs.contains('\x04') {
           Ok(Arguments::from_iter(rhs.split('\x04')))
         } else {
-          Err(Failure::Simple("`-c` is a reserved flag, use --k, or --commit".to_owned()))
+          Err(Failure::Simple(
+            "`-c` is a reserved flag, use --k, or --commit".to_owned(),
+          ))
         }
       }
       _ => Ok(Arguments::from_args()),

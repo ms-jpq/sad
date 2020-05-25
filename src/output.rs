@@ -14,7 +14,7 @@ use tokio::{
 fn stream_stdout(stream: Receiver<SadResult<String>>) -> Task {
   let mut stdout = BufWriter::new(io::stdout());
   task::spawn(async move {
-    while let Some(print) = stream.recv().await {
+    while let Ok(print) = stream.recv().await {
       match print {
         Ok(val) => match stdout.write(val.as_bytes()).await {
           Err(e) if e.kind() == std::io::ErrorKind::BrokenPipe => {
