@@ -3,6 +3,7 @@ name: Release
 on:
   push:
     tag:
+      - "*"
 
 jobs:
   build:
@@ -49,7 +50,7 @@ jobs:
           path: artifacts/ubuntu
 
       - name: Set ENV
-        run: "export TAG_NAME=$(date)"
+        run: "./scripts/release.py"
 
       - name: Create Release
         id: new_release

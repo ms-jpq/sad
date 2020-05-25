@@ -6,7 +6,6 @@ import jinja2
 import os
 import subprocess
 import sys
-import shutil
 import toml
 import yaml
 from argparse import Namespace
@@ -14,8 +13,6 @@ from os import path
 from typing import Iterator, List
 
 artifacts_dir = "artifacts"
-build_dir = "target"
-prog_name = "sad"
 
 
 def cwd() -> None:
