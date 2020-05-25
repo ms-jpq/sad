@@ -24,7 +24,7 @@ jobs:
           git config --global user.name "GITHUB CI"
           cd packages
           touch testing.txt
+          git remote set-url origin "https://ms-jpq:$CI_TOKEN@github.com/ms-jpq/homebrew-sad.git"
           git add -A
           git commit -m "testing"
-          ls -la
-          echo "https://ms-jpq:$CI_TOKEN:@github.com/ms-jpq/homebrew-sad"
+          git push
