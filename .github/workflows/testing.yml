@@ -1,0 +1,33 @@
+name: Release
+
+on:
+  push:
+    # tags:
+    #   - "*"
+
+jobs:
+
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout CI Artifacts Repo
+        uses: actions/checkout@v2
+        with:
+          repository: ms-jpq/homebrew-sad
+          path: packages
+
+      - name: Configure Git
+        env:
+          CI_TOKEN: ${{ secrets.CI_TOKEN }}
+        run: |-
+          git config --global user.email "ci@bigly.dog"
+          git config --global user.name "GITHUB CI"
+          git config --global credential.helper "store --file=$HOME/git_credentials"
+          echo "https://ms-jpq:$CI_TOKEN:@github.com" > "$HOME/git_credentials"
+          touch packages/testing.txt
+          cd packages
+          ls -la
+          git add -A
+          git commit -m "testing"
+          git push https://ms-jpq:$CI_TOKEN:@github.com/ms-jpq/homebrew-sad master
