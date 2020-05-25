@@ -48,13 +48,13 @@ jobs:
         run: cargo test --verbose
 
       - name: Build
-        run: cargo deb --output target/debian/sad.deb
+        run: cargo deb --output target/debian/debian.deb
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v2
         with:
           name: debian_deb
-          path: target/debian/sad.deb
+          path: target/debian/debian.deb
 
   release:
     needs:
@@ -134,8 +134,8 @@ jobs:
         with:
           upload_url: ${{ steps.new_release.outputs.upload_url }}
           asset_content_type: application/vnd.debian.binary-package
-          asset_path: artifacts/sad.deb
-          asset_name: sad.deb
+          asset_path: artifacts/debian.deb
+          asset_name: debian.deb
 
       - name: Checkout CI Artifacts Repo
         uses: actions/checkout@v2
