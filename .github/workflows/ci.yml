@@ -30,8 +30,14 @@ jobs:
       - name: Test
         run: cargo test --verbose
 
+      - name: Package Artifacts
+        run: |-
+          mkdir -p artifacts
+          chmod +x target/release/sad
+          zip -j artifacts/${{ matrix.os }} target/release/sad
+
       - name: Upload Artifacts
         uses: actions/upload-artifact@v2
         with:
           name: ${{ matrix.os }}
-          path: target/release/sad
+          path: artifacts/${{ matrix.os }}.zip
