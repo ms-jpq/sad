@@ -2,9 +2,7 @@ name: Release
 
 on:
   push:
-    branch:
-      - master
-
+    tag:
 
 jobs:
   build:
