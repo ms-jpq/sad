@@ -50,6 +50,12 @@ jobs:
           name: ${{ matrix.os }}
           path: artifacts/${{ matrix.os }}
 
+      - name: Package Artifacts
+        run: |-
+          chmod +x artifacts/${{ matrix.os }}/sad
+          mkdir -p release
+          zip -j release/${{ matrix.os }} artifacts/${{ matrix.os }}
+
       - name: Setup Python
         uses: actions/setup-python@v2
 
@@ -79,5 +85,5 @@ jobs:
         with:
           upload_url: ${{ steps.new_release.outputs.upload_url }}
           asset_content_type: application/zip
-          asset_path: artifacts/${{ matrix.os }}/sad
-          asset_name: ${{ matrix.os }}
+          asset_path: release/${{ matrix.os }}.zip
+          asset_name: ${{ matrix.os }}.zip
