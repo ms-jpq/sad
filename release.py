@@ -7,6 +7,8 @@ import os
 import subprocess
 import sys
 import shutil
+import toml
+import yaml
 from argparse import Namespace
 from os import path
 from typing import Iterator, List
@@ -69,12 +71,11 @@ def git_repo(name, uri: str) -> None:
          install_target])
 
 
-def homebrew_release() -> None:
+def homebrew_release(artifact: str) -> None:
+  if sys.platform != "darwin":
+    return
   git_repo("homebrew", "https://github.com/ms-jpq/homebrew-sad")
-  artifact = macos_build()
   sha1 = sha(artifact)
-
-  print(sha1)
 
 
 def parse_args() -> Namespace:
@@ -86,6 +87,7 @@ def main() -> None:
   cwd()
   args = parse_args()
   os.makedirs(artifacts_dir, exist_ok=True)
+  macos_artifact = macos_build()
 
   homebrew_release()
   # cross_build()

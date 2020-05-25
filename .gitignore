@@ -3,6 +3,4 @@
 .DS_Store
 /target/
 /artifacts/
-release.zip
 Cargo.lock
-temp*

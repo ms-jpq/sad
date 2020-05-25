@@ -1,0 +1,22 @@
+---
+
+project_repo: "https://github.com/ms-jpq/sad"
+
+
+desc: |-
+  Search and replace | Space Age seD
+
+
+long_desc: |-
+  sad is a regex search / replace tool. it provides vastly
+  improved ergonomics over sed.
+
+  - amazing terminal UI.
+  - preview changes
+  - selectively apply changes
+  - batch mode
+
+  integrates with fzf, diff-so-fancy, delta
+
+  https://github.com/ms-jpq/sad
+

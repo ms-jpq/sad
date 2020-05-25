@@ -1,0 +1,13 @@
+class Sad < Formula
+  desc "{{ desc }}"
+  homepage "{{ project_repo }}"
+  version "{{ version }}"
+  bottle :unneeded
+
+  url "{{ release_uri }}"
+  sha256 "{{ sha265 }}"
+
+  def install
+    bin.install "sad"
+  end
+end

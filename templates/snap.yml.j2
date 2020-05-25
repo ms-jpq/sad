@@ -1,0 +1,23 @@
+name: sad
+
+base: core18
+
+version: "{{ version }}"
+
+summary: {{ desc }}
+
+description: |-
+  {{ long_desc }}
+
+
+grade: stable
+confinement: classic
+
+apps:
+  sad:
+    command: /usr/bin/sad
+
+parts:
+  sad:
+    plugin: rust
+    source: {{ project_repo }}
