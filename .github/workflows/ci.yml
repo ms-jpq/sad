@@ -7,7 +7,7 @@ on:
       - "tests/**"
   pull_request:
   schedule:
-    - cron: '0 0 * * 0' # weekly
+    - cron: "0 0 * * *" # daily
 
 jobs:
   build:
@@ -27,3 +27,9 @@ jobs:
 
       - name: Test
         run: cargo test --verbose
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ matrix.os }}
+          path: target/release/sad
