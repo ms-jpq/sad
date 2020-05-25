@@ -33,7 +33,7 @@ def cross_build() -> None:
   for arch in targets:
     args = ["cross", "build", "--release", "--target", arch]
     run(args)
-    release = path.join(build_dir, arch, prog_name)
+    release = path.join(build_dir, arch, release_dir, prog_name)
     dest = path.join(release_dir, arch)
     shutil.copy2(release, dest)
 
@@ -45,7 +45,7 @@ def macos_build() -> None:
   artifact_dir = path.join(build_dir, arch)
   args = ["cargo", "build", "--release", "--target-dir", artifact_dir]
   run(args)
-  release = path.join(build_dir, arch, prog_name)
+  release = path.join(build_dir, arch, release_dir, prog_name)
   dest = path.join(release_dir, arch)
   shutil.copy2(release, dest)
 
