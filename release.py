@@ -42,10 +42,10 @@ def cross_build() -> Iterator[str]:
     yield dest
 
 
-def sha(resource: str) -> str:
+def sha256(resource: str) -> str:
   with open(resource, "rb") as fd:
     binary = fd.read()
-    sha = hashlib.sha1(binary).hexdigest()
+    sha = hashlib.sha256(binary).hexdigest()
     return sha
 
 
@@ -75,7 +75,7 @@ def homebrew_release(artifact: str) -> None:
   if sys.platform != "darwin":
     return
   git_repo("homebrew", "https://github.com/ms-jpq/homebrew-sad")
-  sha1 = sha(artifact)
+  sha = sha256(artifact)
 
 
 def parse_args() -> Namespace:
@@ -87,9 +87,9 @@ def main() -> None:
   cwd()
   args = parse_args()
   os.makedirs(artifacts_dir, exist_ok=True)
-  macos_artifact = macos_build()
+  # macos_artifact = macos_build()
 
-  homebrew_release()
+  # homebrew_release()
   # cross_build()
 
 
