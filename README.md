@@ -105,11 +105,14 @@ Name                                | Function
 
 ## Regex Flags
 
+By default, `sad` uses smartcase, and multiline matching.
+
 Name | Function
 -----|---------
 `i`  | case insensitive (works for `--exact` mode as well)
 `I`  | case sensitive (works for `--exact` mode as well)
 `m`  | multiline: `^` `$` match each line
+`M`  | singleline: `^` `$` match entire document
 `s`  | allow `.` match `\n`
 `x`  | ignore whitespace and allow `#` comments
 
