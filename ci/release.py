@@ -58,6 +58,8 @@ def build_j2(src: str, filters: Dict[str, Callable] = {}) -> Environment:
 
 
 def git_clone(name: str) -> None:
+  if path.isdir(name):
+    return
   token = os.environ["CI_TOKEN"]
   email = "ci@ci.ci"
   username = "ci-bot"
