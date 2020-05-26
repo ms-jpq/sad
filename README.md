@@ -14,11 +14,19 @@ Unlike `sed`, you can double check before you fat finger your edit.
 
 Selectively replace `std` -> `joseph joestar` in the `sad` repo.
 
+You can pick and choose which changes to apply.
+
+You can also choose the clustering factor for changes using `--unified=<n>`. (Same as in GNU diff)
+
 ![preview1](https://github.com/ms-jpq/sad/raw/master/previews/preview1.gif)
 
 ## Preview (no fzf)
 
 Replace all`'(\d+)'` -> `'🌈$1🌈'` in the `chromium` repo.
+
+use `--commit` or `-k` to commit changes all at once.
+
+`-c` is taken because `sad` has to trick `fzf` into thinking it's bash :)
 
 ![preview2](https://github.com/ms-jpq/sad/raw/master/previews/preview2.gif)
 
