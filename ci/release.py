@@ -56,6 +56,17 @@ def build_j2(src: str, filters: Dict[str, Callable] = {}) -> Environment:
   return j2
 
 
+def git_clone(name: str) -> None:
+  token = os.environ["CI_TOKEN"]
+  email = "ci@github.com"
+  username = "ci-bot"
+  uri = f"https://ms-jpq:{token}@github.com/ms-jpq/homebrew-sad.git"
+  run(["git", "clone", "https://github.com/ms-jpq/homebrew-sad.git", name])
+  run(["git", "config", "user.email", "ci@github.com"], cwd=name)
+  run(["git", "config", "user.name", "ci-bot"], cwd=name)
+  run(["git", "remote", "set-url", "origin", uri], cwd=name)
+
+
 def git_commit(repo: str) -> None:
   time = datetime.now().strftime("%Y-%m-%d %H:%M")
   msg = f"CI - {time}"
@@ -95,6 +106,7 @@ def parse_args() -> Namespace:
 def main() -> None:
   cwd()
   args = parse_args()
+  git_clone(packages_dir)
   j2 = build_j2(path.join("ci", "templates"))
   values = load_values()
   if args.brew_artifact and args.brew_uri:
@@ -104,7 +116,8 @@ def main() -> None:
         artifact=path.join(artifacts_dir, args.brew_artifact),
         uri=args.brew_uri)
   else:
-    exit(1)
+    pass
+    # exit(1)
 
 
 main()

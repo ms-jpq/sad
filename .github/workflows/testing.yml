@@ -10,15 +10,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
       - name: Test Git
         env:
           CI_TOKEN: ${{ secrets.CI_TOKEN }}
-          ID_RSA: ${{ secrets.ID_RSA }}
         run: |-
-
-          git config --global user.email "git@bigly.dog"
-          git config --global user.name "ms-jpq"
-          git clone https://github.com/ms-jpq/homebrew-sad.git packages
+          ./ci/ci.py
           cd packages
           echo 555 >> testing.txt
           git add -A
