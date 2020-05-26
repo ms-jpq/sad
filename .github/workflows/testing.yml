@@ -22,9 +22,10 @@ jobs:
         run: |-
           git config --global user.email "git@bigly.dog"
           git config --global user.name "ms-jpq"
+          git config --global credential.helper store
+          echo "https://$CI_TOKEN:x-oauth-basic@github.com" > "$HOME/.git-credentials"
           cd packages
           touch testing.txt
-          git remote set-url origin "https://ms-jpq:$CI_TOKEN@github.com/ms-jpq/homebrew-sad.git"
           git add -A
           git commit -m "testing"
           git push
