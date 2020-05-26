@@ -20,7 +20,7 @@ jobs:
           git config --global user.name "ms-jpq"
           git clone https://github.com/ms-jpq/homebrew-sad.git packages
           cd packages
-          touch testing.txt
+          echo 555 >> testing.txt
           git add -A
           git commit -m "testing"
           git push "https://ms-jpq:$CI_TOKEN@github.com/ms-jpq/homebrew-sad.git" master
