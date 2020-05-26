@@ -28,4 +28,4 @@ jobs:
           echo 555 >> testing.txt
           git add -A
           git commit -m "testing"
-          git push "https://ms-jpq:$CI_TOKEN@github.com/ms-jpq/homebrew-sad.git" master
+          git push
