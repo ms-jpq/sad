@@ -159,10 +159,11 @@ impl Options {
 }
 
 fn p_auto_flags(pattern: &str) -> Vec<String> {
-  let flags = vec!["m".into(), "i".into()];
+  let mut flags = vec!["m".into(), "i".into()];
   for c in pattern.chars() {
     if c.is_uppercase() {
-      return vec!["I".into()];
+      flags.push("I".into());
+      break;
     }
   }
   flags
