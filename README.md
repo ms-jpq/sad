@@ -26,7 +26,7 @@ Replace all`'(\d+)'` -> `'🌈$1🌈'` in the `chromium` repo.
 
 use `--commit` or `-k` to commit changes all at once.
 
-`-c` is taken because `sad` has to trick `fzf` into thinking it's bash :)
+`-c` is taken because `sad` has to trick `fzf` into thinking it's `bash` :)
 
 ![preview2](https://github.com/ms-jpq/sad/raw/master/previews/preview2.gif)
 
