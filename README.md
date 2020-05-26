@@ -123,6 +123,16 @@ Code  | Meaning
 
 ## GET SAD NOW!
 
+**MacOS**
+
+`brew install ms-jpq/sad/sad`
+
+**Ubuntu**
+
+coming soon...
+
+**else**
+
 You can download `sad` from the [github release page](https://github.com/ms-jpq/sad/releases).
 
 ## What about stdin -> stdout
