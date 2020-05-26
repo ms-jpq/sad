@@ -123,15 +123,15 @@ Code  | Meaning
 
 ## GET SAD NOW!
 
-**MacOS**
+**Homebrew**
 
 `brew install ms-jpq/sad/sad`
 
-**Ubuntu**
+**Snap Store**
 
 coming soon...
 
-**else**
+**Binary / .Deb**
 
 You can download `sad` from the [github release page](https://github.com/ms-jpq/sad/releases).
 
