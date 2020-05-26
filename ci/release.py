@@ -109,7 +109,7 @@ def parse_args() -> Namespace:
   parser = argparse.ArgumentParser()
   parser.add_argument("--brew-artifact")
   parser.add_argument("--brew-uri")
-  parser.add_argument("--snapcraft")
+  parser.add_argument("--snapcraft", action="store_true")
   return parser.parse_args()
 
 
