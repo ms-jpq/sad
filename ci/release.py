@@ -125,7 +125,7 @@ def main() -> None:
         values=values,
         artifact=path.join(artifacts_dir, args.brew_artifact),
         uri=args.brew_uri)
-  if args.snapcraft:
+  elif args.snapcraft:
     snap_release(
         j2=j2,
         values=values)
