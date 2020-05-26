@@ -18,7 +18,7 @@ Selectively replace `std` -> `joseph joestar` in the `sad` repo.
 
 ## Preview (no fzf)
 
-Replace all`'(\d+)'` -> `'🌈$1🌈'` in the `chromium` repo. `3GB+`
+Replace all`'(\d+)'` -> `'🌈$1🌈'` in the `chromium` repo.
 
 ![preview2](https://github.com/ms-jpq/sad/raw/master/previews/preview2.gif)
 
@@ -75,7 +75,7 @@ If you install the things below, `sad` will automatically use them. It's progres
 
 ### Diff Colorizer
 
-Any `git` compatible colourize would work. I perfer these two:
+Any `git` compatible colourizer would work. I perfer these two:
 
 [**delta**](https://github.com/dandavison/delta)
 
