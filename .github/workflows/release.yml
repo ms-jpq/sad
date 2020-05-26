@@ -108,6 +108,7 @@ jobs:
           prerelease: false
 
       - name: Upload Asset - Macos
+        id: asset_macos
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -115,9 +116,10 @@ jobs:
           upload_url: ${{ steps.new_release.outputs.upload_url }}
           asset_content_type: application/zip
           asset_path: artifacts/macos-latest.zip
-          asset_name: macos.zip
+          asset_name: x86_64-apple-darwin.zip
 
       - name: Upload Asset - Ubuntu
+        id: asset_ubuntu
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -125,9 +127,10 @@ jobs:
           upload_url: ${{ steps.new_release.outputs.upload_url }}
           asset_content_type: application/zip
           asset_path: artifacts/ubuntu-latest.zip
-          asset_name: ubuntu.zip
+          asset_name: x86_64-unknown-linux-gnu.zip
 
       - name: Upload Asset - Debian deb
+        id: asset_debian
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -135,7 +138,7 @@ jobs:
           upload_url: ${{ steps.new_release.outputs.upload_url }}
           asset_content_type: application/vnd.debian.binary-package
           asset_path: artifacts/debian.deb
-          asset_name: debian.deb
+          asset_name: x86_64-unknown-linux-gnu.deb
 
       - name: Build Packages
         env:
@@ -143,4 +146,4 @@ jobs:
         run: >-
           ./ci/release.py
           --brew-artifact=macos-latest.zip
-          --brew-uri=${{ steps.new_release.outputs.html_url }}
+          --brew-uri=${{ steps.asset_macos.outputs.browser_download_url }}
