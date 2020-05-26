@@ -23,7 +23,7 @@ jobs:
         env:
           CI_TOKEN: ${{ secrets.CI_TOKEN }}
         run: |-
-          ./ci/ci.py
+          ./ci/release.py
           cd packages
           echo 555 >> testing.txt
           git add -A
