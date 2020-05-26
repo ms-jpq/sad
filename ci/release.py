@@ -116,7 +116,6 @@ def main() -> None:
         artifact=path.join(artifacts_dir, args.brew_artifact),
         uri=args.brew_uri)
   else:
-    pass
     exit(1)
 
 
