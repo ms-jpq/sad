@@ -41,7 +41,8 @@ def load_values() -> Dict[str, str]:
   vals = load_yaml(path.join("ci", "vars.yml"))
   values = {"project_repo": "https://github.com/ms-jpq/sad",
             "version": cargo["package"]["version"],
-            "desc": vals["desc"], }
+            "desc": vals["desc"],
+            "long_desc": vals["long_desc"]}
   return values
 
 
@@ -96,10 +97,19 @@ def homebrew_release(j2: Environment, values: Dict[str, str], artifact: str, uri
   git_commit(packages_dir)
 
 
+def snap_release(j2: Environment, values: Dict[str, str]) -> None:
+  vals = {**values}
+  render = j2.get_template("snapcraft.yml.j2").render(**vals)
+  dest = path.join(packages_dir, "snapcraft.yaml")
+  write(dest, render)
+  git_commit(packages_dir)
+
+
 def parse_args() -> Namespace:
   parser = argparse.ArgumentParser()
   parser.add_argument("--brew-artifact")
   parser.add_argument("--brew-uri")
+  parser.add_argument("--snapcraft")
   return parser.parse_args()
 
 
@@ -115,6 +125,10 @@ def main() -> None:
         values=values,
         artifact=path.join(artifacts_dir, args.brew_artifact),
         uri=args.brew_uri)
+  if args.snapcraft:
+    snap_release(
+        j2=j2,
+        values=values)
   else:
     exit(1)
 

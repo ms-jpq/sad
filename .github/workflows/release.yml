@@ -140,10 +140,17 @@ jobs:
           asset_path: artifacts/debian.deb
           asset_name: x86_64-unknown-linux-gnu.deb
 
-      - name: Build Packages
+      - name: Homebrew
         env:
           CI_TOKEN: ${{ secrets.CI_TOKEN }}
         run: >-
           ./ci/release.py
           --brew-artifact=macos-latest.zip
           --brew-uri=${{ steps.asset_macos.outputs.browser_download_url }}
+
+      - name: Snapcraft
+        env:
+          CI_TOKEN: ${{ secrets.CI_TOKEN }}
+        run: >-
+          ./ci/release.py
+          --snapcraft
