@@ -84,8 +84,8 @@ jobs:
           name: debian_deb
           path: artifacts
 
-      - name: Setup Python
-        uses: actions/setup-python@v2
+      # - name: Setup Python
+      #   uses: actions/setup-python@v2
 
       - name: Pip Packages
         run: pip install toml pyyaml jinja2

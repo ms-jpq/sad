@@ -10,6 +10,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Pip Packages
+        run: pip install toml pyyaml jinja2
+
       - name: Checkout
         uses: actions/checkout@v2
 
