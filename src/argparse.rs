@@ -159,12 +159,13 @@ impl Options {
 }
 
 fn p_auto_flags(pattern: &str) -> Vec<String> {
+  let flags = vec!["m".into(), "i".into()];
   for c in pattern.chars() {
     if c.is_uppercase() {
       return vec!["I".into()];
     }
   }
-  vec!["i".into()]
+  flags
 }
 
 fn p_aho_corasick(pattern: &str, flags: &[String]) -> SadResult<AhoCorasick> {
@@ -183,9 +184,10 @@ fn p_regex(pattern: &str, flags: &[String]) -> SadResult<Regex> {
   let mut re = RegexBuilder::new(pattern);
   for flag in flags {
     match flag.as_str() {
-      "I" => re.case_insensitive(false),
       "i" => re.case_insensitive(true),
+      "I" => re.case_insensitive(false),
       "m" => re.multi_line(true),
+      "M" => re.multi_line(false),
       "s" => re.dot_matches_new_line(true),
       "U" => re.swap_greed(true),
       "x" => re.ignore_whitespace(true),
