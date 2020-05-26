@@ -2,8 +2,8 @@ name: Release
 
 on:
   push:
-    tags:
-      - "*"
+    # tags:
+    #   - "*"
 
 jobs:
   build_zips:
@@ -136,21 +136,6 @@ jobs:
           asset_content_type: application/vnd.debian.binary-package
           asset_path: artifacts/debian.deb
           asset_name: debian.deb
-
-      - name: Checkout CI Artifacts Repo
-        uses: actions/checkout@v2
-        with:
-          repository: ms-jpq/homebrew-sad
-          path: packages
-
-      - name: Configure Git
-        env:
-          CI_TOKEN: ${{ secrets.CI_TOKEN }}
-        run: |-
-          git config --global user.email "ci@bigly.dog"
-          git config --global user.name "GITHUB CI"
-          git config --global credential.helper "store --file=$HOME/git_credentials"
-          echo "https://ms-jpq:$CI_TOKEN:@github.com" > "$HOME/git_credentials"
 
       - name: Build Packages
         run: >-

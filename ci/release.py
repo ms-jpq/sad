@@ -58,12 +58,12 @@ def build_j2(src: str, filters: Dict[str, Callable] = {}) -> Environment:
 
 def git_clone(name: str) -> None:
   token = os.environ["CI_TOKEN"]
-  email = "ci@github.com"
+  email = "ci@ci.ci"
   username = "ci-bot"
   uri = f"https://ms-jpq:{token}@github.com/ms-jpq/homebrew-sad.git"
   run(["git", "clone", "https://github.com/ms-jpq/homebrew-sad.git", name])
-  run(["git", "config", "user.email", "ci@github.com"], cwd=name)
-  run(["git", "config", "user.name", "ci-bot"], cwd=name)
+  run(["git", "config", "user.email", email], cwd=name)
+  run(["git", "config", "user.name", username], cwd=name)
   run(["git", "remote", "set-url", "origin", uri], cwd=name)
 
 
@@ -117,7 +117,7 @@ def main() -> None:
         uri=args.brew_uri)
   else:
     pass
-    # exit(1)
+    exit(1)
 
 
 main()
