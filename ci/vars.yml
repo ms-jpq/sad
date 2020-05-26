@@ -11,10 +11,10 @@ long_desc: |-
   sad is a regex search / replace tool. it provides vastly
   improved ergonomics over sed.
 
-  - amazing terminal UI.
-  - preview changes
-  - selectively apply changes
-  - batch mode
+  * amazing terminal UI.
+  * preview changes
+  * selectively apply changes
+  * batch mode
 
   integrates with fzf, diff-so-fancy, delta
 
