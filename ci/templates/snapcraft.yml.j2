@@ -4,7 +4,8 @@ base: core18
 
 version: "{{ version }}"
 
-summary: {{ desc }}
+summary: |-
+  {{ desc | indent(2) }}
 
 description: |-
   {{ long_desc | indent(2) }}
