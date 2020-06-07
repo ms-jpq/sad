@@ -61,10 +61,9 @@ def git_clone(name: str) -> None:
   email = "ci@ci.ci"
   username = "ci-bot"
   uri = f"https://ms-jpq:{token}@github.com/ms-jpq/homebrew-sad.git"
-  run(["git", "clone", "https://github.com/ms-jpq/homebrew-sad.git", name])
+  run(["git", "clone", uri, name])
   run(["git", "config", "user.email", email], cwd=name)
   run(["git", "config", "user.name", username], cwd=name)
-  run(["git", "remote", "set-url", "origin", uri], cwd=name)
 
 
 def git_commit(repo: str) -> None:
