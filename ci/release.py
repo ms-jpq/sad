@@ -4,7 +4,6 @@ import argparse
 import hashlib
 import os
 import subprocess
-import sys
 from argparse import Namespace
 from datetime import datetime
 from os import path
@@ -25,8 +24,7 @@ def cwd() -> None:
 
 
 def run(args: List[str], cwd=os.getcwd()) -> None:
-  ret = subprocess.run(args, cwd=cwd.encode(),
-                       stdout=sys.stdout, stderr=sys.stderr)
+  ret = subprocess.run(args, cwd=cwd.encode())
   if ret.returncode != 0:
     exit(ret.returncode)
 
