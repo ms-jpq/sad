@@ -1,12 +1,9 @@
 ## Good news
 
-* version 0.4
+* version 0.4.2
 
-* uses multiline regex by default
+* fix bug with `-e` flag
 
-* ci builds should be stable now
-
-* please ignore the old CI builds, they were tests
 
 **Released by CI**
 

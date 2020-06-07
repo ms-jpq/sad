@@ -175,7 +175,8 @@ fn p_aho_corasick(pattern: &str, flags: &[String]) -> SadResult<AhoCorasick> {
     match flag.as_str() {
       "I" => ac.ascii_case_insensitive(false),
       "i" => ac.ascii_case_insensitive(true),
-      _ => return Err(Failure::Simple("Invalid flags".into())),
+      "m" => &mut ac,
+      _ => return Err(Failure::Simple(format!("Invaild regex flag -{}", flag))),
     };
   }
   Ok(ac.build(&[pattern]))
@@ -192,7 +193,7 @@ fn p_regex(pattern: &str, flags: &[String]) -> SadResult<Regex> {
       "s" => re.dot_matches_new_line(true),
       "U" => re.swap_greed(true),
       "x" => re.ignore_whitespace(true),
-      _ => return Err(Failure::Simple("Invalid flags".into())),
+      _ => return Err(Failure::Simple(format!("Invaild regex flag -{}", flag))),
     };
   }
   re.build().into_sadness()
