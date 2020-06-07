@@ -1,19 +1,18 @@
 #!/usr/bin/env python3
 
-import argparse
-import json
-import os
-from argparse import Namespace
+from argparse import ArgumentParser, Namespace
 from datetime import datetime
-from os import path
+from json import dumps
+from os import chdir
+from os.path import abspath, dirname
 from typing import Iterator, List
 
-import toml
+from toml import load
 
 
 def cwd() -> None:
-  root = path.dirname(path.dirname(path.abspath(__file__)))
-  os.chdir(root)
+  root = dirname(dirname(abspath(__file__)))
+  chdir(root)
 
 
 def read(name: str) -> str:
@@ -26,7 +25,7 @@ def set_output(name: str, value: str) -> None:
 
 
 def set_release_env() -> None:
-  cargo = toml.load("Cargo.toml")
+  cargo = load("Cargo.toml")
   version = cargo["package"]["version"]
   time = datetime.now()
   tag_name = f"ci_{version}_{time.strftime('%Y-%m-%d_%H-%M')}"
@@ -36,12 +35,12 @@ def set_release_env() -> None:
                   "release_name": release_name,
                   "release_notes": release_notes}
 
-  dump = json.dumps(release_info)
+  dump = dumps(release_info)
   set_output("RELEASE_INFO", dump)
 
 
 def parse_args() -> Namespace:
-  parser = argparse.ArgumentParser()
+  parser = ArgumentParser()
   parser.add_argument("--release", action="store_true")
   return parser.parse_args()
 
