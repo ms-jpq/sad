@@ -228,18 +228,20 @@ fn p_pager_args(program: &str, commands: Vec<String>) -> Vec<String> {
 }
 
 fn p_pager(pager: Option<String>) -> Option<SubprocessCommand> {
-  pager.or_else(|| env::var("GIT_PAGER").ok()).and_then(|val| {
-    if val == "never" {
-      None
-    } else {
-      let less_less = val.split('|').next().unwrap_or(&val).trim();
-      let mut commands = less_less.split_whitespace().map(String::from);
-      commands.next().map(|program| SubprocessCommand {
-        arguments: p_pager_args(&program, commands.collect()),
-        program,
-        env: HashMap::new(),
-      })
-    }
-  })
+  pager
+    .or_else(|| env::var("GIT_PAGER").ok())
+    .and_then(|val| {
+      if val == "never" {
+        None
+      } else {
+        let less_less = val.split('|').next().unwrap_or(&val).trim();
+        let mut commands = less_less.split_whitespace().map(String::from);
+        commands.next().map(|program| SubprocessCommand {
+          arguments: p_pager_args(&program, commands.collect()),
+          program,
+          env: HashMap::new(),
+        })
+      }
+    })
 }
 
