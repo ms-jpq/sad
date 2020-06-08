@@ -221,7 +221,7 @@ fn p_pager_args(program: &str, commands: Vec<String>) -> Vec<String> {
     .and_then(|w| w.parse::<isize>().into_sadness())
   {
     if program == "delta" {
-      cmd.push(format!("--width={}", max(10, width - 2)))
+      cmd.push(format!("--width={}", max(0, width - 1)))
     }
   }
   cmd
