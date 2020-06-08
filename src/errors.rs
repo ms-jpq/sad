@@ -1,4 +1,5 @@
 use std::{
+  env::VarError,
   error::Error,
   fmt::{self, Display, Formatter},
   io, num, string,
@@ -23,6 +24,7 @@ pub enum Failure {
   Regex(regex::Error),
   Simple(String),
   Str(string::FromUtf8Error),
+  VarErr,
 }
 
 impl Failure {
@@ -92,8 +94,15 @@ impl From<regex::Error> for Failure {
   }
 }
 
+impl From<VarError> for Failure {
+  fn from(err: VarError) -> Self {
+    Failure::VarErr
+  }
+}
+
 impl From<JoinError> for Failure {
   fn from(_: JoinError) -> Self {
     Failure::JoinError
   }
 }
+

@@ -2,7 +2,7 @@ use super::errors::*;
 use super::subprocess::SubprocessCommand;
 use aho_corasick::{AhoCorasick, AhoCorasickBuilder};
 use regex::{Regex, RegexBuilder};
-use std::{collections::HashMap, env, fs, path::PathBuf};
+use std::{cmp::max, collections::HashMap, env, fs, path::PathBuf};
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -214,6 +214,19 @@ fn p_fzf(fzf: Option<String>) -> Option<Vec<String>> {
   }
 }
 
+fn p_pager_args(program: &str, commands: Vec<String>) -> Vec<String> {
+  let mut cmd = commands;
+  if let Ok(width) = env::var("FZF_PREVIEW_COLUMNS")
+    .into_sadness()
+    .and_then(|w| w.parse::<isize>().into_sadness())
+  {
+    if program == "delta" {
+      cmd.push(format!("--width={}", max(10, width - 2)))
+    }
+  }
+  cmd
+}
+
 fn p_pager(pager: Option<String>) -> Option<SubprocessCommand> {
   pager.or(env::var("GIT_PAGER").ok()).and_then(|val| {
     if val == "never" {
@@ -222,10 +235,11 @@ fn p_pager(pager: Option<String>) -> Option<SubprocessCommand> {
       let less_less = val.split('|').next().unwrap_or(&val).trim();
       let mut commands = less_less.split_whitespace().map(String::from);
       commands.next().map(|program| SubprocessCommand {
+        arguments: p_pager_args(&program, commands.collect()),
         program,
-        arguments: commands.collect(),
         env: HashMap::new(),
       })
     }
   })
 }
+
