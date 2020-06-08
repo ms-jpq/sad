@@ -108,8 +108,8 @@ impl Options {
         let path = PathBuf::from(s);
         fs::canonicalize(path).ok()
       })
-      .or(which::which("sad").ok())
-      .unwrap_or(PathBuf::from("sad"))
+      .or_else(|| which::which("sad").ok())
+      .unwrap_or_else(|| PathBuf::from("sad"))
       .to_string_lossy()
       .to_string();
 
@@ -228,7 +228,7 @@ fn p_pager_args(program: &str, commands: Vec<String>) -> Vec<String> {
 }
 
 fn p_pager(pager: Option<String>) -> Option<SubprocessCommand> {
-  pager.or(env::var("GIT_PAGER").ok()).and_then(|val| {
+  pager.or_else(|| env::var("GIT_PAGER").ok()).and_then(|val| {
     if val == "never" {
       None
     } else {

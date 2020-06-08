@@ -66,7 +66,7 @@ fn main() {
     .unwrap();
   rt.block_on(async {
     if let Err(err) = run().await {
-      output::err_exit(err.into()).await
+      output::err_exit(err).await
     }
   })
 }

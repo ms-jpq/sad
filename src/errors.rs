@@ -95,7 +95,7 @@ impl From<regex::Error> for Failure {
 }
 
 impl From<VarError> for Failure {
-  fn from(err: VarError) -> Self {
+  fn from(_: VarError) -> Self {
     Failure::VarErr
   }
 }

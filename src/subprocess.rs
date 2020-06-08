@@ -210,16 +210,16 @@ async fn process_status_code(code: Option<i32>, tx: Sender<SadResult<String>>) {
 async fn reset_term() -> SadResult<()> {
   io::stdout().flush().await.into_sadness()?;
   io::stderr().flush().await.into_sadness()?;
-  if let Ok(_) = which::which("tput") {
+  if which::which("tput").is_ok() {
     Command::new("tput")
       .arg("reset")
       .status()
       .await
       .into_sadness()?;
-  } else if let Ok(_) = which::which("reset") {
+  } else if which::which("reset").is_ok() {
     Command::new("reset").status().await.into_sadness()?;
   } else {
-    Err(Failure::Fzf("Unable to clear screen".to_owned()))?;
+    return Err(Failure::Fzf("Unable to clear screen".to_owned()))
   };
   Ok(())
 }
