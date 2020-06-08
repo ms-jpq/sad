@@ -157,3 +157,4 @@ jobs:
         run: >-
           ./ci/release.py
           --snapcraft
+

@@ -27,6 +27,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
+      - name: Lint
+        run: cargo clippy -- -D warnings
+
       - name: Build
         run: cargo build --verbose
 
@@ -43,3 +46,4 @@ jobs:
         with:
           name: ${{ matrix.os }}
           path: artifacts/${{ matrix.os }}.zip
+
