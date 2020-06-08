@@ -30,7 +30,7 @@ jobs:
       - name: Lint
         run: |-
           rustup component add clippy
-          cargo clippy -- -D clippy::all
+          # cargo clippy -- -D clippy::all
 
       - name: Build
         run: cargo build --verbose

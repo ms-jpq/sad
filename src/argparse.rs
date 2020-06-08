@@ -73,7 +73,6 @@ impl Arguments {
 
 #[derive(Clone, Debug)]
 pub enum Engine {
-  #[allow(clippy::large_enum_variant)]
   AhoCorasick(AhoCorasick, String),
   Regex(Regex, String),
 }
