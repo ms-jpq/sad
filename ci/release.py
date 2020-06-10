@@ -79,7 +79,7 @@ def write(filename: str, text: str) -> None:
     fd.write(text)
 
 
-def sha256(resource: str) -> str:
+def calc_sha(resource: str) -> str:
   with open(resource, "rb") as fd:
     binary = fd.read()
     sha = sha256(binary).hexdigest()
@@ -87,7 +87,7 @@ def sha256(resource: str) -> str:
 
 
 def homebrew_release(j2: Environment, values: Dict[str, str], artifact: str, uri: str) -> None:
-  sha = sha256(artifact)
+  sha = calc_sha(artifact)
   vals = {**values, "sha256": sha, "release_uri": uri}
   render = j2.get_template("homebrew.rb.j2").render(**vals)
   dest = join(packages_dir, "sad.rb")
