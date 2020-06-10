@@ -2,8 +2,8 @@
 
 from argparse import ArgumentParser, Namespace
 from datetime import datetime
-from os import chdir, getcwd, environ
 from hashlib import sha256
+from os import chdir, getcwd, environ
 from os.path import abspath, dirname, isdir, join
 from subprocess import run
 from typing import Any, Callable, Dict, List
@@ -22,7 +22,7 @@ def cwd() -> None:
   chdir(root)
 
 
-def run(args: List[str], cwd=getcwd()) -> None:
+def call(prog: str, *args: List[str], cwd: str = getcwd()) -> None:
   ret = run(args, cwd=cwd.encode())
   if ret.returncode != 0:
     exit(ret.returncode)
@@ -61,17 +61,17 @@ def git_clone(name: str) -> None:
   email = "ci@ci.ci"
   username = "ci-bot"
   uri = f"https://ms-jpq:{token}@github.com/ms-jpq/homebrew-sad.git"
-  run(["git", "clone", uri, name])
-  run(["git", "config", "user.email", email], cwd=name)
-  run(["git", "config", "user.name", username], cwd=name)
+  call("git", "clone", uri, name)
+  call("git", "config", "user.email", email, cwd=name)
+  call("git", "config", "user.name", username, cwd=name)
 
 
 def git_commit(repo: str) -> None:
   time = datetime.now().strftime("%Y-%m-%d %H:%M")
   msg = f"CI - {time}"
-  run(["git", "add", "-A"], cwd=repo)
-  run(["git", "commit", "-m", msg], cwd=repo)
-  run(["git", "push", "--force"], cwd=repo)
+  call("git", "add", "-A", cwd=repo)
+  call("git", "commit", "-m", msg, cwd=repo)
+  call("git", "push", "--force", cwd=repo)
 
 
 def write(filename: str, text: str) -> None:
