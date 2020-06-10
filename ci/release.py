@@ -23,7 +23,7 @@ def cwd() -> None:
 
 
 def call(prog: str, *args: List[str], cwd: str = getcwd()) -> None:
-  ret = run(args, cwd=cwd.encode())
+  ret = run([prog, *args], cwd=cwd.encode())
   if ret.returncode != 0:
     exit(ret.returncode)
 
