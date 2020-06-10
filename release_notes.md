@@ -1,8 +1,8 @@
 ## Good news
 
-* version 0.4.2
+* version 0.4.3
 
-* fix bug with `-e` flag
+* added delta integration with custom width in fzf
 
 
 **Released by CI**
