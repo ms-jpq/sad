@@ -50,7 +50,7 @@ jobs:
         run: cargo test --verbose
 
       - name: Build
-        run: cargo deb --output target/debian/debian.deb
+        run: cargo deb --output target/debian/debian.deb --install
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v2
