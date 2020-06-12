@@ -5,6 +5,7 @@ name: CI
 on:
   push:
     paths:
+      - "Cargo.toml"
       - "src/**"
       - "tests/**"
       - ".github/**"
