@@ -31,7 +31,7 @@ jobs:
       - name: Package Artifacts
         run: |-
           chmod +x target/release/sad
-          zip -j artifacts/sad-macos.zip target/debug/sad
+          zip -j artifacts/sad-macos.zip target/release/sad
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v2
