@@ -27,7 +27,7 @@ jobs:
         run: cargo test
 
       - name: Build
-        run: cargo build --release
+        run: cargo build --release --target=x86_64-apple-darwin
 
       - name: Package Artifacts
         run: |-
