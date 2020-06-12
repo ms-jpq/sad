@@ -10,6 +10,7 @@ from typing import Any, List
 from yaml import safe_load
 
 __dir__ = dirname(__file__)
+__prefix__ = "msjpq/sad"
 
 
 def call(prog: str, *args: List[str]) -> None:
@@ -30,15 +31,24 @@ def parse_args() -> Namespace:
 
 
 def docker_build(name: str) -> None:
+  tag = f"{__prefix__}:{name}"
   path = join("ci", name, "Dockerfile")
-  tag = f"msjpq/sad:{name}"
   call("docker", "build", "-t", tag, "-f", path, ".")
+
+
+def docker_cp(name: str) -> None:
+  tag = f"{__prefix__}:{name}"
+  path = join("ci", name, "artifacts.yml")
+  spec = slurp_yaml(path)
+  print(spec)
 
 
 def main() -> None:
   chdir(dirname(__dir__))
   args = parse_args()
-  docker_build(args.dest)
+  name = args.dest
+  docker_build(name)
+  docker_cp(name)
 
 
 main()

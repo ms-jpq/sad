@@ -1,2 +1,7 @@
-/target/
+**
+!Cargo.toml
+!src/
+!tests/
+!ci/deb
+!ci/linux
 
