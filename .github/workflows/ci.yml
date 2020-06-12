@@ -16,38 +16,43 @@ on:
 
 jobs:
   build:
-    strategy:
-      matrix:
-        os:
-          - ubuntu-latest
-          - macos-latest
-    runs-on: ${{ matrix.os }}
+    runs-on: macos-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Lint
-        run: |-
-          rustup component add clippy
-          # cargo clippy -- -D clippy::all
+      - name: Test
+        run: cargo test
 
       - name: Build
-        run: cargo build --verbose
-
-      - name: Test
-        run: cargo test --verbose
+        run: cargo build --release
 
       - name: Package Artifacts
         run: |-
-          chmod +x target/debug/sad
-          zip -j artifacts/${{ matrix.os }} target/debug/sad
+          chmod +x target/release/sad
+          zip -j artifacts/sad-macos.zip target/debug/sad
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v2
         with:
-          name: ${{ matrix.os }}
-          path: artifacts/${{ matrix.os }}.zip
+          name: sad-macos
+          path: artifacts/sad-macos.zip
+
+  build_ubuntu:
+    runs-on: ubuntu-bionic
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Build
+        run: ci/docker.py
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: sad-linux
+          path: artifacts/sad-linux.zip
 
   build_debs:
     runs-on: ubuntu-bionic
@@ -55,18 +60,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Install Deb Builder
-        run: cargo install cargo-deb
-
-      - name: Test
-        run: cargo test --verbose
-
       - name: Build
-        run: cargo deb --output target/debian/debian.deb --install
+        run: ci/docker.py
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v2
         with:
-          name: debian_deb
-          path: target/debian/debian.deb
+          name: sad-deb
+          path: artifacts/sad.deb
 
