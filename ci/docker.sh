@@ -14,5 +14,5 @@ printf '%s\n' "$PWD"
 
 IMAGE="msjpq/sad:$RELEASE"
 
-docker build -t "$IMAGE" . -f "$RELEASE/Dockerfile"
+docker build -t "$IMAGE" . -f "ci/$RELEASE/Dockerfile"
 
