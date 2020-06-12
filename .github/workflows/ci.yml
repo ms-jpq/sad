@@ -50,7 +50,7 @@ jobs:
           path: artifacts/${{ matrix.os }}.zip
 
   build_debs:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-bionic
     steps:
       - name: Checkout
         uses: actions/checkout@v2
