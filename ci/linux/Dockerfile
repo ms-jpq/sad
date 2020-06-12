@@ -6,10 +6,9 @@ WORKDIR /WORK
 
 
 # COPY
-COPY . /WORK
+COPY . .
 
 
 # BUILD
-RUN cargo build --verbose
-RUN cargo test --verbose
+RUN cargo test
 

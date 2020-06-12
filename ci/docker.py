@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from argparse import ArgumentParser, Namespace
+from datetime import datetime
 from os import chdir
 from os.path import dirname, join
 from subprocess import run
@@ -31,19 +32,24 @@ def parse_args() -> Namespace:
 
 
 def docker_build(name: str) -> None:
-  container = f"{__prefix__}:{name}"
+  image = f"{__prefix__}:{name}"
   path = join("ci", name, "Dockerfile")
-  call("docker", "build", "-t", container, "-f", path, ".")
+  call("docker", "build", "-t", image, "-f", path, ".")
 
 
 def docker_cp(name: str) -> None:
-  container = f"{__prefix__}:{name}"
+  time = datetime.now().strftime('%H-%M-%S')
+  image = f"{__prefix__}:{name}"
   path = join("ci", name, "artifacts.yml")
   spec = slurp_yaml(path)
+  container = f"{name}-{time}"
+
+  call("docker", "create", "--name", container, image)
   for target in spec["targets"]:
     src = f"{container}:{target['src']}"
     dest = join("artifacts", target["dest"])
     call("docker", "cp", src, dest)
+  call("docker", "rm", container)
 
 
 def main() -> None:
