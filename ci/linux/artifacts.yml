@@ -1,5 +1,5 @@
 ---
 targets:
-  - src: target/debug/sad
+  - src: /work/target/debug/sad
     dest: sad_debug
 

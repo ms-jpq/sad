@@ -20,7 +20,7 @@ def call(prog: str, *args: List[str]) -> None:
 
 
 def slurp_yaml(path: str) -> Any:
-  with open("path") as fd:
+  with open(path) as fd:
     return safe_load(fd)
 
 
@@ -31,16 +31,19 @@ def parse_args() -> Namespace:
 
 
 def docker_build(name: str) -> None:
-  tag = f"{__prefix__}:{name}"
+  container = f"{__prefix__}:{name}"
   path = join("ci", name, "Dockerfile")
-  call("docker", "build", "-t", tag, "-f", path, ".")
+  call("docker", "build", "-t", container, "-f", path, ".")
 
 
 def docker_cp(name: str) -> None:
-  tag = f"{__prefix__}:{name}"
+  container = f"{__prefix__}:{name}"
   path = join("ci", name, "artifacts.yml")
   spec = slurp_yaml(path)
-  print(spec)
+  for target in spec["targets"]:
+    src = f"{container}:{target['src']}"
+    dest = join("artifacts", target["dest"])
+    call("docker", "cp", src, dest)
 
 
 def main() -> None:

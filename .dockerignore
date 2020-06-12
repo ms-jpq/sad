@@ -2,6 +2,7 @@
 !Cargo.toml
 !src/
 !tests/
-!ci/deb
-!ci/linux
+
+!ci/deb/Dockerfile
+!ci/linux/Dockerfile
 
