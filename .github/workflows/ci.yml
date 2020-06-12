@@ -16,7 +16,7 @@ on:
     - cron: "0 0 * * *" # daily
 
 jobs:
-  build:
+  build_macos:
     runs-on: macos-latest
 
     steps:
