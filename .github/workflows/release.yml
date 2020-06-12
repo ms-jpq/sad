@@ -23,7 +23,6 @@ jobs:
 
       - name: Package Artifacts
         run: |-
-          chmod +x target/release/sad
           zip -j artifacts/sad-macos.zip target/x86_64-apple-darwin/release/sad
 
       - name: Upload Artifacts
