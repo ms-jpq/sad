@@ -15,5 +15,5 @@ COPY . .
 # BUILD
 RUN cargo test
 RUN cargo build --release --target=x86_64-unknown-linux-gnu
-RUN zip -j artifacts/sad.zip target/release/sad
+RUN zip -j artifacts/sad.zip target/x86_64-unknown-linux-gnu/release/sad
 
