@@ -8,20 +8,15 @@ on:
       - "*"
 
 jobs:
-  build_zips:
-    strategy:
-      matrix:
-        os:
-          - ubuntu-latest
-          - macos-latest
-    runs-on: ${{ matrix.os }}
+  build_macos:
+    runs-on: macos-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v2
 
       - name: Test
-        run: cargo test --verbose
+        run: cargo test
 
       - name: Build
         run: cargo build --release
@@ -29,13 +24,28 @@ jobs:
       - name: Package Artifacts
         run: |-
           chmod +x target/release/sad
-          zip -j artifacts/${{ matrix.os }} target/release/sad
+          zip -j artifacts/sad-macos.zip target/release/sad
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v2
         with:
-          name: ${{ matrix.os }}
-          path: artifacts/${{ matrix.os }}.zip
+          name: sad-macos
+          path: artifacts/sad-macos.zip
+
+  build_ubuntu:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Build
+        run: ./ci/docker.py linux
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: sad-linux
+          path: artifacts/sad-linux.zip
 
   build_debs:
     runs-on: ubuntu-latest
@@ -43,24 +53,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Install Deb Builder
-        run: cargo install cargo-deb
-
-      - name: Test
-        run: cargo test --verbose
-
       - name: Build
-        run: cargo deb --output target/debian/debian.deb --install
+        run: ./ci/docker.py deb
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v2
         with:
-          name: debian_deb
-          path: target/debian/debian.deb
+          name: sad-deb
+          path: artifacts/sad.deb
 
   release:
     needs:
-      - build_zips
+      - build_macos
+      - build_ubuntu
       - build_debs
     runs-on: ubuntu-latest
 
@@ -71,32 +76,30 @@ jobs:
       - name: Download Artifacts macos
         uses: actions/download-artifact@v2
         with:
-          name: macos-latest
+          name: sad-macos
           path: artifacts
 
       - name: Download Artifacts ubuntu
         uses: actions/download-artifact@v2
         with:
-          name: ubuntu-latest
+          name: sad-linux
           path: artifacts
 
       - name: Download Artifacts debian deb
         uses: actions/download-artifact@v2
         with:
-          name: debian_deb
+          name: sad-deb
           path: artifacts
 
       - name: Setup Python
         uses: actions/setup-python@v2
 
       - name: Pip Packages
-        run: |-
-          ./ci/pip.sh
+        run: ./ci/pip.sh
 
       - name: Set ENV
         id: set_env
-        run: |-
-          ./ci/ci.py --release
+        run: ./ci/ci.py --release
 
       - name: Create Release
         id: new_release
@@ -118,7 +121,7 @@ jobs:
         with:
           upload_url: ${{ steps.new_release.outputs.upload_url }}
           asset_content_type: application/zip
-          asset_path: artifacts/macos-latest.zip
+          asset_path: artifacts/sad-macos.zip
           asset_name: x86_64-apple-darwin.zip
 
       - name: Upload Asset - Ubuntu
@@ -129,7 +132,7 @@ jobs:
         with:
           upload_url: ${{ steps.new_release.outputs.upload_url }}
           asset_content_type: application/zip
-          asset_path: artifacts/ubuntu-latest.zip
+          asset_path: artifacts/sad-linux.zip
           asset_name: x86_64-unknown-linux-gnu.zip
 
       - name: Upload Asset - Debian deb
@@ -140,7 +143,7 @@ jobs:
         with:
           upload_url: ${{ steps.new_release.outputs.upload_url }}
           asset_content_type: application/vnd.debian.binary-package
-          asset_path: artifacts/debian.deb
+          asset_path: artifacts/sad.deb
           asset_name: x86_64-unknown-linux-gnu.deb
 
       - name: Homebrew
