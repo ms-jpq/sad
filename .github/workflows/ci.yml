@@ -41,13 +41,13 @@ jobs:
           path: artifacts/sad-macos.zip
 
   build_ubuntu:
-    runs-on: ubuntu-bionic
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v2
 
       - name: Build
-        run: ci/docker.py linux
+        run: ./ci/docker.py linux
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v2
@@ -56,13 +56,13 @@ jobs:
           path: artifacts/sad-linux.zip
 
   build_debs:
-    runs-on: ubuntu-bionic
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v2
 
       - name: Build
-        run: ci/docker.py deb
+        run: ./ci/docker.py deb
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v2
