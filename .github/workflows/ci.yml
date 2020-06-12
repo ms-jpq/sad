@@ -70,3 +70,37 @@ jobs:
           name: sad-deb
           path: artifacts/sad.deb
 
+  release:
+    needs:
+      - build_macos
+      - build_ubuntu
+      - build_debs
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Download Artifacts macos
+        uses: actions/download-artifact@v2
+        with:
+          name: sad-macos
+          path: artifacts
+
+      - name: Download Artifacts ubuntu
+        uses: actions/download-artifact@v2
+        with:
+          name: sad-linux
+          path: artifacts
+
+      - name: Download Artifacts debian deb
+        uses: actions/download-artifact@v2
+        with:
+          name: sad-deb
+          path: artifacts
+
+      - name: Confirm Download
+        run: |-
+          cd artifacts || exit 1
+          ls -l
+
