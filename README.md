@@ -1,4 +1,4 @@
-# SAD!
+# [SAD!](https://ms-jpq.github.io/sad)
 
 **Space Age seD**
 
