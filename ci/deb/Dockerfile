@@ -12,4 +12,5 @@ COPY . .
 
 # BUILD
 RUN cargo test
+RUN cargo deb --output target/debian/debian.deb
 

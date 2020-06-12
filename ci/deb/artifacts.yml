@@ -1,5 +1,5 @@
 ---
 targets:
-  - src: /WORK/target/debug/sad
-    dest: sad_debug
+  - src: /WORK/target/debian/debian.deb
+    dest: sad.deb
 
