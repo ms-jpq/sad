@@ -14,5 +14,5 @@ COPY . .
 # BUILD
 RUN cargo test
 RUN cargo build --release
-RUN zip -j artifacts/sad.zip target/release/sad
+RUN zip -j sad.zip target/release/sad
 

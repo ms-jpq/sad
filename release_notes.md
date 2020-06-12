@@ -1,8 +1,10 @@
 ## Good news
 
-* version 0.4.3
+* version 0.4.4
 
-* added delta integration with custom width in fzf
+* fix dependency issue on ubuntu deb
+
+* CI now uses Docker for reproducible builds
 
 
 **Released by CI**
