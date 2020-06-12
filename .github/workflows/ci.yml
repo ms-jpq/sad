@@ -49,3 +49,24 @@ jobs:
           name: ${{ matrix.os }}
           path: artifacts/${{ matrix.os }}.zip
 
+  build_debs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install Deb Builder
+        run: cargo install cargo-deb
+
+      - name: Test
+        run: cargo test --verbose
+
+      - name: Build
+        run: cargo deb --output target/debian/debian.deb
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: debian_deb
+          path: target/debian/debian.deb
+
