@@ -12,5 +12,6 @@ COPY . .
 
 # BUILD
 RUN cargo test
-RUN cargo deb --output target/debian/debian.deb -- --target=x86_64-unknown-linux-gnu
+RUN cargo deb --target=x86_64-unknown-linux-gnu \
+              --output=target/debian/debian.deb
 
