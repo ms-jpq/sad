@@ -5,6 +5,7 @@ name: CI
 on:
   push:
     paths:
+      - "ci/*"
       - "Cargo.toml"
       - "src/**"
       - "tests/**"
