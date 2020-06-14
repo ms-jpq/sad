@@ -22,7 +22,7 @@ You can also choose the clustering factor for changes using `--unified=<n>`. (Sa
 
 ## Preview (no fzf)
 
-Replace all`'(\d+)'` -> `'🌈$1🌈'` in the `chromium` repo.
+Replace all`'"(\d+)"'` -> `'🌈$1🌈'` in the `chromium` repo.
 
 use `--commit` or `-k` to commit changes all at once.
 
