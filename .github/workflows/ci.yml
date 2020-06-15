@@ -5,11 +5,11 @@ name: CI
 on:
   push:
     paths:
-      - "ci/*"
+      - ".github/**"
+      - "ci/**"
       - "Cargo.toml"
       - "src/**"
       - "tests/**"
-      - ".github/**"
     branches:
       - master
   pull_request:
