@@ -10,6 +10,7 @@ use types::Task;
 mod argparse;
 mod displace;
 mod errors;
+mod fzf;
 mod input;
 mod output;
 mod subprocess;

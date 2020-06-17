@@ -1,5 +1,6 @@
 use super::argparse::{Action, Options, Printer};
 use super::errors::*;
+use super::fzf::run_fzf;
 use super::subprocess::SubprocessCommand;
 use super::types::Task;
 use ansi_term::Colour;
@@ -56,7 +57,7 @@ pub fn stream_output(opts: Options, stream: Receiver<SadResult<String>>) -> Task
         arguments,
         env,
       };
-      let (child, rx) = cmd.stream_connected(stream);
+      let (child, rx) = run_fzf(&cmd, stream);
       let recv = stream_stdout(rx);
       task::spawn(async {
         if let Err(e) = try_join(child, recv).await {
