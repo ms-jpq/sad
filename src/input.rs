@@ -154,4 +154,3 @@ fn stream_stdin(use_nul: bool) -> (Task, Receiver<SadResult<Payload>>) {
   });
   (handle, rx)
 }
-

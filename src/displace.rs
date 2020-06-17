@@ -102,4 +102,3 @@ pub async fn displace(opts: &Options, payload: Payload) -> SadResult<String> {
     Err(err) => Err(Failure::Displace(format!("{:#?}", payload), Box::new(err))),
   }
 }
-

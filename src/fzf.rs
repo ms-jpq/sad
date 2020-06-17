@@ -11,8 +11,10 @@ use tokio::{
   task,
 };
 
-
-pub fn run_fzf(opts: &Options, stream: Receiver<SadResult<String>>) -> (Task, Receiver<SadResult<String>>) {
+pub fn run_fzf(
+  opts: &Options,
+  stream: Receiver<SadResult<String>>,
+) -> (Task, Receiver<SadResult<String>>) {
   let preview_args = env::args().collect::<Vec<_>>().join("\x04");
   let execute = format!(
     "abort+execute:{}\x04--internal-patch\x04{{+f}}",
@@ -157,4 +159,3 @@ async fn reset_term() -> SadResult<()> {
   };
   Ok(())
 }
-
