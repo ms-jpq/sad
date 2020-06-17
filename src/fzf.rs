@@ -1,16 +1,45 @@
+use super::argparse::Options;
 use super::errors::*;
 use super::subprocess::SubprocessCommand;
 use super::types::Task;
 use async_std::sync::{channel, Receiver, Sender};
 use futures::future::{select, try_join, Either};
-use std::process::Stdio;
+use std::{collections::HashMap, env, process::Stdio};
 use tokio::{
   io::{self, AsyncWriteExt, BufWriter},
   process::Command,
   task,
 };
 
-pub fn run_fzf(
+
+pub fn run_fzf(opts: &Options, stream: Receiver<SadResult<String>>) -> (Task, Receiver<SadResult<String>>) {
+  let preview_args = env::args().collect::<Vec<_>>().join("\x04");
+  let execute = format!(
+    "abort+execute:{}\x04--internal-patch\x04{{+f}}",
+    preview_args
+  );
+  let mut arguments = vec![
+    "--read0".to_owned(),
+    "--print0".to_owned(),
+    "-m".to_owned(),
+    "--ansi".to_owned(),
+    format!("--bind=enter:{}", execute),
+    format!("--bind=double-click:{}", execute),
+    format!("--preview={}\x04--internal-preview\x04{{f}}", preview_args),
+    "--preview-window=70%:wrap".to_owned(),
+  ];
+  arguments.extend(opts.fzf.clone().unwrap_or_default());
+  let mut env = HashMap::new();
+  env.insert("SHELL".to_owned(), opts.name.clone());
+  let cmd = SubprocessCommand {
+    program: "fzf".to_owned(),
+    arguments,
+    env,
+  };
+  stream_fzf(&cmd, stream)
+}
+
+fn stream_fzf(
   cmd: &SubprocessCommand,
   stream: Receiver<SadResult<String>>,
 ) -> (Task, Receiver<SadResult<String>>) {
