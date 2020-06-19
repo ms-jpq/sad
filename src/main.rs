@@ -12,6 +12,7 @@ mod displace;
 mod errors;
 mod fzf;
 mod input;
+mod mktemp;
 mod output;
 mod subprocess;
 mod types;
