@@ -6,7 +6,7 @@
 
 Basically `sad` is a **Batch File Edit** tool.
 
-It will show you a really nice diff of proposed changes *before* you commit them.
+It will show you a really nice diff of proposed changes _before_ you commit them.
 
 Unlike `sed`, you can double check before you fat finger your edit.
 
@@ -63,9 +63,9 @@ find "$FIND_ARGS" | sad '<pattern>' '<replacement>'
 
 If you wanna go fast.
 
-* preview to verify you really want the changes.
+- preview to verify you really want the changes.
 
-* run with `--commit`, and redirect `stdout` to a file or `/dev/null`
+- run with `--commit`, and redirect `stdout` to a file or `/dev/null`
 
 ---
 
@@ -95,42 +95,42 @@ Any `git` compatible colourizer would work. I perfer these two:
 
 ## Environmental Variables
 
-Name        | Function
-------------|---------
-`GIT_PAGER` | `sad` will use the same pager as `git`
+| Name        | Function                               |
+| ----------- | -------------------------------------- |
+| `GIT_PAGER` | `sad` will use the same pager as `git` |
 
 ## Flags
 
-Name                                | Function
-------------------------------------|---------
-`-f` `--flags`                      | Regex flags, see below
-`-k` `--commit`                     | No preview, write changes to file
-`-0` `--read0`                      | Use `\x00` as stdin delimiter
-`-e` `--exact`                      | String literal mode
-`-p` `--pager`                      | Colourizing program, disable = `never`
-`--fzf`                             | Additional Fzf options, disable = `never`
-`-u` `--unified`                    | Same as in GNU `diff`, affects hunk size
+| Name             | Function                                  |
+| ---------------- | ----------------------------------------- |
+| `-f` `--flags`   | Regex flags, see below                    |
+| `-k` `--commit`  | No preview, write changes to file         |
+| `-0` `--read0`   | Use `\x00` as stdin delimiter             |
+| `-e` `--exact`   | String literal mode                       |
+| `-p` `--pager`   | Colourizing program, disable = `never`    |
+| `--fzf`          | Additional Fzf options, disable = `never` |
+| `-u` `--unified` | Same as in GNU `diff`, affects hunk size  |
 
 ## Regex Flags
 
 By default, `sad` uses smartcase, and multiline matching.
 
-Name | Function
------|---------
-`i`  | case insensitive (works for `--exact` mode as well)
-`I`  | case sensitive (works for `--exact` mode as well)
-`m`  | multiline: `^` `$` match each line
-`M`  | singleline: `^` `$` match entire document
-`s`  | allow `.` match `\n`
-`x`  | ignore whitespace and allow `#` comments
+| Name | Function                                            |
+| ---- | --------------------------------------------------- |
+| `i`  | case insensitive (works for `--exact` mode as well) |
+| `I`  | case sensitive (works for `--exact` mode as well)   |
+| `m`  | multiline: `^` `$` match each line                  |
+| `M`  | singleline: `^` `$` match entire document           |
+| `s`  | allow `.` match `\n`                                |
+| `x`  | ignore whitespace and allow `#` comments            |
 
 ## Exit Codes
 
-Code  | Meaning
-------|---------
-`0`   | Good
-`1`   | Bad
-`130` | Interrupted (ie. user cancel), or if using `fzf`, [it will always exit `130`](https://github.com/ms-jpq/sad/issues/5).
+| Code  | Meaning                                                                                                                |
+| ----- | ---------------------------------------------------------------------------------------------------------------------- |
+| `0`   | Good                                                                                                                   |
+| `1`   | Bad                                                                                                                    |
+| `130` | Interrupted (ie. user cancel), or if using `fzf`, [it will always exit `130`](https://github.com/ms-jpq/sad/issues/5). |
 
 ## GET SAD NOW!
 
@@ -153,6 +153,8 @@ If you just want to edit the shell stream, I would recommand [`sd`](https://gith
 ```sh
 command1 | sd '<pattern>' '<replacement>' | command2
 ```
+
 ## Bugs
 
 Please file an issue if you see one `<3`
+
