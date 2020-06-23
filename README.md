@@ -154,6 +154,12 @@ If you just want to edit the shell stream, I would recommand [`sd`](https://gith
 command1 | sd '<pattern>' '<replacement>' | command2
 ```
 
+[`ripgrep`](https://github.com/BurntSushi/ripgrep) with `--replace` also works
+
+```sh
+command1 | rg --passthru --replace '<replacement>' -- '<pattern>' | command2
+```
+
 ## Bugs
 
 Please file an issue if you see one `<3`
