@@ -160,6 +160,8 @@ command1 | sd '<pattern>' '<replacement>' | command2
 command1 | rg --passthru --replace '<replacement>' -- '<pattern>' | command2
 ```
 
+Take note however, `rg` will `exit 1`, it it finds no matches.
+
 ## Bugs
 
 Please file an issue if you see one `<3`
