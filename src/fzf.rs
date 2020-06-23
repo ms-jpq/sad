@@ -10,6 +10,7 @@ use tokio::{
   process::Command,
   task,
 };
+use which::which;
 
 pub fn run_fzf(
   opts: &Options,
@@ -146,13 +147,13 @@ async fn process_status_code(code: Option<i32>, tx: Sender<SadResult<String>>) {
 async fn reset_term() -> SadResult<()> {
   io::stdout().flush().await.into_sadness()?;
   io::stderr().flush().await.into_sadness()?;
-  if which::which("tput").is_ok() {
+  if which("tput").is_ok() {
     Command::new("tput")
       .arg("reset")
       .status()
       .await
       .into_sadness()?;
-  } else if which::which("reset").is_ok() {
+  } else if which("reset").is_ok() {
     Command::new("reset").status().await.into_sadness()?;
   } else {
     return Err(Failure::Fzf("Unable to clear screen".to_owned()));

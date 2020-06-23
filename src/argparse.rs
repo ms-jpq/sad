@@ -4,6 +4,7 @@ use aho_corasick::{AhoCorasick, AhoCorasickBuilder};
 use regex::{Regex, RegexBuilder};
 use std::{cmp::max, collections::HashMap, env, fs, path::PathBuf};
 use structopt::StructOpt;
+use which::which;
 
 #[derive(Debug, StructOpt)]
 #[structopt(name = "sad", author, about)]
@@ -200,7 +201,7 @@ fn p_regex(pattern: &str, flags: &[String]) -> SadResult<Regex> {
 }
 
 fn p_fzf(fzf: Option<String>) -> Option<Vec<String>> {
-  match (which::which("fzf"), atty::is(atty::Stream::Stdout)) {
+  match (which("fzf"), atty::is(atty::Stream::Stdout)) {
     (Ok(_), true) => match fzf {
       Some(v) if v == "never" => None,
       Some(val) => Some(val.split_whitespace().map(String::from).collect()),
@@ -223,9 +224,17 @@ fn p_pager_args(program: &str, commands: Vec<String>) -> Vec<String> {
   cmd
 }
 
+fn find_exec(exe: &str) -> Option<String> {
+  which(exe)
+    .ok()
+    .and_then(|p| p.to_str().map(|p| p.to_owned()))
+}
+
 fn p_pager(pager: Option<String>) -> Option<SubprocessCommand> {
   pager
     .or_else(|| env::var("GIT_PAGER").ok())
+    .or_else(|| find_exec("delta"))
+    .or_else(|| find_exec("diff-so-fancy"))
     .and_then(|val| {
       if val == "never" {
         None
