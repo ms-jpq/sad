@@ -136,7 +136,9 @@ fn stream_stdin(use_nul: bool) -> (Task, Receiver<SadResult<Payload>>) {
   let handle = task::spawn(async move {
     let delim = if use_nul { b'\0' } else { b'\n' };
     let mut reader = BufReader::new(io::stdin());
-
+    if atty::is(atty::Stream::Stdin) {
+      tx.send(Err(Failure::NilStdin)).await
+    }
     loop {
       let mut buf = Vec::new();
       let n = reader.read_until(delim, &mut buf).await.into_sadness();
@@ -154,3 +156,4 @@ fn stream_stdin(use_nul: bool) -> (Task, Receiver<SadResult<Payload>>) {
   });
   (handle, rx)
 }
+

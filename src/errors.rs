@@ -19,6 +19,7 @@ pub enum Failure {
   Interrupt,
   IO(io::Error),
   JoinError,
+  NilStdin,
   Pager(String),
   Parse(String),
   Regex(regex::Error),
@@ -105,3 +106,4 @@ impl From<JoinError> for Failure {
     Failure::JoinError
   }
 }
+

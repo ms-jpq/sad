@@ -199,12 +199,8 @@ fn p_regex(pattern: &str, flags: &[String]) -> SadResult<Regex> {
   re.build().into_sadness()
 }
 
-fn p_tty() -> bool {
-  atty::is(atty::Stream::Stdout)
-}
-
 fn p_fzf(fzf: Option<String>) -> Option<Vec<String>> {
-  match (which::which("fzf"), p_tty()) {
+  match (which::which("fzf"), atty::is(atty::Stream::Stdout)) {
     (Ok(_), true) => match fzf {
       Some(v) if v == "never" => None,
       Some(val) => Some(val.split_whitespace().map(String::from).collect()),
@@ -244,3 +240,4 @@ fn p_pager(pager: Option<String>) -> Option<SubprocessCommand> {
       }
     })
 }
+
