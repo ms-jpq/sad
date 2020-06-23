@@ -110,9 +110,8 @@ impl Options {
         fs::canonicalize(path).ok()
       })
       .or_else(|| which::which("sad").ok())
-      .unwrap_or_else(|| PathBuf::from("sad"))
-      .to_string_lossy()
-      .to_string();
+      .and_then(|p| p.to_str().map(|p| p.to_owned()))
+      .unwrap_or_else(|| "sad".to_owned());
 
     let mut flagset = p_auto_flags(&args.pattern);
     flagset.extend(
