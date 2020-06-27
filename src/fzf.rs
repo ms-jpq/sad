@@ -160,4 +160,3 @@ async fn reset_term() -> SadResult<()> {
   };
   Ok(())
 }
-
