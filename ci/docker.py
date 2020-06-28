@@ -13,7 +13,7 @@ __dir__ = dirname(__file__)
 __prefix__ = "msjpq/sad"
 
 
-def call(prog: str, *args: List[str]) -> None:
+def call(prog: str, *args: str) -> None:
     ret = run([prog, *args])
     if ret.returncode != 0:
         exit(ret.returncode)

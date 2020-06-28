@@ -21,7 +21,7 @@ def cwd() -> None:
     chdir(root)
 
 
-def call(prog: str, *args: List[str], cwd: str = getcwd()) -> None:
+def call(prog: str, *args: str, cwd: str = getcwd()) -> None:
     ret = run([prog, *args], cwd=cwd.encode())
     if ret.returncode != 0:
         exit(ret.returncode)
