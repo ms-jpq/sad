@@ -6,7 +6,7 @@ from hashlib import sha256
 from os import chdir, environ, getcwd
 from os.path import abspath, dirname, isdir, join
 from subprocess import run
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable, Dict
 
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from toml import load as load_toml
