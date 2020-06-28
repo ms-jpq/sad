@@ -5,7 +5,7 @@ from datetime import datetime
 from os import chdir
 from os.path import dirname, join
 from subprocess import run
-from typing import Any, List
+from typing import Any
 
 from yaml import safe_load
 
