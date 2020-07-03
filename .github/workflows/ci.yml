@@ -102,3 +102,12 @@ jobs:
           cd artifacts || exit 1
           ls -l
 
+  install_macos:
+    runs-on: macos-latest
+
+    steps:
+      - name: Homebrew
+        run: brew install ms-jpq/sad/sad
+
+      - name: Confirm Install
+        run: brew list -1
