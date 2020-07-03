@@ -14,4 +14,3 @@ COPY . .
 RUN cargo test
 RUN cargo deb --target=x86_64-unknown-linux-gnu \
               --output=target/debian/debian.deb
-
