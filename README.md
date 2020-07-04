@@ -134,18 +134,46 @@ By default, `sad` uses smartcase, and multiline matching.
 
 ## GET SAD NOW!
 
-**Homebrew**
+### Homebrew:
 
 `brew install ms-jpq/sad/sad`
 
-**Snap Store**
+### Snap Store:
 
 coming soon...
 
-**Binary / .Deb**
+### Distribution packages:
 
+##### Debian/Ubuntu:
 You can download `sad` from the [github release page](https://github.com/ms-jpq/sad/releases).
 
+##### Arch Linux:
+
+You can find the `PKGBUILD` on the [AUR](https://aur.archlinux.org/packages/sad/).
+
+##### Other:
+
+Missing a package for your favourite distribution? Let us know!
+
+### Compile from source:
+
+##### Requirements:
+To compile sad yourself you'll have to make sure you have
+[Rust](https://www.rust-lang.org/) and `cargo` installed.
+
+##### Install instructions:
+To install cargo from source you can run the following commands:
+
+```sh
+cargo install --locked --all-features --path .
+
+```
+If you want to install it in a specific directory you can provide the `--root`
+flag, like so:
+
+```sh
+cargo install --locked --all-features --root="/usr/bin/" --path .
+```
 ## What about stdin -> stdout
 
 If you just want to edit the shell stream, I would recommand [`sd`](https://github.com/chmln/sd), it uses the same concept, but its more for in stream edits. `sad` was inspired by my initial useage of `sd`.
