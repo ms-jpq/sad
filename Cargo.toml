@@ -18,5 +18,5 @@ difflib = "0.4"
 uuid = { version = "0.8", features = ["v4"] }
 ansi_term = "0.12"
 atty = "0.2"
-which = "3"
+which = "4"
 
