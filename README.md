@@ -145,7 +145,8 @@ coming soon...
 ### Distribution packages:
 
 ##### Debian/Ubuntu:
-You can download `sad` from the [github release page](https://github.com/ms-jpq/sad/releases).
+
+You can download `sad` deb packages from the [github release page](https://github.com/ms-jpq/sad/releases).
 
 ##### Arch Linux:
 
@@ -158,22 +159,26 @@ Missing a package for your favourite distribution? Let us know!
 ### Compile from source:
 
 ##### Requirements:
+
 To compile sad yourself you'll have to make sure you have
 [Rust](https://www.rust-lang.org/) and `cargo` installed.
 
 ##### Install instructions:
+
 To install cargo from source you can run the following commands:
 
 ```sh
 cargo install --locked --all-features --path .
 
 ```
+
 If you want to install it in a specific directory you can provide the `--root`
 flag, like so:
 
 ```sh
 cargo install --locked --all-features --root="/usr/bin/" --path .
 ```
+
 ## What about stdin -> stdout
 
 If you just want to edit the shell stream, I would recommand [`sd`](https://github.com/chmln/sd), it uses the same concept, but its more for in stream edits. `sad` was inspired by my initial useage of `sd`.
@@ -190,7 +195,11 @@ command1 | rg --passthru --replace '<replacement>' -- '<pattern>' | command2
 
 Take note however, `rg` will `exit 1`, it it finds no matches.
 
+
+## Thank yous
+
+Special thanks to [MadeOfMagicAndWires](https://github.com/MadeOfMagicAndWires) for their generous contribution for maintaining the AUR package.
+
 ## Bugs
 
 Please file an issue if you see one `<3`
-
