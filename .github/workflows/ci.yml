@@ -8,6 +8,7 @@ on:
       - ".github/**"
       - "ci/**"
       - "Cargo.toml"
+      - "Cargo.lock"
       - "src/**"
       - "tests/**"
   pull_request:
