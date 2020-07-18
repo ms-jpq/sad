@@ -67,7 +67,7 @@ fn stream_fzf(
     }
   };
 
-  let mut stdin = child.stdin.take().map(BufWriter::new).unwrap();
+  let mut stdin = child.stdin.take().map(BufWriter::new).expect("nil stdin");
 
   let handle_in = task::spawn(async move {
     while let Ok(print) = stream.recv().await {

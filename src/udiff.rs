@@ -48,7 +48,7 @@ impl Picker for DiffRanges {
     let mut ret = Vec::new();
     let mut matcher = SequenceMatcher::new(&before, &after);
     for group in &matcher.get_grouped_opcodes(unified) {
-      let range = DiffRange::new(group).unwrap();
+      let range = DiffRange::new(group).expect("algo failure");
       ret.push(range);
     }
     ret
@@ -91,7 +91,7 @@ impl Patchable for Diffs {
         }
       }
       let diff = Diff {
-        range: DiffRange::new(group).unwrap(),
+        range: DiffRange::new(group).expect("algo failure"),
         new_lines,
       };
       ret.push(diff);
@@ -108,7 +108,10 @@ impl Patchable for Diffs {
       let (before_start, before_inc) = diff.range.before;
       let before_end = before_start + before_inc;
       for i in prev..before_start {
-        before.get(i).map(|b| ret.push_str(b)).unwrap();
+        before
+          .get(i)
+          .map(|b| ret.push_str(b))
+          .expect("algo failure");
         ret.push('\n');
       }
       if ranges.contains(&diff.range) {
@@ -118,14 +121,20 @@ impl Patchable for Diffs {
         }
       } else {
         for i in before_start..before_end {
-          before.get(i).map(|b| ret.push_str(b)).unwrap();
+          before
+            .get(i)
+            .map(|b| ret.push_str(b))
+            .expect("algo failure");
           ret.push('\n')
         }
       }
       prev = before_end;
     }
     for i in prev..before.len() {
-      before.get(i).map(|b| ret.push_str(b)).unwrap();
+      before
+        .get(i)
+        .map(|b| ret.push_str(b))
+        .expect("algo failure");
       ret.push('\n')
     }
     ret
@@ -149,7 +158,7 @@ pub fn udiff(
 
   let mut matcher = SequenceMatcher::new(&before, &after);
   for group in &matcher.get_grouped_opcodes(unified) {
-    let range = DiffRange::new(group).unwrap();
+    let range = DiffRange::new(group).expect("algo failure");
     if let Some(ranges) = &ranges {
       if !ranges.contains(&range) {
         continue;

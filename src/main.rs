@@ -64,7 +64,7 @@ fn main() {
     .threaded_scheduler()
     .enable_io()
     .build()
-    .unwrap();
+    .expect("runtime failure");
   rt.block_on(async {
     if let Err(err) = run().await {
       output::err_exit(err).await

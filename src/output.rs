@@ -26,7 +26,7 @@ fn stream_stdout(stream: Receiver<SadResult<String>>) -> Task {
         Err(e) => err_exit(e).await,
       }
     }
-    stdout.shutdown().await.unwrap()
+    stdout.shutdown().await.expect("shutdown failure")
   })
 }
 

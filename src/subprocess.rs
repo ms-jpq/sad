@@ -42,9 +42,9 @@ impl SubprocessCommand {
       }
     };
 
-    let mut stdin = child.stdin.take().map(BufWriter::new).unwrap();
-    let mut stdout = child.stdout.take().map(BufReader::new).unwrap();
-    let mut stderr = child.stderr.take().map(BufReader::new).unwrap();
+    let mut stdin = child.stdin.take().map(BufWriter::new).expect("nil stdin");
+    let mut stdout = child.stdout.take().map(BufReader::new).expect("nil stdout");
+    let mut stderr = child.stderr.take().map(BufReader::new).expect("nil stderr");
 
     let handle_in = task::spawn(async move {
       while let Ok(print) = stream.recv().await {
