@@ -81,7 +81,7 @@ fn stream_fzf(
       }
     }
     if let Err(err) = stdin.shutdown().await {
-      tix.send(err.into()).await;
+      tix.send(err.into()).await
     }
   });
 
