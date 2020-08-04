@@ -1,4 +1,4 @@
-use super::errors::*;
+use super::errors::{Failure, SadResult, SadnessFrom};
 use super::types::Task;
 use async_std::sync::{channel, Receiver, Sender};
 use futures::future::try_join4;

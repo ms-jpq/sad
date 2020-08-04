@@ -1,5 +1,5 @@
 use super::argparse::Options;
-use super::errors::*;
+use super::errors::{Failure, SadResult, SadnessFrom};
 use super::subprocess::SubprocessCommand;
 use super::types::Task;
 use async_std::sync::{channel, Receiver, Sender};

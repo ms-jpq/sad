@@ -1,5 +1,5 @@
 use super::argparse::{Action, Options, Printer};
-use super::errors::*;
+use super::errors::{Failure, SadResult};
 use super::fzf::run_fzf;
 use super::types::Task;
 use ansi_term::Colour;

@@ -1,5 +1,5 @@
 use super::argparse::Arguments;
-use super::errors::*;
+use super::errors::{Failure, SadResult, SadnessFrom};
 use super::types::Task;
 use super::udiff::DiffRange;
 use async_std::sync::{channel, Receiver};

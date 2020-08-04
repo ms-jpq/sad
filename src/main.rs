@@ -1,6 +1,6 @@
 use argparse::{Arguments, Options};
 use async_std::sync::{channel, Receiver, Sender};
-use errors::*;
+use errors::{SadResult, SadnessFrom};
 use futures::future::{try_join3, try_join_all, TryJoinAll};
 use input::Payload;
 use std::sync::Arc;

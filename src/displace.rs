@@ -1,5 +1,5 @@
 use super::argparse::{Action, Engine, Options};
-use super::errors::*;
+use super::errors::{Failure, SadResult, SadnessFrom};
 use super::input::Payload;
 use super::udiff::{udiff, DiffRanges, Diffs, Patchable, Picker};
 use ansi_term::Colour;
