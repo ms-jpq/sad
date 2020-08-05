@@ -10,6 +10,7 @@ use types::Task;
 mod argparse;
 mod displace;
 mod errors;
+mod fs_pipe;
 mod fzf;
 mod input;
 mod output;
