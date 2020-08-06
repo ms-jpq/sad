@@ -2,5 +2,4 @@
 /.venv/
 .DS_Store
 /target/
-/artifacts/
 /packages/

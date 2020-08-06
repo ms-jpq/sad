@@ -1,5 +1,5 @@
 use super::errors::{Failure, SadResult, SadnessFrom};
-use std::{fs::Metadata, path::PathBuf};
+use std::{fs::Metadata, io::ErrorKind, path::PathBuf};
 use tokio::fs::{
   canonicalize, metadata, read_to_string, remove_file, rename, set_permissions, write,
 };
@@ -17,6 +17,7 @@ pub async fn slurp(path: &PathBuf) -> SadResult<Slurpee> {
   let content = if meta.is_file() {
     match read_to_string(&canonical).await {
       Ok(text) => text,
+      Err(err) if err.kind() == ErrorKind::InvalidData => String::new(),
       Err(err) => Err(err).into_sadness()?,
     }
   } else {
