@@ -1,11 +1,10 @@
 use super::argparse::{Action, Engine, Options};
-use super::errors::{Failure, SadResult, SadnessFrom};
+use super::errors::{Failure, SadResult};
+use super::fs_pipe::{slurp, spit};
 use super::input::Payload;
 use super::udiff::{udiff, DiffRanges, Diffs, Patchable, Picker};
 use ansi_term::Colour;
-use std::{fs::Metadata, path::PathBuf};
-use tokio::fs;
-use uuid::Uuid;
+use std::path::PathBuf;
 
 impl Engine {
   fn replace(&self, before: &str) -> String {
@@ -25,42 +24,11 @@ impl Payload {
   }
 }
 
-async fn read_meta(path: &PathBuf) -> SadResult<(PathBuf, Metadata)> {
-  let canonical = fs::canonicalize(&path).await.into_sadness()?;
-  let meta = fs::metadata(&canonical).await.into_sadness()?;
-  if !meta.is_file() {
-    let msg = format!("Not a file - {}", canonical.to_string_lossy());
-    return Err(Failure::Simple(msg));
-  }
-  Ok((canonical, meta))
-}
-
-async fn safe_write(canonical: &PathBuf, meta: &Metadata, text: &str) -> SadResult<()> {
-  let uuid = Uuid::new_v4().to_simple().to_string();
-  let mut file_name = canonical
-    .file_name()
-    .and_then(|s| s.to_str())
-    .map(String::from)
-    .ok_or_else(|| Failure::Simple(format!("Bad file name - {}", canonical.to_string_lossy())))?;
-  file_name.push_str("___");
-  file_name.push_str(&uuid);
-
-  let backup = canonical.with_file_name(file_name);
-  fs::rename(&canonical, &backup).await.into_sadness()?;
-  fs::write(&canonical, text).await.into_sadness()?;
-  fs::set_permissions(&canonical, meta.permissions())
-    .await
-    .into_sadness()?;
-  fs::remove_file(&backup).await.into_sadness()?;
-
-  Ok(())
-}
-
 async fn displace_impl(opts: &Options, payload: &Payload) -> SadResult<String> {
   let path = payload.path().clone();
   let name = path.to_string_lossy();
-  let (canonical, meta) = read_meta(&path).await?;
-  let before = fs::read_to_string(&canonical).await.into_sadness()?;
+  let slurped = slurp(&path).await?;
+  let (canonical, meta, before) = (slurped.canonical, slurped.meta, slurped.content);
   let after = opts.engine.replace(&before);
 
   if before == after {
@@ -72,13 +40,13 @@ async fn displace_impl(opts: &Options, payload: &Payload) -> SadResult<String> {
         udiff(Some(ranges), opts.unified, &name, &before, &after)
       }
       (Action::Commit, Payload::Entire(_)) => {
-        safe_write(&canonical, &meta, &after).await?;
+        spit(&canonical, &meta, &after).await?;
         format!("{}\n", name)
       }
       (Action::Commit, Payload::Piecewise(_, ranges)) => {
         let diffs: Diffs = Patchable::new(opts.unified, &before, &after);
         let after = diffs.patch(&ranges, &before);
-        safe_write(&canonical, &meta, &after).await?;
+        spit(&canonical, &meta, &after).await?;
         format!("{}\n", name)
       }
       (Action::Fzf, _) => {
