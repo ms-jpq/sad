@@ -1,10 +1,9 @@
 ## Good news
 
-* CI now uses Docker for reproducible builds
+- CI now uses Docker for reproducible builds
 
-v0.4.6
+v0.4.7
 
-Fix minor bug with `--` flag
+Now ignores invalid utf-8 files instead of raising error,
 
 **Released by CI**
-
