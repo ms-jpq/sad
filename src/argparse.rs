@@ -210,19 +210,6 @@ fn p_fzf(fzf: Option<String>) -> Option<Vec<String>> {
   }
 }
 
-fn p_pager_args(program: &str, commands: Vec<String>) -> Vec<String> {
-  let mut cmd = commands;
-  if let Ok(width) = env::var("FZF_PREVIEW_COLUMNS")
-    .into_sadness()
-    .and_then(|w| w.parse::<isize>().into_sadness())
-  {
-    if program == "delta" {
-      cmd.push(format!("--width={}", max(0, width - 1)))
-    }
-  }
-  cmd
-}
-
 fn find_exec(exe: &str) -> Option<String> {
   which(exe)
     .ok()
@@ -241,7 +228,7 @@ fn p_pager(pager: Option<String>) -> Option<SubprocessCommand> {
         let less_less = val.split('|').next().unwrap_or(&val).trim();
         let mut commands = less_less.split_whitespace().map(String::from);
         commands.next().map(|program| SubprocessCommand {
-          arguments: p_pager_args(&program, commands.collect()),
+          arguments: commands.collect(),
           program,
           env: HashMap::new(),
         })

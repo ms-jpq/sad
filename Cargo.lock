@@ -190,9 +190,9 @@ checksum = "6184e33543162437515c2e2b48714794e37845ec9851711914eec9d308f6ebe8"
 
 [[package]]
 name = "event-listener"
-version = "2.3.2"
+version = "2.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "68082183f458867ce7cddea16d4df4443c1537112c0c09c450dedc09daf5c719"
+checksum = "7f14646a9e0430150a87951622ba9675472b68e384b7701b8423b30560805c7a"
 
 [[package]]
 name = "fastrand"
@@ -704,7 +704,7 @@ checksum = "26412eb97c6b088a6997e05f69403a802a92d520de2f8e63c2b65f9e0f47c4e8"
 
 [[package]]
 name = "sad"
-version = "0.4.6"
+version = "0.4.7"
 dependencies = [
  "aho-corasick",
  "ansi_term 0.12.1",
