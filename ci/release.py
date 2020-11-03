@@ -63,7 +63,7 @@ def git_clone(name: str) -> None:
     email = "ci@ci.ci"
     username = "ci-bot"
     uri = f"https://ms-jpq:{token}@github.com/ms-jpq/homebrew-sad.git"
-    call("git", "clone", uri, name)
+    call("git", "clone", "depth=1", uri, name)
     call("git", "config", "user.email", email, cwd=name)
     call("git", "config", "user.name", username, cwd=name)
 
