@@ -35,9 +35,9 @@ checksum = "4d25d88fd6b8041580a654f9d0c581a047baee2b3efee13275f2fc392fc75034"
 
 [[package]]
 name = "async-channel"
-version = "1.4.0"
+version = "1.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43de69555a39d52918e2bc33a408d3c0a86c829b212d898f4ca25d21a6387478"
+checksum = "59740d83946db6a5af71ae25ddf9562c2b176b2ca42cf99a455f09f4a220d6b9"
 dependencies = [
  "concurrent-queue",
  "event-listener",
@@ -103,14 +103,32 @@ dependencies = [
 ]
 
 [[package]]
-name = "async-std"
-version = "1.7.0"
+name = "async-process"
+version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a7e82538bc65a25dbdff70e4c5439d52f068048ab97cdea0acd73f131594caa1"
+checksum = "4c8cea09c1fb10a317d1b5af8024eeba256d6554763e85ecd90ff8df31c7bbda"
 dependencies = [
+ "async-io",
+ "blocking",
+ "cfg-if 0.1.10",
+ "event-listener",
+ "futures-lite",
+ "once_cell",
+ "signal-hook",
+ "winapi 0.3.9",
+]
+
+[[package]]
+name = "async-std"
+version = "1.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8f9f84f1280a2b436a2c77c2582602732b6c2f4321d5494d6e799e6c367859a8"
+dependencies = [
+ "async-channel",
  "async-global-executor",
  "async-io",
  "async-mutex",
+ "async-process",
  "blocking",
  "crossbeam-utils",
  "futures-channel",
@@ -123,7 +141,7 @@ dependencies = [
  "memchr",
  "num_cpus",
  "once_cell",
- "pin-project-lite",
+ "pin-project-lite 0.2.0",
  "pin-utils",
  "slab",
  "wasm-bindgen-futures",
@@ -264,9 +282,9 @@ checksum = "6184e33543162437515c2e2b48714794e37845ec9851711914eec9d308f6ebe8"
 
 [[package]]
 name = "event-listener"
-version = "2.3.3"
+version = "2.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7f14646a9e0430150a87951622ba9675472b68e384b7701b8423b30560805c7a"
+checksum = "f7531096570974c3a9dcf9e4b8e1cede1ec26cf5046219fb3b9d897503b9be59"
 
 [[package]]
 name = "fastrand"
@@ -346,16 +364,16 @@ checksum = "611834ce18aaa1bd13c4b374f5d653e1027cf99b6b502584ff8c9a64413b30bb"
 
 [[package]]
 name = "futures-lite"
-version = "1.8.0"
+version = "1.11.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0db18c5f58083b54b0c416638ea73066722c2815c1e54dd8ba85ee3def593c3a"
+checksum = "5e6c079abfac3ab269e2927ec048dabc89d009ebfdda6b8ee86624f30c689658"
 dependencies = [
  "fastrand",
  "futures-core",
  "futures-io",
  "memchr",
  "parking",
- "pin-project-lite",
+ "pin-project-lite 0.1.7",
  "waker-fn",
 ]
 
@@ -636,6 +654,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "282adbf10f2698a7a77f8e983a74b2d18176c19a7fd32a45446139ae7b02b715"
 
 [[package]]
+name = "pin-project-lite"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6b063f57ec186e6140e2b8b6921e5f1bd89c7356dda5b33acc5401203ca6131c"
+
+[[package]]
 name = "pin-utils"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -798,6 +822,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "signal-hook"
+version = "0.1.16"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "604508c1418b99dfe1925ca9224829bb2a8a9a04dda655cc01fcad46f4ab05ed"
+dependencies = [
+ "libc",
+ "signal-hook-registry",
+]
+
+[[package]]
 name = "signal-hook-registry"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -919,7 +953,7 @@ dependencies = [
  "mio-named-pipes",
  "mio-uds",
  "num_cpus",
- "pin-project-lite",
+ "pin-project-lite 0.1.7",
  "signal-hook-registry",
  "slab",
  "winapi 0.3.9",
