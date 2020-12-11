@@ -16,6 +16,22 @@ on:
     - cron: "0 0 * * *" # daily
 
 jobs:
+  mypy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup Python
+        uses: actions/setup-python@v2
+
+      - name: Pip Packages
+        run: pip install -U mypy
+
+      - name: Lint
+        run: ./lint.sh
+
   build_macos:
     runs-on: macos-latest
 
