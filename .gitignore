@@ -1,5 +1,4 @@
 /.git/
 /.venv/
-.DS_Store
 /target/
 /packages/
