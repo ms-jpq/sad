@@ -100,6 +100,19 @@ impl Patchable for Diffs {
   }
 
   fn patch(&self, ranges: &HashSet<DiffRange>, before: &str) -> String {
+    // str::lines() only support LF and CRLF
+    let eol = if before.contains('\r') {
+      "\r\n".to_owned()
+    } else {
+      // when the original file hasn't got any line break,
+      // it doesn't matter if this is wrong
+      "\n".to_owned()
+    };
+    let eof = before
+      .chars()
+      .last()
+      .map(|c| c == '\n')
+      .unwrap_or_else(|| false);
     let before = before.lines().collect::<Vec<_>>();
     let mut ret = String::new();
     let mut prev = 0;
@@ -112,12 +125,12 @@ impl Patchable for Diffs {
           .get(i)
           .map(|b| ret.push_str(b))
           .expect("algo failure");
-        ret.push('\n');
+        ret.push_str(&eol);
       }
       if ranges.contains(&diff.range) {
         for line in diff.new_lines.iter() {
           ret.push_str(line);
-          ret.push('\n')
+          ret.push_str(&eol)
         }
       } else {
         for i in before_start..before_end {
@@ -125,7 +138,7 @@ impl Patchable for Diffs {
             .get(i)
             .map(|b| ret.push_str(b))
             .expect("algo failure");
-          ret.push('\n')
+          ret.push_str(&eol)
         }
       }
       prev = before_end;
@@ -135,7 +148,12 @@ impl Patchable for Diffs {
         .get(i)
         .map(|b| ret.push_str(b))
         .expect("algo failure");
-      ret.push('\n')
+      ret.push_str(&eol)
+    }
+    if !eof {
+      for _ in 0..eol.len() {
+        ret.pop();
+      }
     }
     ret
   }
