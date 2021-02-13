@@ -2,7 +2,7 @@ use super::argparse::Options;
 use super::errors::{Failure, SadResult, SadnessFrom};
 use super::subprocess::SubprocessCommand;
 use super::types::Task;
-use async_std::sync::{channel, Receiver, Sender};
+use async_channel::{bounded, Receiver, Sender};
 use futures::future::{select, try_join, Either};
 use std::{collections::HashMap, env, process::Stdio};
 use tokio::{
@@ -49,8 +49,8 @@ fn stream_fzf(
   cmd: &SubprocessCommand,
   stream: Receiver<SadResult<String>>,
 ) -> (Task, Receiver<SadResult<String>>) {
-  let (tx, rx) = channel::<SadResult<String>>(1);
-  let (tix, rix) = channel::<Failure>(1);
+  let (tx, rx) = bounded::<SadResult<String>>(1);
+  let (tix, rix) = bounded::<Failure>(1);
   let ta = Sender::clone(&tx);
 
   let subprocess = Command::new(&cmd.program)

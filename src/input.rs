@@ -2,7 +2,7 @@ use super::argparse::Arguments;
 use super::errors::{Failure, SadResult, SadnessFrom};
 use super::types::Task;
 use super::udiff::DiffRange;
-use async_std::sync::{channel, Receiver};
+use async_channel::{bounded, Receiver};
 use regex::Regex;
 use std::{
   collections::{HashMap, HashSet},
@@ -117,7 +117,7 @@ async fn read_patches(path: &PathBuf) -> SadResult<HashMap<PathBuf, HashSet<Diff
 }
 
 fn stream_patch(patch: PathBuf) -> (Task, Receiver<SadResult<Payload>>) {
-  let (tx, rx) = channel::<SadResult<Payload>>(1);
+  let (tx, rx) = bounded::<SadResult<Payload>>(1);
   let handle = task::spawn(async move {
     match read_patches(&patch).await {
       Ok(patches) => {
@@ -132,7 +132,7 @@ fn stream_patch(patch: PathBuf) -> (Task, Receiver<SadResult<Payload>>) {
 }
 
 fn stream_stdin(use_nul: bool) -> (Task, Receiver<SadResult<Payload>>) {
-  let (tx, rx) = channel::<SadResult<Payload>>(1);
+  let (tx, rx) = bounded::<SadResult<Payload>>(1);
   let handle = task::spawn(async move {
     let delim = if use_nul { b'\0' } else { b'\n' };
     let mut reader = BufReader::new(io::stdin());

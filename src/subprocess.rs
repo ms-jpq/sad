@@ -1,6 +1,6 @@
 use super::errors::{Failure, SadResult, SadnessFrom};
 use super::types::Task;
-use async_std::sync::{channel, Receiver, Sender};
+use async_channel::{bounded, Receiver, Sender};
 use futures::future::try_join4;
 use std::{collections::HashMap, process::Stdio};
 use tokio::{
@@ -18,7 +18,7 @@ pub struct SubprocessCommand {
 
 impl SubprocessCommand {
   pub fn stream(&self, stream: Receiver<SadResult<String>>) -> (Task, Receiver<SadResult<String>>) {
-    let (tx, rx) = channel::<SadResult<String>>(1);
+    let (tx, rx) = bounded::<SadResult<String>>(1);
     let to = Sender::clone(&tx);
     let te = Sender::clone(&tx);
     let tt = Sender::clone(&tx);

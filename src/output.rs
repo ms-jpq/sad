@@ -3,7 +3,7 @@ use super::errors::{Failure, SadResult};
 use super::fzf::run_fzf;
 use super::types::Task;
 use ansi_term::Colour;
-use async_std::sync::Receiver;
+use async_channel::Receiver;
 use futures::future::try_join;
 use std::process;
 use tokio::{

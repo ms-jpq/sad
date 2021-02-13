@@ -2,7 +2,7 @@ use super::errors::{Failure, SadResult, SadnessFrom};
 use super::subprocess::SubprocessCommand;
 use aho_corasick::{AhoCorasick, AhoCorasickBuilder};
 use regex::{Regex, RegexBuilder};
-use std::{cmp::max, collections::HashMap, env, fs, path::PathBuf};
+use std::{collections::HashMap, env, fs, path::PathBuf};
 use structopt::StructOpt;
 use which::which;
 

@@ -1,5 +1,5 @@
 use argparse::{Arguments, Options};
-use async_std::sync::{channel, Receiver, Sender};
+use async_channel::{bounded, Receiver, Sender};
 use errors::{SadResult, SadnessFrom};
 use futures::future::{try_join3, try_join_all, TryJoinAll};
 use input::Payload;
@@ -23,7 +23,7 @@ fn stream_process(
   stream: Receiver<SadResult<Payload>>,
 ) -> (TryJoinAll<Task>, Receiver<SadResult<String>>) {
   let oo = Arc::new(opts);
-  let (tx, rx) = channel::<SadResult<String>>(1);
+  let (tx, rx) = bounded::<SadResult<String>>(1);
 
   let handles = (1..=num_cpus::get() * 2)
     .map(|_| {
