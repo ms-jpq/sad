@@ -1,4 +1,6 @@
+use async_channel::{RecvError, SendError};
 use std::{
+  any::Any,
   env::VarError,
   error::Error,
   fmt::{self, Display, Formatter},
@@ -13,6 +15,7 @@ use tokio::task::JoinError;
 
 #[derive(Debug)]
 pub enum Failure {
+  Channel(Box<dyn Any>),
   Compound(Box<Failure>, Box<Failure>),
   Displace(String, Box<Failure>),
   Fzf(String),
@@ -70,6 +73,18 @@ impl<T, E: Into<Failure>> SadnessFrom<T> for Result<T, E> {
 /* ==========================
  * Consolidate Error Handling
  */
+
+impl<T: 'static> From<SendError<T>> for Failure {
+  fn from(err: SendError<T>) -> Self {
+    Failure::Channel(Box::new(err))
+  }
+}
+
+impl From<RecvError> for Failure {
+  fn from(err: RecvError) -> Self {
+    Failure::Channel(Box::new(err))
+  }
+}
 
 impl From<io::Error> for Failure {
   fn from(err: io::Error) -> Self {
