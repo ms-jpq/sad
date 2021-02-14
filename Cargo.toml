@@ -9,7 +9,7 @@ edition = "2018"
 [dependencies]
 futures = "0.3"
 structopt = "0.3"
-tokio = { version = "1.2", features = ["fs", "io-std", "io-util", "process", "sync", "rt"] }
+tokio = { version = "1.2", features = ["fs", "io-std", "io-util", "process", "sync", "rt-multi-thread"] }
 async-channel = { version = "1.5" }
 num_cpus = "1"
 regex = "1"

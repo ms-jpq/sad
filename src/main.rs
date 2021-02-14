@@ -4,7 +4,7 @@ use errors::{SadResult, SadnessFrom};
 use futures::future::{try_join3, try_join_all, TryJoinAll};
 use input::Payload;
 use std::sync::Arc;
-use tokio::{runtime, task};
+use tokio::{runtime::Builder, task};
 use types::Task;
 
 mod argparse;
@@ -61,8 +61,7 @@ async fn run() -> SadResult<()> {
 }
 
 fn main() {
-  let mut rt = runtime::Builder::new()
-    .threaded_scheduler()
+  let rt = Builder::new_multi_thread()
     .enable_io()
     .build()
     .expect("runtime failure");
