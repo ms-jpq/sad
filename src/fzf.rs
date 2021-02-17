@@ -97,54 +97,28 @@ fn stream_fzf(
 
   let handle_child = task::spawn(async move {
     select! {
-        lhs = child.wait() => {
-          match lhs {
+      lhs = child.wait() => {
+        match lhs {
+          Ok(status) => process_status_code(status.code(), tx).await,
+          Err(err) => tx.send(Err(err.into())).await.expect("<CHANNEL>")
+        }
+      },
+      rhs = handle_kill => {
+        match rhs {
+          Ok(Some(err)) => {
+            let err = combine_err(err, child.kill().await.into_sadness());
+            let err = combine_err(err, child.wait().await.into_sadness());
+            let err = combine_err(err, reset_term().await);
+            tx.send(Err(err)).await.expect("<CHAN>")
+          },
+          Ok(None) => match child.wait().await.into_sadness() {
+            Err(err) => tx.send(Err(err)).await.expect("<CHANNEL>"),
             Ok(status) => process_status_code(status.code(), tx).await,
-            Err(err) => tx.send(Err(err.into())).await.expect("<CHANNEL>")
           }
-        },
-        rhs = handle_kill => {
-          match rhs {
-            Ok(maybe_failure) => {
-              match maybe_failure {
-                Some(err) => {
-                  let err = combine_err(err, child.kill().await.into_sadness());
-                  let err = combine_err(err, child.wait().await.into_sadness());
-                  let err = combine_err(err, reset_term().await);
-                  tx.send(Err(err)).await.expect("<CHAN>")
-                },
-                None => match child.wait().await.into_sadness() {
-                          Err(err) => tx.send(Err(err)).await.expect("<CHANNEL>"),
-                          Ok(status) => process_status_code(status.code(), tx).await,
-                        }
-              }
-            },
-            Err(err) => tx.send(Err(err.into())).await.expect("<CHANNEL>")
-          }
+          Err(err) => tx.send(Err(err.into())).await.expect("<CHANNEL>")
+        }
       }
     }
-    // match select(waiter, handle_kill).await {
-    //   Either::Left((Ok(status), _)) => process_status_code(status.code(), tx).await,
-    //   Either::Left((Err(err), _)) => tx.send(Err(err.into())).await.expect("<CHANNEL>"),
-    //   Either::Right((handle, mut child)) => {
-    //     let maybe_failure = match handle.into_sadness() {
-    //       Ok(err) => err,
-    //       Err(err) => Some(err),
-    //     };
-    //     match maybe_failure {
-    //       Some(err) => {
-    //         let err = combine_err(err, child.kill().into_sadness());
-    //         let err = combine_err(err, child.await.into_sadness());
-    //         let err = combine_err(err, reset_term().await);
-    //         tx.send(Err(err)).await.expect("<CHAN>")
-    //       }
-    //       None => match child.await.into_sadness() {
-    //         Err(err) => tx.send(Err(err)).await.expect("<CHANNEL>"),
-    //         Ok(status) => process_status_code(status.code(), tx).await,
-    //       },
-    //     }
-    //   }
-    // }
   });
 
   let handle = task::spawn(async move {
