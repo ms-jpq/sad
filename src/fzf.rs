@@ -3,13 +3,12 @@ use super::errors::{Failure, SadResult, SadnessFrom};
 use super::subprocess::SubprocessCommand;
 use super::types::Task;
 use async_channel::{bounded, Receiver, Sender};
-use futures::future::{try_join, Either};
+use futures::future::try_join;
 use std::{collections::HashMap, env, process::Stdio};
 use tokio::{
   io::{self, AsyncWriteExt, BufWriter},
   process::Command,
-  task,
-  select
+  select, task,
 };
 use which::which;
 
@@ -96,31 +95,56 @@ fn stream_fzf(
     }
   });
 
-  let waiter = child.wait();
-
   let handle_child = task::spawn(async move {
-    match select(waiter, handle_kill).await {
-      Either::Left((Ok(status), _)) => process_status_code(status.code(), tx).await,
-      Either::Left((Err(err), _)) => tx.send(Err(err.into())).await.expect("<CHANNEL>"),
-      Either::Right((handle, mut child)) => {
-        let maybe_failure = match handle.into_sadness() {
-          Ok(err) => err,
-          Err(err) => Some(err),
-        };
-        match maybe_failure {
-          Some(err) => {
-            let err = combine_err(err, child.kill().into_sadness());
-            let err = combine_err(err, child.await.into_sadness());
-            let err = combine_err(err, reset_term().await);
-            tx.send(Err(err)).await.expect("<CHAN>")
-          }
-          None => match child.await.into_sadness() {
-            Err(err) => tx.send(Err(err)).await.expect("<CHANNEL>"),
+    select! {
+        lhs = child.wait() => {
+          match lhs {
             Ok(status) => process_status_code(status.code(), tx).await,
-          },
-        }
+            Err(err) => tx.send(Err(err.into())).await.expect("<CHANNEL>")
+          }
+        },
+        rhs = handle_kill => {
+          match rhs {
+            Ok(maybe_failure) => {
+              match maybe_failure {
+                Some(err) => {
+                  let err = combine_err(err, child.kill().await.into_sadness());
+                  let err = combine_err(err, child.wait().await.into_sadness());
+                  let err = combine_err(err, reset_term().await);
+                  tx.send(Err(err)).await.expect("<CHAN>")
+                },
+                None => match child.wait().await.into_sadness() {
+                          Err(err) => tx.send(Err(err)).await.expect("<CHANNEL>"),
+                          Ok(status) => process_status_code(status.code(), tx).await,
+                        }
+              }
+            },
+            Err(err) => tx.send(Err(err.into())).await.expect("<CHANNEL>")
+          }
       }
     }
+    // match select(waiter, handle_kill).await {
+    //   Either::Left((Ok(status), _)) => process_status_code(status.code(), tx).await,
+    //   Either::Left((Err(err), _)) => tx.send(Err(err.into())).await.expect("<CHANNEL>"),
+    //   Either::Right((handle, mut child)) => {
+    //     let maybe_failure = match handle.into_sadness() {
+    //       Ok(err) => err,
+    //       Err(err) => Some(err),
+    //     };
+    //     match maybe_failure {
+    //       Some(err) => {
+    //         let err = combine_err(err, child.kill().into_sadness());
+    //         let err = combine_err(err, child.await.into_sadness());
+    //         let err = combine_err(err, reset_term().await);
+    //         tx.send(Err(err)).await.expect("<CHAN>")
+    //       }
+    //       None => match child.await.into_sadness() {
+    //         Err(err) => tx.send(Err(err)).await.expect("<CHANNEL>"),
+    //         Ok(status) => process_status_code(status.code(), tx).await,
+    //       },
+    //     }
+    //   }
+    // }
   });
 
   let handle = task::spawn(async move {

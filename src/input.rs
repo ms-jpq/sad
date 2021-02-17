@@ -122,7 +122,9 @@ fn stream_patch(patch: PathBuf) -> (Task, Receiver<SadResult<Payload>>) {
     match read_patches(&patch).await {
       Ok(patches) => {
         for patch in patches {
-          tx.send(Ok(Payload::Piecewise(patch.0, patch.1))).await.expect("<CHAN>")
+          tx.send(Ok(Payload::Piecewise(patch.0, patch.1)))
+            .await
+            .expect("<CHAN>")
         }
       }
       Err(err) => tx.send(Err(err)).await.expect("<CHAN>"),

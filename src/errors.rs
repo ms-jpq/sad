@@ -74,13 +74,13 @@ impl<T, E: Into<Failure>> SadnessFrom<T> for Result<T, E> {
  */
 
 impl<T> From<SendError<T>> for Failure {
-  fn from(err: SendError<T>) -> Self {
+  fn from(_: SendError<T>) -> Self {
     Failure::Channel
   }
 }
 
 impl From<RecvError> for Failure {
-  fn from(err: RecvError) -> Self {
+  fn from(_: RecvError) -> Self {
     Failure::Channel
   }
 }
