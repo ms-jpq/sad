@@ -3,12 +3,13 @@ use super::errors::{Failure, SadResult, SadnessFrom};
 use super::subprocess::SubprocessCommand;
 use super::types::Task;
 use async_channel::{bounded, Receiver, Sender};
-use futures::future::{select, try_join, Either};
+use futures::future::{try_join, Either};
 use std::{collections::HashMap, env, process::Stdio};
 use tokio::{
   io::{self, AsyncWriteExt, BufWriter},
   process::Command,
   task,
+  select
 };
 use which::which;
 
@@ -65,7 +66,7 @@ fn stream_fzf(
   let mut child = match subprocess.into_sadness() {
     Ok(child) => child,
     Err(err) => {
-      let handle = task::spawn(async move { tx.send(Err(err)).await });
+      let handle = task::spawn(async move { tx.send(Err(err)).await.expect("<CHANNEL>") });
       return (handle, rx);
     }
   };
@@ -77,14 +78,14 @@ fn stream_fzf(
       match print {
         Ok(val) => {
           if let Err(err) = stdin.write(val.as_bytes()).await.into_sadness() {
-            tix.send(err).await;
+            tix.send(err).await.expect("<CHAN>")
           }
         }
-        Err(err) => tix.send(err).await,
+        Err(err) => tix.send(err).await.expect("<CHANNEL>"),
       }
     }
     if let Err(err) = stdin.shutdown().await {
-      tix.send(err.into()).await
+      tix.send(err.into()).await.expect("<CHANNEL>")
     }
   });
 
@@ -95,10 +96,12 @@ fn stream_fzf(
     }
   });
 
+  let waiter = child.wait();
+
   let handle_child = task::spawn(async move {
-    match select(child, handle_kill).await {
+    match select(waiter, handle_kill).await {
       Either::Left((Ok(status), _)) => process_status_code(status.code(), tx).await,
-      Either::Left((Err(err), _)) => tx.send(Err(err.into())).await,
+      Either::Left((Err(err), _)) => tx.send(Err(err.into())).await.expect("<CHANNEL>"),
       Either::Right((handle, mut child)) => {
         let maybe_failure = match handle.into_sadness() {
           Ok(err) => err,
@@ -109,10 +112,10 @@ fn stream_fzf(
             let err = combine_err(err, child.kill().into_sadness());
             let err = combine_err(err, child.await.into_sadness());
             let err = combine_err(err, reset_term().await);
-            tx.send(Err(err)).await
+            tx.send(Err(err)).await.expect("<CHAN>")
           }
           None => match child.await.into_sadness() {
-            Err(err) => tx.send(Err(err)).await,
+            Err(err) => tx.send(Err(err)).await.expect("<CHANNEL>"),
             Ok(status) => process_status_code(status.code(), tx).await,
           },
         }
@@ -122,7 +125,7 @@ fn stream_fzf(
 
   let handle = task::spawn(async move {
     if let Err(err) = try_join(handle_child, handle_in).await {
-      ta.send(Err(err.into())).await;
+      ta.send(Err(err.into())).await.expect("<CHAN>")
     }
   });
 
@@ -139,11 +142,11 @@ fn combine_err<T>(err: Failure, res: SadResult<T>) -> Failure {
 async fn process_status_code(code: Option<i32>, tx: Sender<SadResult<String>>) {
   match code {
     Some(0) | Some(1) | None => {}
-    Some(130) => tx.send(Err(Failure::Interrupt)).await,
-    Some(c) => {
-      tx.send(Err(Failure::Fzf(format!("Error exit - {}", c))))
-        .await
-    }
+    Some(130) => tx.send(Err(Failure::Interrupt)).await.expect("<CHANNEL>"),
+    Some(c) => tx
+      .send(Err(Failure::Fzf(format!("Error exit - {}", c))))
+      .await
+      .expect("<CHANNEL>"),
   }
 }
 

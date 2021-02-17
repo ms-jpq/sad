@@ -37,7 +37,7 @@ impl SubprocessCommand {
     let mut child = match subprocess.into_sadness() {
       Ok(child) => child,
       Err(err) => {
-        let handle = task::spawn(async move { tx.send(Err(err)).await });
+        let handle = task::spawn(async move { tx.send(Err(err)).await.expect("<CHAN>") });
         return (handle, rx);
       }
     };
@@ -51,14 +51,14 @@ impl SubprocessCommand {
         match print {
           Ok(val) => {
             if let Err(err) = stdin.write(val.as_bytes()).await.into_sadness() {
-              tx.send(Err(err)).await;
+              tx.send(Err(err)).await.expect("<CHAN>")
             }
           }
-          Err(err) => tx.send(Err(err)).await,
+          Err(err) => tx.send(Err(err)).await.expect("<CHAN>"),
         }
       }
       if let Err(err) = stdin.shutdown().await {
-        tx.send(Err(err.into())).await;
+        tx.send(Err(err.into())).await.expect("<CHAN>")
       }
     });
 
@@ -67,10 +67,8 @@ impl SubprocessCommand {
         let mut buf = String::new();
         match stdout.read_line(&mut buf).await.into_sadness() {
           Ok(0) => return,
-          Ok(_) => {
-            to.send(Ok(buf)).await;
-          }
-          Err(err) => to.send(Err(err)).await,
+          Ok(_) => to.send(Ok(buf)).await.expect("<CHAN>"),
+          Err(err) => to.send(Err(err)).await.expect("<CHAN>"),
         }
       }
     });
@@ -78,26 +76,24 @@ impl SubprocessCommand {
     let handle_err = task::spawn(async move {
       let mut buf = String::new();
       match stderr.read_to_string(&mut buf).await.into_sadness() {
-        Err(err) => {
-          te.send(Err(err)).await;
-        }
+        Err(err) => te.send(Err(err)).await.expect("<CHAN>"),
         Ok(_) => {
           if !buf.is_empty() {
-            te.send(Err(Failure::Pager(buf))).await
+            te.send(Err(Failure::Pager(buf))).await.expect("<CHAN>")
           }
         }
       }
     });
 
     let handle_child = task::spawn(async move {
-      if let Err(err) = child.await {
-        tt.send(Err(err.into())).await;
+      if let Err(err) = child.wait().await {
+        tt.send(Err(err.into())).await.expect("<CHAN>")
       }
     });
 
     let handle = task::spawn(async move {
       if let Err(err) = try_join4(handle_child, handle_in, handle_out, handle_err).await {
-        ta.send(Err(err.into())).await;
+        ta.send(Err(err.into())).await.expect("<CHAN>")
       }
     });
 

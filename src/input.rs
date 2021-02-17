@@ -122,10 +122,10 @@ fn stream_patch(patch: PathBuf) -> (Task, Receiver<SadResult<Payload>>) {
     match read_patches(&patch).await {
       Ok(patches) => {
         for patch in patches {
-          tx.send(Ok(Payload::Piecewise(patch.0, patch.1))).await
+          tx.send(Ok(Payload::Piecewise(patch.0, patch.1))).await.expect("<CHAN>")
         }
       }
-      Err(err) => tx.send(Err(err)).await,
+      Err(err) => tx.send(Err(err)).await.expect("<CHAN>"),
     }
   });
   (handle, rx)
@@ -137,7 +137,7 @@ fn stream_stdin(use_nul: bool) -> (Task, Receiver<SadResult<Payload>>) {
     let delim = if use_nul { b'\0' } else { b'\n' };
     let mut reader = BufReader::new(io::stdin());
     if atty::is(atty::Stream::Stdin) {
-      tx.send(Err(Failure::NilStdin)).await
+      tx.send(Err(Failure::NilStdin)).await.expect("<CHAN>")
     }
     loop {
       let mut buf = Vec::new();
@@ -148,9 +148,9 @@ fn stream_stdin(use_nul: bool) -> (Task, Receiver<SadResult<Payload>>) {
           buf.pop();
           let path = p_path(buf);
           let step = path.map(Payload::Entire);
-          tx.send(step).await;
+          tx.send(step).await.expect("<CHAN>")
         }
-        Err(err) => tx.send(Err(err)).await,
+        Err(err) => tx.send(Err(err)).await.expect("<CHAN>"),
       }
     }
   });
