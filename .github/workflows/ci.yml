@@ -27,7 +27,7 @@ jobs:
         uses: actions/setup-python@v2
 
       - name: Pip Packages
-        run: pip install -U mypy types-PyYAML
+        run: pip install -U mypy types-PyYAML types-toml types-Jinja2
 
       - name: Lint
         run: ./lint.sh
