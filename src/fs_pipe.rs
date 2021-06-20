@@ -1,8 +1,6 @@
 use super::errors::{Failure, SadResult, SadnessFrom};
 use std::{fs::Metadata, io::ErrorKind, path::PathBuf};
-use tokio::fs::{
-   metadata, read_to_string, remove_file, rename, set_permissions, write,
-};
+use tokio::fs::{metadata, read_to_string, remove_file, rename, set_permissions, write};
 use uuid::Uuid;
 
 pub struct Slurpee {
@@ -23,7 +21,7 @@ pub async fn slurp(path: &PathBuf) -> SadResult<Slurpee> {
     String::new()
   };
   let slurpee = Slurpee {
-    path:path.clone(),
+    path: path.clone(),
     meta,
     content,
   };

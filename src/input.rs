@@ -10,7 +10,7 @@ use std::{
   path::PathBuf,
 };
 use tokio::{
-  fs::File,
+  fs::{canonicalize, File},
   io::{self, AsyncBufReadExt, BufReader},
   task,
 };
@@ -141,6 +141,7 @@ fn stream_stdin(use_nul: bool) -> (Task, Receiver<SadResult<Payload>>) {
     if atty::is(atty::Stream::Stdin) {
       tx.send(Err(Failure::NilStdin)).await.expect("<CHAN>")
     }
+    let mut seen = HashSet::new();
     loop {
       let mut buf = Vec::new();
       let n = reader.read_until(delim, &mut buf).await.into_sadness();
@@ -148,9 +149,20 @@ fn stream_stdin(use_nul: bool) -> (Task, Receiver<SadResult<Payload>>) {
         Ok(0) => return,
         Ok(_) => {
           buf.pop();
-          let path = p_path(buf);
-          let step = path.map(Payload::Entire);
-          tx.send(step).await.expect("<CHAN>")
+          match p_path(buf) {
+            Ok(path) => match canonicalize(&path).await.into_sadness() {
+              Ok(canonical) => {
+                let present = seen.insert(canonical.clone());
+                if !present {
+                  tx.send(Ok(Payload::Entire(canonical)))
+                    .await
+                    .expect("<CHAN>")
+                }
+              }
+              Err(err) => tx.send(Err(err)).await.expect("<CHAN>"),
+            },
+            Err(err) => tx.send(Err(err)).await.expect("<CHAN>"),
+          }
         }
         Err(err) => tx.send(Err(err)).await.expect("<CHAN>"),
       }
