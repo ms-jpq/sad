@@ -1,4 +1,4 @@
-use super::errors::{Failure, SadResult};
+use super::errors::{Failure, SadResult, SadnessFrom};
 use std::{fs::Metadata, io::ErrorKind, path::PathBuf};
 use tokio::fs::{
    metadata, read_to_string, remove_file, rename, set_permissions, write,

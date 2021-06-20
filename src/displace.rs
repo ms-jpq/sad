@@ -1,5 +1,5 @@
 use super::argparse::{Action, Engine, Options};
-use super::errors::{Failure, SadResult, SadnessFrom};
+use super::errors::{Failure, SadResult};
 use super::fs_pipe::{slurp, spit};
 use super::input::Payload;
 use super::udiff::{udiff, DiffRanges, Diffs, Patchable, Picker};
