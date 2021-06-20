@@ -82,7 +82,7 @@ impl Patchable for Diffs {
           for line in before.iter().take(code.first_end).skip(code.first_start) {
             new_lines.push((*line).to_owned());
           }
-          continue;
+          continue
         }
         if code.tag == "replace" || code.tag == "insert" {
           for line in after.iter().take(code.second_end).skip(code.second_start) {
@@ -161,7 +161,7 @@ pub fn udiff(
     let range = DiffRange::new(group).expect("algo failure");
     if let Some(ranges) = &ranges {
       if !ranges.contains(&range) {
-        continue;
+        continue
       }
     };
     ret.push_str(&format!("\n{}", range));
@@ -170,7 +170,7 @@ pub fn udiff(
         for line in before.iter().take(code.first_end).skip(code.first_start) {
           ret.push_str(&format!("\n {}", *line))
         }
-        continue;
+        continue
       }
       if code.tag == "replace" || code.tag == "delete" {
         for line in before.iter().take(code.first_end).skip(code.first_start) {
