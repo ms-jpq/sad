@@ -1,5 +1,5 @@
 use super::argparse::{Action, Engine, Options};
-use super::errors::{Failure, SadResult};
+use super::errors::{Failure, SadResult, SadnessFrom};
 use super::fs_pipe::{slurp, spit};
 use super::input::Payload;
 use super::udiff::{udiff, DiffRanges, Diffs, Patchable, Picker};
@@ -28,7 +28,7 @@ async fn displace_impl(opts: &Options, payload: &Payload) -> SadResult<String> {
   let path = payload.path().clone();
   let name = path.to_string_lossy();
   let slurped = slurp(&path).await?;
-  let (canonical, meta, before) = (slurped.canonical, slurped.meta, slurped.content);
+  let (canonical, meta, before) = (slurped.path, slurped.meta, slurped.content);
   let after = opts.engine.replace(&before);
 
   if before == after {

@@ -1,21 +1,20 @@
-use super::errors::{Failure, SadResult, SadnessFrom};
+use super::errors::{Failure, SadResult};
 use std::{fs::Metadata, io::ErrorKind, path::PathBuf};
 use tokio::fs::{
-  canonicalize, metadata, read_to_string, remove_file, rename, set_permissions, write,
+   metadata, read_to_string, remove_file, rename, set_permissions, write,
 };
 use uuid::Uuid;
 
 pub struct Slurpee {
-  pub canonical: PathBuf,
+  pub path: PathBuf,
   pub meta: Metadata,
   pub content: String,
 }
 
 pub async fn slurp(path: &PathBuf) -> SadResult<Slurpee> {
-  let canonical = canonicalize(&path).await.into_sadness()?;
-  let meta = metadata(&canonical).await.into_sadness()?;
+  let meta = metadata(&path).await.into_sadness()?;
   let content = if meta.is_file() {
-    match read_to_string(&canonical).await {
+    match read_to_string(&path).await {
       Ok(text) => text,
       Err(err) if err.kind() == ErrorKind::InvalidData => String::new(),
       Err(err) => Err(err).into_sadness()?,
@@ -24,7 +23,7 @@ pub async fn slurp(path: &PathBuf) -> SadResult<Slurpee> {
     String::new()
   };
   let slurpee = Slurpee {
-    canonical,
+    path:path.clone(),
     meta,
     content,
   };
