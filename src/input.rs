@@ -152,8 +152,7 @@ fn stream_stdin(use_nul: bool) -> (Task, Receiver<SadResult<Payload>>) {
           match p_path(buf) {
             Ok(path) => match canonicalize(&path).await.into_sadness() {
               Ok(canonical) => {
-                let present = seen.insert(canonical.clone());
-                if !present {
+                if seen.insert(canonical.clone()) {
                   tx.send(Ok(Payload::Entire(canonical)))
                     .await
                     .expect("<CHAN>")
