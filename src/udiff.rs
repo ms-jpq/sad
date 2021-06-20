@@ -43,8 +43,8 @@ pub trait Picker {
 
 impl Picker for DiffRanges {
   fn new(unified: usize, before: &str, after: &str) -> Self {
-    let before = before.lines().collect::<Vec<_>>();
-    let after = after.lines().collect::<Vec<_>>();
+    let before = before.split_inclusive("\n").collect::<Vec<_>>();
+    let after = after.split_inclusive("\n").collect::<Vec<_>>();
     let mut ret = Vec::new();
     let mut matcher = SequenceMatcher::new(&before, &after);
     for group in &matcher.get_grouped_opcodes(unified) {
@@ -69,8 +69,8 @@ pub trait Patchable {
 
 impl Patchable for Diffs {
   fn new(unified: usize, before: &str, after: &str) -> Self {
-    let before = before.lines().collect::<Vec<_>>();
-    let after = after.lines().collect::<Vec<_>>();
+    let before = before.split_inclusive("\n").collect::<Vec<_>>();
+    let after = after.split_inclusive("\n").collect::<Vec<_>>();
 
     let mut ret = Vec::new();
     let mut matcher = SequenceMatcher::new(&before, &after);
@@ -82,7 +82,7 @@ impl Patchable for Diffs {
           for line in before.iter().take(code.first_end).skip(code.first_start) {
             new_lines.push((*line).to_owned());
           }
-          continue
+          continue;
         }
         if code.tag == "replace" || code.tag == "insert" {
           for line in after.iter().take(code.second_end).skip(code.second_start) {
@@ -100,7 +100,7 @@ impl Patchable for Diffs {
   }
 
   fn patch(&self, ranges: &HashSet<DiffRange>, before: &str) -> String {
-    let before = before.lines().collect::<Vec<_>>();
+    let before = before.split_inclusive("\n").collect::<Vec<_>>();
     let mut ret = String::new();
     let mut prev = 0;
 
@@ -112,12 +112,10 @@ impl Patchable for Diffs {
           .get(i)
           .map(|b| ret.push_str(b))
           .expect("algo failure");
-        ret.push('\n');
       }
       if ranges.contains(&diff.range) {
         for line in diff.new_lines.iter() {
           ret.push_str(line);
-          ret.push('\n')
         }
       } else {
         for i in before_start..before_end {
@@ -125,7 +123,6 @@ impl Patchable for Diffs {
             .get(i)
             .map(|b| ret.push_str(b))
             .expect("algo failure");
-          ret.push('\n')
         }
       }
       prev = before_end;
@@ -135,7 +132,6 @@ impl Patchable for Diffs {
         .get(i)
         .map(|b| ret.push_str(b))
         .expect("algo failure");
-      ret.push('\n')
     }
     ret
   }
@@ -148,38 +144,38 @@ pub fn udiff(
   before: &str,
   after: &str,
 ) -> String {
-  let before = before.lines().collect::<Vec<_>>();
-  let after = after.lines().collect::<Vec<_>>();
+  let before = before.split_inclusive("\n").collect::<Vec<_>>();
+  let after = after.split_inclusive("\n").collect::<Vec<_>>();
 
   let mut ret = String::new();
-  ret.push_str(&format!("\ndiff --git {} {}", name, name));
-  ret.push_str(&format!("\n--- {}", name));
-  ret.push_str(&format!("\n+++ {}", name));
+  ret.push_str(&format!("diff --git {} {}\n", name, name));
+  ret.push_str(&format!("--- {}\n", name));
+  ret.push_str(&format!("+++ {}\n", name));
 
   let mut matcher = SequenceMatcher::new(&before, &after);
   for group in &matcher.get_grouped_opcodes(unified) {
     let range = DiffRange::new(group).expect("algo failure");
     if let Some(ranges) = &ranges {
       if !ranges.contains(&range) {
-        continue
+        continue;
       }
     };
-    ret.push_str(&format!("\n{}", range));
+    ret.push_str(&format!("{}\n", range));
     for code in group {
       if code.tag == "equal" {
         for line in before.iter().take(code.first_end).skip(code.first_start) {
-          ret.push_str(&format!("\n {}", *line))
+          ret.push_str(&format!(" {}", *line))
         }
-        continue
+        continue;
       }
       if code.tag == "replace" || code.tag == "delete" {
         for line in before.iter().take(code.first_end).skip(code.first_start) {
-          ret.push_str(&format!("\n-{}", *line))
+          ret.push_str(&format!("-{}", *line))
         }
       }
       if code.tag == "replace" || code.tag == "insert" {
         for line in after.iter().take(code.second_end).skip(code.second_start) {
-          ret.push_str(&format!("\n+{}", *line))
+          ret.push_str(&format!("+{}", *line))
         }
       }
     }
@@ -257,8 +253,7 @@ mod tests {
       for i in 0..len {
         assert_eq!(canon[i], imp[i]);
       }
-      // TODO: last new line!
-      assert_eq!(after.trim_end(), patched.trim_end());
+      assert_eq!(after, patched);
       unified += 1;
     }
   }
@@ -283,7 +278,7 @@ mod tests {
         .collect::<Vec<_>>();
       let imp = udiff(None, unified, "", &before, &after)
         .lines()
-        .skip(4)
+        .skip(3)
         .map(|s| {
           if s.starts_with("@@") {
             "@@".to_owned()
