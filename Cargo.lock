@@ -456,7 +456,7 @@ checksum = "f497285884f3fcff424ffc933e56d7cbca511def0c9831a7f9b5f6153e3cc89b"
 
 [[package]]
 name = "sad"
-version = "0.4.7"
+version = "0.4.8"
 dependencies = [
  "aho-corasick",
  "ansi_term 0.12.1",
@@ -562,9 +562,9 @@ dependencies = [
 
 [[package]]
 name = "tokio"
-version = "1.7.0"
+version = "1.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c79ba603c337335df6ba6dd6afc38c38a7d5e1b0c871678439ea973cd62a118e"
+checksum = "5fb2ed024293bb19f7a5dc54fe83bf86532a44c12a2bb8ba40d64a4509395ca2"
 dependencies = [
  "autocfg",
  "bytes",
