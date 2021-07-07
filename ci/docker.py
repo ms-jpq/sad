@@ -13,50 +13,50 @@ __dir__ = dirname(__file__)
 __prefix__ = "msjpq/sad"
 
 
-def call(prog: str, *args: str) -> None:
+def _call(prog: str, *args: str) -> None:
     ret = run([prog, *args])
     if ret.returncode != 0:
         exit(ret.returncode)
 
 
-def slurp_yaml(path: str) -> Any:
+def _slurp_yaml(path: str) -> Any:
     with open(path) as fd:
         return safe_load(fd)
 
 
-def parse_args() -> Namespace:
+def _parse_args() -> Namespace:
     parser = ArgumentParser()
     parser.add_argument("dest", choices=("deb", "linux"))
     return parser.parse_args()
 
 
-def docker_build(name: str) -> None:
+def _docker_build(name: str) -> None:
     image = f"{__prefix__}:{name}"
     path = join("ci", name, "Dockerfile")
-    call("docker", "build", "-t", image, "-f", path, ".")
+    _call("docker", "build", "-t", image, "-f", path, ".")
 
 
-def docker_cp(name: str) -> None:
+def _docker_cp(name: str) -> None:
     time = datetime.now().strftime("%H-%M-%S")
     image = f"{__prefix__}:{name}"
     path = join("ci", name, "artifacts.yml")
-    spec = slurp_yaml(path)
+    spec = _slurp_yaml(path)
     container = f"{name}-{time}"
 
-    call("docker", "create", "--name", container, image)
+    _call("docker", "create", "--name", container, image)
     for target in spec["targets"]:
         src = f"{container}:{target['src']}"
         dest = join("artifacts", target["dest"])
-        call("docker", "cp", src, dest)
-    call("docker", "rm", container)
+        _call("docker", "cp", src, dest)
+    _call("docker", "rm", container)
 
 
 def main() -> None:
     chdir(dirname(__dir__))
-    args = parse_args()
+    args = _parse_args()
     name = args.dest
-    docker_build(name)
-    docker_cp(name)
+    _docker_build(name)
+    _docker_cp(name)
 
 
 main()

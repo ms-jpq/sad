@@ -16,25 +16,25 @@ artifacts_dir = "artifacts"
 packages_dir = "packages"
 
 
-def cwd() -> None:
+def _cwd() -> None:
     root = dirname(dirname(abspath(__file__)))
     chdir(root)
 
 
-def call(prog: str, *args: str, cwd: str = getcwd()) -> None:
+def _call(prog: str, *args: str, cwd: str = getcwd()) -> None:
     ret = run([prog, *args], cwd=cwd.encode())
     if ret.returncode != 0:
         exit(ret.returncode)
 
 
-def load_yaml(src: str) -> Any:
+def _load_yaml(src: str) -> Any:
     with open(src) as fd:
         return safe_load(fd)
 
 
-def load_values() -> Dict[str, str]:
+def _load_values() -> Dict[str, str]:
     cargo = load_toml("Cargo.toml")
-    vals = load_yaml(join("ci", "vars.yml"))
+    vals = _load_yaml(join("ci", "vars.yml"))
     values = {
         "project_repo": "https://github.com/ms-jpq/sad",
         "version": cargo["package"]["version"],
@@ -44,7 +44,7 @@ def load_values() -> Dict[str, str]:
     return values
 
 
-def build_j2(src: str, filters: Dict[str, Callable] = {}) -> Environment:
+def _build_j2(src: str, filters: Dict[str, Callable] = {}) -> Environment:
     j2 = Environment(
         enable_async=True,
         trim_blocks=True,
@@ -56,55 +56,55 @@ def build_j2(src: str, filters: Dict[str, Callable] = {}) -> Environment:
     return j2
 
 
-def git_clone(name: str) -> None:
+def _git_clone(name: str) -> None:
     if isdir(name):
         return
     token = environ["CI_TOKEN"]
     email = "ci@ci.ci"
     username = "ci-bot"
     uri = f"https://ms-jpq:{token}@github.com/ms-jpq/homebrew-sad.git"
-    call("git", "clone", "--depth=1", uri, name)
-    call("git", "config", "user.email", email, cwd=name)
-    call("git", "config", "user.name", username, cwd=name)
+    _call("git", "clone", "--depth=1", uri, name)
+    _call("git", "config", "user.email", email, cwd=name)
+    _call("git", "config", "user.name", username, cwd=name)
 
 
-def git_commit(repo: str) -> None:
+def _git_commit(repo: str) -> None:
     time = datetime.now().strftime("%Y-%m-%d %H:%M")
     msg = f"CI - {time}"
-    call("git", "add", "-A", cwd=repo)
-    call("git", "commit", "-m", msg, cwd=repo)
-    call("git", "push", "--force", cwd=repo)
+    _call("git", "add", "-A", cwd=repo)
+    _call("git", "commit", "-m", msg, cwd=repo)
+    _call("git", "push", "--force", cwd=repo)
 
 
-def write(filename: str, text: str) -> None:
+def _write(filename: str, text: str) -> None:
     with open(filename, "w") as fd:
         fd.write(text)
 
 
-def calc_sha(resource: str) -> str:
+def _calc_sha(resource: str) -> str:
     with open(resource, "rb") as fd:
         binary = fd.read()
         sha = sha256(binary).hexdigest()
         return sha
 
 
-def homebrew_release(
+def _homebrew_release(
     j2: Environment, values: Dict[str, str], artifact: str, uri: str
 ) -> None:
-    sha = calc_sha(artifact)
+    sha = _calc_sha(artifact)
     vals = {**values, "sha256": sha, "release_uri": uri}
     render = j2.get_template("homebrew.rb.j2").render(**vals)
     dest = join(packages_dir, "sad.rb")
-    write(dest, render)
-    git_commit(packages_dir)
+    _write(dest, render)
+    _git_commit(packages_dir)
 
 
-def snap_release(j2: Environment, values: Dict[str, str]) -> None:
+def _snap_release(j2: Environment, values: Dict[str, str]) -> None:
     vals = {**values}
     render = j2.get_template("snapcraft.yml.j2").render(**vals)
     dest = join(packages_dir, "snapcraft.yaml")
-    write(dest, render)
-    git_commit(packages_dir)
+    _write(dest, render)
+    _git_commit(packages_dir)
 
 
 def parse_args() -> Namespace:
@@ -116,20 +116,20 @@ def parse_args() -> Namespace:
 
 
 def main() -> None:
-    cwd()
+    _cwd()
     args = parse_args()
-    git_clone(packages_dir)
-    j2 = build_j2(join("ci", "templates"))
-    values = load_values()
+    _git_clone(packages_dir)
+    j2 = _build_j2(join("ci", "templates"))
+    values = _load_values()
     if args.brew_artifact and args.brew_uri:
-        homebrew_release(
+        _homebrew_release(
             j2=j2,
             values=values,
             artifact=join(artifacts_dir, args.brew_artifact),
             uri=args.brew_uri,
         )
     elif args.snapcraft:
-        snap_release(j2=j2, values=values)
+        _snap_release(j2=j2, values=values)
     else:
         exit(1)
 
