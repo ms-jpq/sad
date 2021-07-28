@@ -30,7 +30,7 @@ jobs:
         run: pip install -U mypy types-PyYAML types-toml types-Jinja2
 
       - name: Lint
-        run: ./lint.sh
+        run: mypy -- .
 
   build_macos:
     runs-on: macos-latest
