@@ -150,7 +150,11 @@ You can download `sad` deb packages from the [github release page](https://githu
 
 ##### Arch Linux:
 
-You can find the `PKGBUILD` on the [AUR](https://aur.archlinux.org/packages/sad/).
+There is an official Arch Linux package that can be installed via `pacman`:
+
+```
+pacman -Syu sad
+```
 
 ##### Other:
 
