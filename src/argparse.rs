@@ -93,7 +93,7 @@ pub enum Printer {
 
 #[derive(Clone, Debug)]
 pub struct Options {
-  pub cwd: PathBuf,
+  pub cwd: Option<PathBuf>,
   pub action: Action,
   pub engine: Engine,
   pub printer: Printer,
@@ -137,7 +137,7 @@ impl Options {
     };
 
     Ok(Options {
-      cwd: env::current_dir().unwrap_or(PathBuf::new()),
+      cwd: env::current_dir().ok(),
       action,
       engine,
       printer,
