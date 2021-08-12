@@ -2,6 +2,7 @@ use difflib::{sequencematcher::Opcode, sequencematcher::SequenceMatcher};
 use std::{
   collections::HashSet,
   fmt::{self, Display, Formatter},
+  path::Display as PDisplay,
 };
 
 #[derive(Debug, Eq, Hash, PartialEq)]
@@ -140,7 +141,7 @@ impl Patchable for Diffs {
 pub fn udiff(
   ranges: Option<&HashSet<DiffRange>>,
   unified: usize,
-  name: &str,
+  name: &PDisplay,
   before: &str,
   after: &str,
 ) -> String {
