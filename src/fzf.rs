@@ -24,7 +24,7 @@ async fn reset_term(abort: Abort) {
   } else if let Ok(path) = which("reset") {
     Command::new("reset").status().await
   } else {
-    abort.tx.send(Failure::Sucks("")).expect("<CHANNEL>")
+    abort.tx.send(Failure::Sucks(String::new())).expect("<CHANNEL>")
   }
 }
 async fn process_status_code(abort: Abort, status: ExitStatus) {
@@ -33,12 +33,10 @@ async fn process_status_code(abort: Abort, status: ExitStatus) {
     Some(130) => abort
       .tx
       .send(Box::new(Failure::Interrupt))
-      .await
       .expect("<CHANNEL>"),
     Some(c) => abort
       .tx
       .send(Box::new(Failure::Sucks(format!("Error exit - {}", c))))
-      .await
       .expect("<CHANNEL>"),
   }
 }
@@ -68,11 +66,11 @@ fn stream_fzf(abort: Abort, cmd: &SubprocessCommand, stream: Receiver<String>) -
         match print {
           Ok(val) => {
             if let Err(err) = stdin.write(val.as_bytes()).await {
-              abort.tx.send(Box::new(err)).await.expect("<CHAN>")
+              abort.tx.send(Box::new(err)).expect("<CHAN>")
             }
           }
           Err(err) => {
-            abort.tx.send(Box::new(err)).await.expect("<CHANNEL>");
+            abort.tx.send(Box::new(err)).expect("<CHANNEL>");
             break;
           }
         }
@@ -80,7 +78,7 @@ fn stream_fzf(abort: Abort, cmd: &SubprocessCommand, stream: Receiver<String>) -
       }
     }
     if let Err(err) = stdin.shutdown().await {
-      abort.tx.send(Box::new(err)).await.expect("<CHANNEL>")
+      abort.tx.send(Box::new(err)).expect("<CHANNEL>")
     }
   });
 
@@ -93,26 +91,26 @@ fn stream_fzf(abort: Abort, cmd: &SubprocessCommand, stream: Receiver<String>) -
             let err2 = child.wait().await;
             let err3 = reset_term().await;
             if let Err(err) = err1 {
-              abort.tx.send(Box::new(err1)).expect("<CHAN>")
+              abort.tx.send(Box::new(err)).expect("<CHAN>")
             } else
             if let Err(err) = err2 {
-              abort.tx.send(Box::new(err1)).expect("<CHAN>")
+              abort.tx.send(Box::new(err)).expect("<CHAN>")
             } else
             if let Err(err) = err3 {
-              abort.tx.send(Box::new(err1)).expect("<CHAN>")
+              abort.tx.send(Box::new(err)).expect("<CHAN>")
             }
           },
           Ok(None) => match child.wait().await {
             Err(err) => abort.tx.send(Box::new(err)).expect("<CHANNEL>"),
             Ok(status) => process_status_code(abort, status).await,
           }
-          Err(err) =>abort. tx.send(Box::new(err())).await.expect("<CHANNEL>")
+          Err(err) =>abort. tx.send(Box::new(err)).expect("<CHANNEL>")
         }
       },
       lhs = child.wait() => {
         match lhs {
             Ok(status) => process_status_code(abort, status).await,
-          Err(err) => abort.tx.send(Box::new(err())).expect("<CHANNEL>")
+          Err(err) => abort.tx.send(Box::new(err)).expect("<CHANNEL>")
         }
       },
     }
@@ -120,7 +118,7 @@ fn stream_fzf(abort: Abort, cmd: &SubprocessCommand, stream: Receiver<String>) -
 
   task::spawn(async move {
     if let Err(err) = try_join(handle_child, handle_in).await {
-      abort.send(Box::new(err())).expect("<CHAN>")
+      abort.tx.send(Box::new(err)).expect("<CHAN>")
     }
   })
 }
@@ -157,5 +155,5 @@ pub fn run_fzf(abort: Abort, bin: PathBuf, args: Vec<String>, stream: Receiver<S
     arguments,
     env,
   };
-  stream_fzf(&cmd, stream)
+  stream_fzf(abort,&cmd, stream)
 }

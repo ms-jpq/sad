@@ -36,28 +36,28 @@ impl TryFrom<&str> for DiffLine {
   fn try_from(candidate: &str) -> Result<Self, Box<dyn Error>> {
     let preg = "\n\n\n\n@@ -(\\d+),(\\d+) \\+(\\d+),(\\d+) @@$";
     let re = Regex::new(preg)?;
-    let captures = re.captures(candidate).ok_or_else(|| Failure::Sucks(""))?;
+    let captures = re.captures(candidate).ok_or_else(|| Failure::Sucks(String::new()))?;
     let before_start = captures
       .get(1)
-      .ok_or_else(|| Failure::Sucks(""))?
+      .ok_or_else(|| Failure::Sucks(String::new()))?
       .as_str()
       .parse::<usize>()
       ?;
     let before_inc = captures
       .get(2)
-      .ok_or_else(|| Failure::Sucks(""))?
+      .ok_or_else(|| Failure::Sucks(String::new()))?
       .as_str()
       .parse::<usize>()
       ?;
     let after_start = captures
       .get(3)
-      .ok_or_else(|| Failure::Sucks(""))?
+      .ok_or_else(|| Failure::Sucks(String::new()))?
       .as_str()
       .parse::<usize>()
       ?;
     let after_inc = captures
       .get(4)
-      .ok_or_else(|| Failure::Sucks(""))?
+      .ok_or_else(|| Failure::Sucks(String::new()))?
       .as_str()
       .parse::<usize>()
       ?;
@@ -116,7 +116,7 @@ fn stream_patch(abort: Abort, patch: PathBuf) -> (Task, Receiver<Payload>) {
             .expect("<CHAN>")
         }
       }
-      Err(err) => abort.tx(Err(err)).expect("<CHAN>"),
+      Err(err) => abort.tx.send(err).expect("<CHAN>"),
     }
   });
   (handle, rx)
@@ -130,8 +130,7 @@ fn stream_stdin(abort: Abort, use_nul: bool) -> (Task, Receiver<Payload>) {
     if atty::is(atty::Stream::Stdin) {
       abort
         .tx
-        .send(Box::new(Failure::Sucks("")))
-        .await
+        .send(Box::new(Failure::Sucks(String::new())))
         .expect("<CHAN>")
     } else {
       let mut seen = HashSet::new();
