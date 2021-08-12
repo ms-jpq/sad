@@ -6,4 +6,6 @@ v0.4.9
 
 - fzf now shows relative instead of absolute path
 
+- fix bugs
+
 **Released by CI**

@@ -3,7 +3,10 @@ use async_channel::{bounded, Receiver, Sender};
 use errors::{SadResult, SadnessFrom};
 use futures::future::{try_join3, try_join_all, TryJoinAll};
 use input::Payload;
-use std::sync::Arc;
+use std::sync::{
+  atomic::{AtomicBool, Ordering},
+  Arc,
+};
 use tokio::{runtime::Builder, task};
 use types::Task;
 
@@ -24,23 +27,30 @@ fn stream_process(
 ) -> (TryJoinAll<Task>, Receiver<SadResult<String>>) {
   let oo = Arc::new(opts);
   let (tx, rx) = bounded::<SadResult<String>>(1);
+  let stop = Arc::new(AtomicBool::new(false));
 
   let handles = (1..=num_cpus::get() * 2)
     .map(|_| {
+      let stp = Arc::clone(&stop);
       let stream = Receiver::clone(&stream);
       let opts = Arc::clone(&oo);
       let sender = Sender::clone(&tx);
 
       task::spawn(async move {
         while let Ok(path) = stream.recv().await {
-          match path {
-            Ok(val) => {
-              let displaced = displace::displace(&opts, val).await;
-              sender.send(displaced).await.expect("<CHANNEL>")
-            }
-            Err(err) => {
-              sender.send(Err(err)).await.expect("<CHANNEL>");
-              return;
+          if stp.load(Ordering::Relaxed) {
+            return;
+          } else {
+            match path {
+              Ok(val) => {
+                let displaced = displace::displace(&opts, val).await;
+                sender.send(displaced).await.expect("<CHANNEL>")
+              }
+              Err(err) => {
+                sender.send(Err(err)).await.expect("<CHANNEL>");
+                stp.store(true, Ordering::Relaxed);
+                return;
+              }
             }
           }
         }
