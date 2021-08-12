@@ -140,27 +140,28 @@ fn stream_stdin(use_nul: bool) -> (Task, Receiver<SadResult<Payload>>) {
     let mut reader = BufReader::new(io::stdin());
     if atty::is(atty::Stream::Stdin) {
       tx.send(Err(Failure::NilStdin)).await.expect("<CHAN>")
-    }
-    let mut seen = HashSet::new();
-    loop {
-      let mut buf = Vec::new();
-      let n = reader.read_until(delim, &mut buf).await.into_sadness();
-      match n {
-        Ok(0) => break,
-        Ok(_) => {
-          buf.pop();
-          let path = p_path(buf);
-          if let Ok(canonical) = canonicalize(&path).await.into_sadness() {
-            if seen.insert(canonical.clone()) {
-              tx.send(Ok(Payload::Entire(canonical)))
-                .await
-                .expect("<CHAN>")
+    } else {
+      let mut seen = HashSet::new();
+      loop {
+        let mut buf = Vec::new();
+        let n = reader.read_until(delim, &mut buf).await.into_sadness();
+        match n {
+          Ok(0) => break,
+          Ok(_) => {
+            buf.pop();
+            let path = p_path(buf);
+            if let Ok(canonical) = canonicalize(&path).await.into_sadness() {
+              if seen.insert(canonical.clone()) {
+                tx.send(Ok(Payload::Entire(canonical)))
+                  .await
+                  .expect("<CHAN>")
+              }
             }
           }
-        }
-        Err(err) => {
-          tx.send(Err(err)).await.expect("<CHAN>");
-          break;
+          Err(err) => {
+            tx.send(Err(err)).await.expect("<CHAN>");
+            break;
+          }
         }
       }
     }
