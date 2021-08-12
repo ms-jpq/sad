@@ -1,9 +1,9 @@
 ## Good news
 
-- CI now uses Docker for reproducible builds
+v0.4.9
 
-v0.4.7
+- imperceptibly faster
 
-Now ignores invalid utf-8 files instead of raising error,
+- fzf now shows relative instead of absolute path
 
 **Released by CI**
