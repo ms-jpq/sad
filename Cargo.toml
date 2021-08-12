@@ -1,21 +1,21 @@
 [package]
 name = "sad"
-version = "0.4.8"
+version = "0.4.9"
 description = "Space Age seD | https://github.com/ms-jpq/sad"
 authors = ["git@bigly.dog"]
 edition = "2018"
 
-
 [dependencies]
+aho-corasick = "0.7"
+ansi_term = "0.12"
+async-channel = { version = "1.6" }
+atty = "0.2"
+difflib = "0.4"
 futures = "0.3"
+num_cpus = "1"
+pathdiff = "0.2.0"
+regex = "1"
 structopt = "0.3"
 tokio = { version = "1.9", features = ["full"] }
-async-channel = { version = "1.6" }
-num_cpus = "1"
-regex = "1"
-aho-corasick = "0.7"
-difflib = "0.4"
 uuid = { version = "0.8", features = ["v4"] }
-ansi_term = "0.12"
-atty = "0.2"
 which = "4"
