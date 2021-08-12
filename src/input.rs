@@ -4,9 +4,11 @@ use super::types::Task;
 use super::udiff::DiffRange;
 use async_channel::{bounded, Receiver};
 use regex::Regex;
+use std::os::unix::ffi::OsStringExt;
 use std::{
   collections::{HashMap, HashSet},
   convert::TryFrom,
+  ffi::OsString,
   path::PathBuf,
 };
 use tokio::{
@@ -33,10 +35,8 @@ impl Arguments {
   }
 }
 
-fn p_path(name: Vec<u8>) -> SadResult<PathBuf> {
-  String::from_utf8(name)
-    .map(|p| PathBuf::from(p.as_str()))
-    .into_sadness()
+fn p_path(name: Vec<u8>) -> PathBuf {
+  PathBuf::from(OsString::from_vec(name))
 }
 
 struct DiffLine(PathBuf, DiffRange);
@@ -80,7 +80,7 @@ impl TryFrom<&str> for DiffLine {
       after: (after_start - 1, after_inc),
     };
     let name = re.replace(candidate, "").as_bytes().to_vec();
-    let buf = p_path(name)?;
+    let buf = p_path(name);
     Ok(DiffLine(buf, range))
   }
 }
@@ -149,18 +149,13 @@ fn stream_stdin(use_nul: bool) -> (Task, Receiver<SadResult<Payload>>) {
         Ok(0) => return,
         Ok(_) => {
           buf.pop();
-          match p_path(buf) {
-            Ok(path) => match canonicalize(&path).await.into_sadness() {
-              Ok(canonical) => {
-                if seen.insert(canonical.clone()) {
-                  tx.send(Ok(Payload::Entire(canonical)))
-                    .await
-                    .expect("<CHAN>")
-                }
-              }
-              Err(err) => tx.send(Err(err)).await.expect("<CHAN>"),
-            },
-            Err(err) => tx.send(Err(err)).await.expect("<CHAN>"),
+          let path = p_path(buf);
+          if let Ok(canonical) = canonicalize(&path).await.into_sadness() {
+            if seen.insert(canonical.clone()) {
+              tx.send(Ok(Payload::Entire(canonical)))
+                .await
+                .expect("<CHAN>")
+            }
           }
         }
         Err(err) => tx.send(Err(err)).await.expect("<CHAN>"),
