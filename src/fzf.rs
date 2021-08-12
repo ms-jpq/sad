@@ -1,9 +1,8 @@
-use super::errors::{Failure, SadResult, SadnessFrom};
 use super::subprocess::SubprocessCommand;
-use super::types::Task;
+use super::types::{Abort, Task};
 use async_channel::{bounded, Receiver, Sender};
 use futures::future::try_join;
-use std::{collections::HashMap, env, path::PathBuf, process::Stdio};
+use std::{collections::HashMap, env, error::Error, path::PathBuf, process::Stdio};
 use tokio::{
   io::{self, AsyncWriteExt, BufWriter},
   process::Command,
@@ -11,11 +10,109 @@ use tokio::{
 };
 use which::which;
 
+async fn reset_term(abort: Abort) {
+  try_join(io::stdout().flush(), io::stderr()).await?;
+  if let Ok(path) = which("tput") {
+    Command::new("tput").arg("reset").status().await
+  } else if let Ok(path) = which("reset") {
+    Command::new("reset").status().await
+  } else {
+    abort.tx.send(()).await.expect("<CHANNEL>")
+  }
+}
+
+fn stream_fzf(abort: Abort, cmd: &SubprocessCommand, stream: Receiver<String>) -> Task {
+  let subprocess = Command::new(&cmd.program)
+    .args(&cmd.arguments)
+    .envs(&cmd.env)
+    .kill_on_drop(true)
+    .stdin(Stdio::piped())
+    .spawn();
+
+  let mut child = match subprocess.into_sadness() {
+    Ok(child) => child,
+    Err(err) => {
+      let handle = task::spawn(async move { abort.tx.send(Err(err)).await.expect("<CHANNEL>") });
+      return (handle, rx);
+    }
+  };
+  let mut stdin = child.stdin.take().map(BufWriter::new).expect("nil stdin");
+
+  let handle_in = task::spawn(async move {
+    loop {
+      select! {
+        _ = abort.rx.changed() => break,
+        print = stream.recv() => {
+        match print {
+          Ok(val) => {
+            if let Err(err) = stdin.write(val.as_bytes()).await.into_sadness() {
+              abort.tx.send(err).await.expect("<CHAN>")
+            }
+          }
+          Err(err) => {
+            abort.tx.send(err).await.expect("<CHANNEL>");
+            break;
+          }
+        }
+        }
+      }
+    }
+    if let Err(err) = stdin.shutdown().await {
+      abort.tx.send(err.into()).await.expect("<CHANNEL>")
+    }
+  });
+
+  let handle_child = task::spawn(async move {
+    select! {
+        _ = abort.rx.changed() => {
+          match rhs {
+            Ok(Some(err)) => {
+              let err = combine_err(err, child.kill().await.into_sadness());
+              let err = combine_err(err, child.wait().await.into_sadness());
+              let err = combine_err(err, reset_term().await);
+              tx.send(Err(err)).await.expect("<CHAN>")
+            },
+            Ok(None) => match child.wait().await.into_sadness() {
+              Err(err) => tx.send(Err(err)).await.expect("<CHANNEL>"),
+              Ok(status) => process_status_code(status.code(), tx).await,
+            }
+            Err(err) => tx.send(Err(err.into())).await.expect("<CHANNEL>")
+          }
+        },
+        lhs = child.wait() => {
+          match lhs {
+            Ok(status) => {
+
+    match status.code() {
+      Some(0) | Some(1) | None => {}
+      Some(130) => abort.tx.send(Err(Failure::Interrupt)).await.expect("<CHANNEL>"),
+      Some(c) => abort.tx
+        .send(Err(Failure::Fzf(format!("Error exit - {}", c))))
+        .await
+        .expect("<CHANNEL>"),
+    }
+            },
+            Err(err) => abort.tx.send(Err(err.into())).await.expect("<CHANNEL>")
+          }
+        },
+      }
+  });
+
+  let handle = task::spawn(async move {
+    if let Err(err) = try_join(handle_child, handle_in).await {
+      abort.send(Err(err.into())).await.expect("<CHAN>")
+    }
+  });
+
+  (handle, rx)
+}
+
 pub fn run_fzf(
+  abort: Abort,
   bin: PathBuf,
   args: Vec<String>,
   stream: Receiver<SadResult<String>>,
-) -> (Task, Receiver<SadResult<String>>) {
+) -> Task {
   let sad = env::current_exe()
     .or_else(|_| which("sad".to_owned()))
     .map(|p| format!("{}", p.display()))
@@ -48,126 +145,4 @@ pub fn run_fzf(
     env,
   };
   stream_fzf(&cmd, stream)
-}
-
-fn stream_fzf(
-  cmd: &SubprocessCommand,
-  stream: Receiver<SadResult<String>>,
-) -> (Task, Receiver<SadResult<String>>) {
-  let (tx, rx) = bounded::<SadResult<String>>(1);
-  let (tix, rix) = bounded::<Failure>(1);
-  let ta = Sender::clone(&tx);
-
-  let subprocess = Command::new(&cmd.program)
-    .args(&cmd.arguments)
-    .envs(&cmd.env)
-    .kill_on_drop(true)
-    .stdin(Stdio::piped())
-    .spawn();
-
-  let mut child = match subprocess.into_sadness() {
-    Ok(child) => child,
-    Err(err) => {
-      let handle = task::spawn(async move { tx.send(Err(err)).await.expect("<CHANNEL>") });
-      return (handle, rx);
-    }
-  };
-
-  let mut stdin = child.stdin.take().map(BufWriter::new).expect("nil stdin");
-
-  let handle_in = task::spawn(async move {
-    while let Ok(print) = stream.recv().await {
-      match print {
-        Ok(val) => {
-          if let Err(err) = stdin.write(val.as_bytes()).await.into_sadness() {
-            tix.send(err).await.expect("<CHAN>")
-          }
-        }
-        Err(err) => {
-          tix.send(err).await.expect("<CHANNEL>");
-          break;
-        }
-      }
-    }
-    if let Err(err) = stdin.shutdown().await {
-      tix.send(err.into()).await.expect("<CHANNEL>")
-    }
-  });
-
-  let handle_kill = task::spawn(async move {
-    match rix.recv().await {
-      Ok(err) => Some(err),
-      Err(_) => None,
-    }
-  });
-
-  let handle_child = task::spawn(async move {
-    select! {
-      lhs = child.wait() => {
-        match lhs {
-          Ok(status) => process_status_code(status.code(), tx).await,
-          Err(err) => tx.send(Err(err.into())).await.expect("<CHANNEL>")
-        }
-      },
-      rhs = handle_kill => {
-        match rhs {
-          Ok(Some(err)) => {
-            let err = combine_err(err, child.kill().await.into_sadness());
-            let err = combine_err(err, child.wait().await.into_sadness());
-            let err = combine_err(err, reset_term().await);
-            tx.send(Err(err)).await.expect("<CHAN>")
-          },
-          Ok(None) => match child.wait().await.into_sadness() {
-            Err(err) => tx.send(Err(err)).await.expect("<CHANNEL>"),
-            Ok(status) => process_status_code(status.code(), tx).await,
-          }
-          Err(err) => tx.send(Err(err.into())).await.expect("<CHANNEL>")
-        }
-      }
-    }
-  });
-
-  let handle = task::spawn(async move {
-    if let Err(err) = try_join(handle_child, handle_in).await {
-      ta.send(Err(err.into())).await.expect("<CHAN>")
-    }
-  });
-
-  (handle, rx)
-}
-
-fn combine_err<T>(err: Failure, res: SadResult<T>) -> Failure {
-  match res {
-    Ok(_) => err,
-    Err(e) => Failure::Compound(Box::new(err), Box::new(e)),
-  }
-}
-
-async fn process_status_code(code: Option<i32>, tx: Sender<SadResult<String>>) {
-  match code {
-    Some(0) | Some(1) | None => {}
-    Some(130) => tx.send(Err(Failure::Interrupt)).await.expect("<CHANNEL>"),
-    Some(c) => tx
-      .send(Err(Failure::Fzf(format!("Error exit - {}", c))))
-      .await
-      .expect("<CHANNEL>"),
-  }
-}
-
-async fn reset_term() -> SadResult<()> {
-  io::stdout().flush().await.into_sadness()?;
-  io::stderr().flush().await.into_sadness()?;
-  if which("tput").is_ok() {
-    Command::new("tput")
-      .arg("reset")
-      .status()
-      .await
-      .into_sadness()?;
-    Ok(())
-  } else if which("reset").is_ok() {
-    Command::new("reset").status().await.into_sadness()?;
-    Ok(())
-  } else {
-    Err(Failure::Fzf("Unable to clear screen".to_owned()))
-  }
 }

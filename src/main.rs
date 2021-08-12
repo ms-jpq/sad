@@ -1,14 +1,18 @@
 use argparse::{Arguments, Options};
 use async_channel::{bounded, Receiver, Sender};
-use errors::{SadResult, SadnessFrom};
+use displace::displace;
 use futures::future::{try_join3, try_join_all, TryJoinAll};
 use input::Payload;
-use std::sync::{
-  atomic::{AtomicBool, Ordering},
-  Arc,
+use output::stream_output;
+use std::{
+  sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+  },
+  time::Duration,
 };
-use tokio::{runtime::Builder, task};
-use types::Task;
+use tokio::{runtime::Builder, select, sync::watch, task};
+use types::{Abort, Task};
 
 mod argparse;
 mod displace;
@@ -22,34 +26,31 @@ mod types;
 mod udiff;
 
 fn stream_process(
+  abort: Abort,
   opts: Options,
-  stream: Receiver<SadResult<Payload>>,
-) -> (TryJoinAll<Task>, Receiver<SadResult<String>>) {
+  stream: Receiver<Payload>,
+) -> (TryJoinAll<Task>, Receiver<String>) {
   let oo = Arc::new(opts);
   let (tx, rx) = bounded::<SadResult<String>>(1);
-  let stop = Arc::new(AtomicBool::new(false));
 
   let handles = (1..=num_cpus::get() * 2)
     .map(|_| {
-      let stp = Arc::clone(&stop);
       let stream = Receiver::clone(&stream);
       let opts = Arc::clone(&oo);
       let sender = Sender::clone(&tx);
 
       task::spawn(async move {
-        while let Ok(path) = stream.recv().await {
-          if stp.load(Ordering::Relaxed) {
-            break;
-          } else {
-            match path {
-              Ok(val) => {
-                let displaced = displace::displace(&opts, val).await;
+        loop {
+          select! {
+            _ = abort.rx.changed() => break,
+            payload = stream.recv().await => {
+              match payload {
+                Ok(p) => {
+
+                let displaced = displace(&opts, payload).await;
                 sender.send(displaced).await.expect("<CHANNEL>")
-              }
-              Err(err) => {
-                sender.send(Err(err)).await.expect("<CHANNEL>");
-                stp.store(true, Ordering::Relaxed);
-                break;
+                },
+                _ => break
               }
             }
           }
@@ -61,16 +62,15 @@ fn stream_process(
   (handle, rx)
 }
 
-async fn run() -> SadResult<()> {
+async fn run(abort: Abort) {
   let args = Arguments::new()?;
-  let (reader, receiver) = args.stream();
+  let (reader, receiver) = args.stream(abort);
   let opts = Options::new(args)?;
-  let (steps, rx) = stream_process(opts.clone(), receiver);
-  let writer = output::stream_output(opts, rx);
-  try_join3(reader, steps, writer)
-    .await
-    .map(|_| ())
-    .into_sadness()
+  let (steps, rx) = stream_process(abort, opts.clone(), receiver);
+  let writer = stream_output(abort, opts, rx);
+  if let Err(err) = try_join3(reader, steps, writer).await {
+    abort.tx.send(err).await.expect("<CHANNEL>")
+  }
 }
 
 fn main() {
@@ -79,8 +79,16 @@ fn main() {
     .build()
     .expect("runtime failure");
   rt.block_on(async {
-    if let Err(err) = run().await {
-      output::err_exit(err).await
-    }
-  })
+    let (tx, rx) = watch::channel(());
+    let abort = Abort { tx, rx };
+    let exiting = select! {
+      maybe = rx.changed() => maybe,
+      handle = run(abort) => handle
+    };
+    //if let Some(msg) = err.exit_message() {
+    //  eprintln!("{}", Colour::Red.paint(msg));
+    //}
+  });
+  rt.shutdown_timeout(Duration.MAX)
+  //exit(err.exit_code())
 }

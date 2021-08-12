@@ -1,6 +1,5 @@
 use super::argparse::Arguments;
-use super::errors::{Failure, SadResult, SadnessFrom};
-use super::types::Task;
+use super::types::{Abort, Task};
 use super::udiff::DiffRange;
 use async_channel::{bounded, Receiver};
 use regex::Regex;
@@ -14,25 +13,13 @@ use std::{
 use tokio::{
   fs::{canonicalize, File},
   io::{self, AsyncBufReadExt, BufReader},
-  task,
+  select, task,
 };
 
 #[derive(Debug)]
 pub enum Payload {
   Entire(PathBuf),
   Piecewise(PathBuf, HashSet<DiffRange>),
-}
-
-impl Arguments {
-  pub fn stream(&self) -> (Task, Receiver<SadResult<Payload>>) {
-    if let Some(preview) = &self.internal_preview {
-      stream_patch(preview.clone())
-    } else if let Some(patch) = &self.internal_patch {
-      stream_patch(patch.clone())
-    } else {
-      stream_stdin(self.nul_delim)
-    }
-  }
 }
 
 fn p_path(name: Vec<u8>) -> PathBuf {
@@ -116,8 +103,8 @@ async fn read_patches(path: &PathBuf) -> SadResult<HashMap<PathBuf, HashSet<Diff
   Ok(acc)
 }
 
-fn stream_patch(patch: PathBuf) -> (Task, Receiver<SadResult<Payload>>) {
-  let (tx, rx) = bounded::<SadResult<Payload>>(1);
+fn stream_patch(abort: Abort, patch: PathBuf) -> (Task, Receiver<Payload>) {
+  let (tx, rx) = bounded::<Payload>(1);
   let handle = task::spawn(async move {
     match read_patches(&patch).await {
       Ok(patches) => {
@@ -127,24 +114,27 @@ fn stream_patch(patch: PathBuf) -> (Task, Receiver<SadResult<Payload>>) {
             .expect("<CHAN>")
         }
       }
-      Err(err) => tx.send(Err(err)).await.expect("<CHAN>"),
+      Err(err) => abort.tx(Err(err)).await.expect("<CHAN>"),
     }
   });
   (handle, rx)
 }
 
-fn stream_stdin(use_nul: bool) -> (Task, Receiver<SadResult<Payload>>) {
-  let (tx, rx) = bounded::<SadResult<Payload>>(1);
+fn stream_stdin(abort: Abort, use_nul: bool) -> (Task, Receiver<Payload>) {
+  let (tx, rx) = bounded::<Payload>(1);
   let handle = task::spawn(async move {
     let delim = if use_nul { b'\0' } else { b'\n' };
     let mut reader = BufReader::new(io::stdin());
     if atty::is(atty::Stream::Stdin) {
-      tx.send(Err(Failure::NilStdin)).await.expect("<CHAN>")
+      abort.tx.send(Err(Failure::NilStdin)).await.expect("<CHAN>")
     } else {
       let mut seen = HashSet::new();
       loop {
         let mut buf = Vec::new();
-        let n = reader.read_until(delim, &mut buf).await.into_sadness();
+        select! {
+          _ = abort.rx.changed() => break,
+          n = reader.read_until(delim, &mut buf) => {
+
         match n {
           Ok(0) => break,
           Ok(_) => {
@@ -159,12 +149,26 @@ fn stream_stdin(use_nul: bool) -> (Task, Receiver<SadResult<Payload>>) {
             }
           }
           Err(err) => {
-            tx.send(Err(err)).await.expect("<CHAN>");
+            abort.tx.send(Err(err)).await.expect("<CHAN>");
             break;
+          }
+        }
           }
         }
       }
     }
   });
   (handle, rx)
+}
+
+impl Arguments {
+  pub fn stream(&self, abort: Abort) -> (Task, Receiver<SadResult<Payload>>) {
+    if let Some(preview) = &self.internal_preview {
+      stream_patch(abort, preview.clone())
+    } else if let Some(patch) = &self.internal_patch {
+      stream_patch(abort, patch.clone())
+    } else {
+      stream_stdin(abort, self.nul_delim)
+    }
+  }
 }
