@@ -20,14 +20,14 @@ fn stream_stdout(abort: Abort, stream: Receiver<String>) -> Task {
         print = stream.recv() => {
         match print {
           Ok(val) => match stdout.write(val.as_bytes()).await {
-            Err(e) => {
-              abort.tx.send(e).expect("<CHANNEL>");
+            Err(err) => {
+              abort.tx.send(Box::new(err)).expect("<CHANNEL>");
               break;
             }
             _ => {}
           },
-          Err(e) => {
-            abort.tx.send(e).expect("<CHANNEL>");
+          Err(err) => {
+            abort.tx.send(Box::new(err)).expect("<CHANNEL>");
             break;
           }
         }

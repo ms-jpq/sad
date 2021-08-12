@@ -56,19 +56,19 @@ impl SubprocessCommand {
         }
       }
       if let Err(err) = stdin.shutdown().await {
-        abort.tx.send(Box::new(err())).expect("<CHAN>")
+        abort.tx.send(Box::new(err)).expect("<CHAN>")
       }
     });
 
     let handle_child = task::spawn(async move {
       if let Err(err) = child.wait().await {
-        abort.tx.send(Box::new(err())).expect("<CHAN>")
+        abort.tx.send(Box::new(err)).expect("<CHAN>")
       }
     });
 
     task::spawn(async move {
       if let Err(err) = try_join(handle_child, handle_in).await {
-        abort.tx.send(Box::new(err())).expect("<CHAN>")
+        abort.tx.send(Box::new(err)).expect("<CHAN>")
       }
     })
   }

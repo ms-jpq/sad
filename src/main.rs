@@ -69,7 +69,7 @@ async fn run(abort: Abort) {
   let (steps, rx) = stream_process(abort, opts.clone(), receiver);
   let writer = stream_output(abort, opts, rx);
   if let Err(err) = try_join3(reader, steps, writer).await {
-    abort.tx.send(err).await.expect("<CHANNEL>")
+    abort.tx.send(Box::new(err)).await.expect("<CHANNEL>")
   }
 }
 

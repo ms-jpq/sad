@@ -111,7 +111,7 @@ fn stream_patch(abort: Abort, patch: PathBuf) -> (Task, Receiver<Payload>) {
     match read_patches(&patch).await {
       Ok(patches) => {
         for patch in patches {
-          tx.send(Ok(Payload::Piecewise(patch.0, patch.1)))
+          tx.send(Payload::Piecewise(patch.0, patch.1))
             .await
             .expect("<CHAN>")
         }
@@ -130,7 +130,7 @@ fn stream_stdin(abort: Abort, use_nul: bool) -> (Task, Receiver<Payload>) {
     if atty::is(atty::Stream::Stdin) {
       abort
         .tx
-        .send(Err(Box::new(Failure::Sucks(""))))
+        .send(Box::new(Failure::Sucks("")))
         .await
         .expect("<CHAN>")
     } else {
@@ -148,7 +148,7 @@ fn stream_stdin(abort: Abort, use_nul: bool) -> (Task, Receiver<Payload>) {
             let path = p_path(buf);
             if let Ok(canonical) = canonicalize(&path).await {
               if seen.insert(canonical.clone()) {
-                tx.send(Ok(Payload::Entire(canonical)))
+                tx.send(Payload::Entire(canonical))
                   .await
                   .expect("<CHAN>")
               }
