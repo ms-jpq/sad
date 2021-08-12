@@ -38,7 +38,10 @@ fn stream_process(
               let displaced = displace::displace(&opts, val).await;
               sender.send(displaced).await.expect("<CHANNEL>")
             }
-            Err(err) => sender.send(Err(err)).await.expect("<CHANNEL>"),
+            Err(err) => {
+              sender.send(Err(err)).await.expect("<CHANNEL>");
+              return;
+            }
           }
         }
       })

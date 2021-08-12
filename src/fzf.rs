@@ -85,7 +85,10 @@ fn stream_fzf(
             tix.send(err).await.expect("<CHAN>")
           }
         }
-        Err(err) => tix.send(err).await.expect("<CHANNEL>"),
+        Err(err) => {
+          tix.send(err).await.expect("<CHANNEL>");
+          return;
+        }
       }
     }
     if let Err(err) = stdin.shutdown().await {
