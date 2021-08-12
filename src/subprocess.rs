@@ -24,7 +24,7 @@ impl SubprocessCommand {
       .stdin(Stdio::piped())
       .spawn();
 
-    let mut child = match subprocess.into_sadness() {
+    let mut child = match subprocess {
       Ok(child) => child,
       Err(err) => {
         return task::spawn(async move { abort.tx.send(Err(err)).await.expect("<CHAN>") });
@@ -38,36 +38,36 @@ impl SubprocessCommand {
         select! {
           _ = abort.rx.changed() => break,
           print = stream.recv() => {
-        match print {
-          Ok(val) => {
-            if let Err(err) = stdin.write(val.as_bytes()).await.into_sadness() {
-              abort.tx.send(Err(err)).await.expect("<CHAN>");
-              break;
+            match print {
+              Ok(val) => {
+                if let Err(err) = stdin.write(val.as_bytes()).await {
+                  abort.tx.send(Err(err)).await.expect("<CHAN>");
+                  break;
+                }
+              }
+              Err(err) => {
+                abort.tx.send(Err(err)).await.expect("<CHAN>");
+                break;
+              }
             }
-          }
-          Err(err) => {
-            abort.tx.send(Err(err)).await.expect("<CHAN>");
-            break;
-          }
-        }
 
           }
         }
       }
       if let Err(err) = stdin.shutdown().await {
-        abort.tx.send(Err(err.into())).await.expect("<CHAN>")
+        abort.tx.send(Err(err())).await.expect("<CHAN>")
       }
     });
 
     let handle_child = task::spawn(async move {
       if let Err(err) = child.wait().await {
-        abort.tx.send(Err(err.into())).await.expect("<CHAN>")
+        abort.tx.send(Err(err())).await.expect("<CHAN>")
       }
     });
 
     task::spawn(async move {
       if let Err(err) = try_join(handle_child, handle_in).await {
-        abort.tx.send(Err(err.into())).await.expect("<CHAN>")
+        abort.tx.send(Err(err())).await.expect("<CHAN>")
       }
     })
   }

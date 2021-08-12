@@ -7,6 +7,6 @@ use tokio::{
 pub type Task = JoinHandle<()>;
 
 pub struct Abort {
-  pub tx: Sender<Boxed<dyn Error>>,
-  pub rx: Receiver<Boxed<dyn Error>>,
+  pub tx: Sender<Box<dyn Error>>,
+  pub rx: Receiver<Box<dyn Error>>,
 }

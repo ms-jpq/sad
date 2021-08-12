@@ -33,34 +33,34 @@ struct DiffLine(PathBuf, DiffRange);
 impl TryFrom<&str> for DiffLine {
   type Error = Failure;
 
-  fn try_from(candidate: &str) -> Result<Self, Boxed<dyn Error>> {
+  fn try_from(candidate: &str) -> Result<Self, Box<dyn Error>> {
     let preg = "\n\n\n\n@@ -(\\d+),(\\d+) \\+(\\d+),(\\d+) @@$";
-    let re = Regex::new(preg).into_sadness()?;
+    let re = Regex::new(preg)?;
     let captures = re.captures(candidate).ok_or_else(|| Failure::Sucks(""))?;
     let before_start = captures
       .get(1)
       .ok_or_else(|| Failure::Sucks(""))?
       .as_str()
       .parse::<usize>()
-      .into_sadness()?;
+      ?;
     let before_inc = captures
       .get(2)
       .ok_or_else(|| Failure::Sucks(""))?
       .as_str()
       .parse::<usize>()
-      .into_sadness()?;
+      ?;
     let after_start = captures
       .get(3)
       .ok_or_else(|| Failure::Sucks(""))?
       .as_str()
       .parse::<usize>()
-      .into_sadness()?;
+      ?;
     let after_inc = captures
       .get(4)
       .ok_or_else(|| Failure::Sucks(""))?
       .as_str()
       .parse::<usize>()
-      .into_sadness()?;
+      ?;
 
     let range = DiffRange {
       before: (before_start - 1, before_inc),
@@ -74,20 +74,20 @@ impl TryFrom<&str> for DiffLine {
 
 async fn read_patches(
   path: &PathBuf,
-) -> Result<HashMap<PathBuf, HashSet<DiffRange>>, Boxed<dyn Error>> {
+) -> Result<HashMap<PathBuf, HashSet<DiffRange>>, Box<dyn Error>> {
   let mut acc: HashMap<PathBuf, HashSet<DiffRange>> = HashMap::new();
-  let fd = File::open(path).await.into_sadness()?;
+  let fd = File::open(path).await?;
   let mut reader = BufReader::new(fd);
 
   loop {
     let mut buf = Vec::new();
-    let n = reader.read_until(b'\0', &mut buf).await.into_sadness()?;
+    let n = reader.read_until(b'\0', &mut buf).await?;
     match n {
       0 => break,
       _ => {
         buf.pop();
-        let line = String::from_utf8(buf).into_sadness()?;
-        let patch = DiffLine::try_from(line.as_str()).into_sadness()?;
+        let line = String::from_utf8(buf)?;
+        let patch = DiffLine::try_from(line.as_str())?;
         match acc.get_mut(&patch.0) {
           Some(ranges) => {
             ranges.insert(patch.1);
@@ -146,7 +146,7 @@ fn stream_stdin(abort: Abort, use_nul: bool) -> (Task, Receiver<Payload>) {
           Ok(_) => {
             buf.pop();
             let path = p_path(buf);
-            if let Ok(canonical) = canonicalize(&path).await.into_sadness() {
+            if let Ok(canonical) = canonicalize(&path).await {
               if seen.insert(canonical.clone()) {
                 tx.send(Ok(Payload::Entire(canonical)))
                   .await

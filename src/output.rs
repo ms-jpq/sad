@@ -39,8 +39,8 @@ fn stream_stdout(abort: Abort, stream: Receiver<String>) -> Task {
 
 pub fn stream_output(abort: Abort, opts: Options, stream: Receiver<String>) -> Task {
   match (&opts.action, &opts.printer) {
-    (Action::Fzf(fzf_p, fzf_a), _) => run_fzf(fzf_p.to_owned(), fzf_a.to_owned(), stream),
-    (_, Printer::Pager(cmd)) => cmd.stream(stream),
-    (_, Printer::Stdout) => stream_stdout(stream),
+    (Action::Fzf(fzf_p, fzf_a), _) => run_fzf(abort,fzf_p.to_owned(), fzf_a.to_owned(), stream),
+    (_, Printer::Pager(cmd)) => cmd.stream(abort,stream),
+    (_, Printer::Stdout) => stream_stdout(abort,stream),
   }
 }

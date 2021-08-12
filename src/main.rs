@@ -43,7 +43,7 @@ fn stream_process(
         loop {
           select! {
             _ = abort.rx.changed() => break,
-            payload = stream.recv().await => {
+            payload = stream.recv() => {
               match payload {
                 Ok(p) => {
 

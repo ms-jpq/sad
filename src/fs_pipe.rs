@@ -9,8 +9,8 @@ pub struct Slurpee {
   pub content: String,
 }
 
-pub async fn slurp(path: &PathBuf) -> Result<Slurpee, Boxed<dyn Error>> {
-  let meta = metadata(&path).await.into_sadness()?;
+pub async fn slurp(path: &PathBuf) -> Result<Slurpee, Box<dyn Error>> {
+  let meta = metadata(&path).await?;
   let content = if meta.is_file() {
     match read_to_string(&path).await {
       Ok(text) => text,
@@ -28,7 +28,7 @@ pub async fn slurp(path: &PathBuf) -> Result<Slurpee, Boxed<dyn Error>> {
   Ok(slurpee)
 }
 
-pub async fn spit(canonical: &PathBuf, meta: &Metadata, text: &str) -> Result<(), Boxed<dyn Error>> {
+pub async fn spit(canonical: &PathBuf, meta: &Metadata, text: &str) -> Result<(), Box<dyn Error>> {
   let uuid = Uuid::new_v4().to_simple().to_string();
   let mut file_name = canonical
     .file_name()
@@ -39,12 +39,12 @@ pub async fn spit(canonical: &PathBuf, meta: &Metadata, text: &str) -> Result<()
   file_name.push_str(&uuid);
 
   let backup = canonical.with_file_name(file_name);
-  rename(&canonical, &backup).await.into_sadness()?;
-  write(&canonical, text).await.into_sadness()?;
+  rename(&canonical, &backup).await?;
+  write(&canonical, text).await?;
   set_permissions(&canonical, meta.permissions())
     .await
-    .into_sadness()?;
-  remove_file(&backup).await.into_sadness()?;
+    ?;
+  remove_file(&backup).await?;
 
   Ok(())
 }

@@ -66,7 +66,7 @@ fn stream_fzf(abort: Abort, cmd: &SubprocessCommand, stream: Receiver<String>) -
         print = stream.recv() => {
         match print {
           Ok(val) => {
-            if let Err(err) = stdin.write(val.as_bytes()).await.into_sadness() {
+            if let Err(err) = stdin.write(val.as_bytes()).await {
               abort.tx.send(err).await.expect("<CHAN>")
             }
           }
@@ -79,7 +79,7 @@ fn stream_fzf(abort: Abort, cmd: &SubprocessCommand, stream: Receiver<String>) -
       }
     }
     if let Err(err) = stdin.shutdown().await {
-      abort.tx.send(err.into()).await.expect("<CHANNEL>")
+      abort.tx.send(err()).await.expect("<CHANNEL>")
     }
   });
 
@@ -101,17 +101,17 @@ fn stream_fzf(abort: Abort, cmd: &SubprocessCommand, stream: Receiver<String>) -
               abort.tx.send(Err(err1)).await.expect("<CHAN>")
             }
           },
-          Ok(None) => match child.wait().await.into_sadness() {
+          Ok(None) => match child.wait().await {
             Err(err) => abort.tx.send(Err(err)).await.expect("<CHANNEL>"),
             Ok(status) => process_status_code(abort, status).await,
           }
-          Err(err) =>abort. tx.send(Err(err.into())).await.expect("<CHANNEL>")
+          Err(err) =>abort. tx.send(Err(err())).await.expect("<CHANNEL>")
         }
       },
       lhs = child.wait() => {
         match lhs {
             Ok(status) => process_status_code(abort, status).await,
-          Err(err) => abort.tx.send(Err(err.into())).await.expect("<CHANNEL>")
+          Err(err) => abort.tx.send(Err(err())).await.expect("<CHANNEL>")
         }
       },
     }
@@ -119,7 +119,7 @@ fn stream_fzf(abort: Abort, cmd: &SubprocessCommand, stream: Receiver<String>) -
 
   task::spawn(async move {
     if let Err(err) = try_join(handle_child, handle_in).await {
-      abort.send(Err(err.into())).await.expect("<CHAN>")
+      abort.send(Err(err())).await.expect("<CHAN>")
     }
   })
 }

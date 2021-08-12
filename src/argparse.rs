@@ -67,7 +67,7 @@ pub struct Arguments {
 }
 
 impl Arguments {
-  pub fn new() -> Result<Arguments, Boxed<dyn Error>> {
+  pub fn new() -> Result<Arguments, Box<dyn Error>> {
     let args = env::args().collect::<Vec<_>>();
     match (args.get(1), args.get(2)) {
       (Some(lhs), Some(rhs)) if lhs == "-c" => {
@@ -123,7 +123,7 @@ fn p_auto_flags(pattern: &str) -> Vec<String> {
   flags
 }
 
-fn p_aho_corasick(pattern: &str, flags: &[String]) -> Result<AhoCorasick, Boxed<dyn Error>> {
+fn p_aho_corasick(pattern: &str, flags: &[String]) -> Result<AhoCorasick, Box<dyn Error>> {
   let mut ac = AhoCorasickBuilder::new();
   for flag in flags {
     match flag.as_str() {
@@ -140,7 +140,7 @@ fn p_aho_corasick(pattern: &str, flags: &[String]) -> Result<AhoCorasick, Boxed<
   Ok(ac.build(&[pattern]))
 }
 
-fn p_regex(pattern: &str, flags: &[String]) -> Result<Regex, Boxed<dyn Error>> {
+fn p_regex(pattern: &str, flags: &[String]) -> Result<Regex, Box<dyn Error>> {
   let mut re = RegexBuilder::new(pattern);
   for flag in flags {
     match flag.as_str() {
@@ -157,7 +157,7 @@ fn p_regex(pattern: &str, flags: &[String]) -> Result<Regex, Boxed<dyn Error>> {
       _ => return Err(Failure::Sucks(format!("Invaild regex flag -{}", flag))),
     };
   }
-  re.build().into_sadness()
+  re.build()
 }
 
 fn p_fzf(fzf: Option<String>) -> Option<(PathBuf, Vec<String>)> {
@@ -198,7 +198,7 @@ fn p_pager(pager: &Option<String>) -> Option<SubprocessCommand> {
 }
 
 impl Options {
-  pub fn new(args: Arguments) -> Result<Options, Boxed<dyn Error>> {
+  pub fn new(args: Arguments) -> Result<Options, Box<dyn Error>> {
     let mut flagset = p_auto_flags(&args.pattern);
     flagset.extend(
       args
