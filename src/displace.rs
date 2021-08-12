@@ -26,7 +26,7 @@ impl Payload {
 
 async fn displace_impl(opts: &Options, payload: &Payload) -> SadResult<String> {
   let path = payload.path().clone();
-  let name = path.to_string_lossy();
+  let name = path.display();
   let slurped = slurp(&path).await?;
   let (canonical, meta, before) = (slurped.path, slurped.meta, slurped.content);
   let after = opts.engine.replace(&before);

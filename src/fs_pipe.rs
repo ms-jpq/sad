@@ -34,7 +34,7 @@ pub async fn spit(canonical: &PathBuf, meta: &Metadata, text: &str) -> SadResult
     .file_name()
     .and_then(|s| s.to_str())
     .map(String::from)
-    .ok_or_else(|| Failure::Simple(format!("Bad file name - {}", canonical.to_string_lossy())))?;
+    .ok_or_else(|| Failure::Simple(format!("Bad file name - {}", canonical.display())))?;
   file_name.push_str("___");
   file_name.push_str(&uuid);
 
