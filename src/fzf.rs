@@ -8,7 +8,9 @@ use std::{
   env,
   path::PathBuf,
   process::{ExitStatus, Stdio},
+  sync::Arc,
 };
+
 use tokio::{
   io::{self, AsyncWriteExt, BufWriter},
   process::Command,
@@ -16,7 +18,7 @@ use tokio::{
 };
 use which::which;
 
-async fn reset_term(abort: Abort) {
+async fn reset_term(abort: &Arc<Abort>) {
   try_join(io::stdout().flush(), io::stderr()).await?;
   if let Ok(path) = which("tput") {
     Command::new("tput").arg("reset").status().await
@@ -29,7 +31,7 @@ async fn reset_term(abort: Abort) {
       .expect("<CHANNEL>")
   }
 }
-async fn process_status_code(abort: Abort, status: ExitStatus) {
+async fn process_status_code(abort: &Arc<Abort>, status: ExitStatus) {
   match status.code() {
     Some(0) | Some(1) | None => {}
     Some(130) => abort
@@ -43,7 +45,7 @@ async fn process_status_code(abort: Abort, status: ExitStatus) {
   }
 }
 
-fn stream_fzf(abort: Abort, cmd: &SubprocessCommand, stream: Receiver<String>) -> Task {
+fn stream_fzf(abort: &Arc<Abort>, cmd: &SubprocessCommand, stream: Receiver<String>) -> Task {
   let subprocess = Command::new(&cmd.program)
     .args(&cmd.arguments)
     .envs(&cmd.env)
@@ -125,7 +127,12 @@ fn stream_fzf(abort: Abort, cmd: &SubprocessCommand, stream: Receiver<String>) -
   })
 }
 
-pub fn run_fzf(abort: Abort, bin: PathBuf, args: Vec<String>, stream: Receiver<String>) -> Task {
+pub fn run_fzf(
+  abort: &Arc<Abort>,
+  bin: PathBuf,
+  args: Vec<String>,
+  stream: Receiver<String>,
+) -> Task {
   let sad = env::current_exe()
     .or_else(|_| which("sad".to_owned()))
     .map(|p| format!("{}", p.display()))

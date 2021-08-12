@@ -4,13 +4,14 @@ use super::types::{Abort, Task};
 use super::udiff::DiffRange;
 use async_channel::{bounded, Receiver};
 use regex::Regex;
-use std::os::unix::ffi::OsStringExt;
 use std::{
   collections::{HashMap, HashSet},
   convert::TryFrom,
   error::Error,
   ffi::OsString,
+  os::unix::ffi::OsStringExt,
   path::PathBuf,
+  sync::Arc,
 };
 use tokio::{
   fs::{canonicalize, File},
@@ -103,7 +104,7 @@ async fn read_patches(
   Ok(acc)
 }
 
-fn stream_patch(abort: Abort, patch: PathBuf) -> (Task, Receiver<Payload>) {
+fn stream_patch(abort: &Arc<Abort>, patch: PathBuf) -> (Task, Receiver<Payload>) {
   let (tx, rx) = bounded::<Payload>(1);
   let handle = task::spawn(async move {
     match read_patches(&patch).await {
@@ -120,7 +121,7 @@ fn stream_patch(abort: Abort, patch: PathBuf) -> (Task, Receiver<Payload>) {
   (handle, rx)
 }
 
-fn stream_stdin(abort: Abort, use_nul: bool) -> (Task, Receiver<Payload>) {
+fn stream_stdin(abort: &Arc<Abort>, use_nul: bool) -> (Task, Receiver<Payload>) {
   let (tx, rx) = bounded::<Payload>(1);
   let handle = task::spawn(async move {
     let delim = if use_nul { b'\0' } else { b'\n' };
@@ -165,7 +166,7 @@ fn stream_stdin(abort: Abort, use_nul: bool) -> (Task, Receiver<Payload>) {
 }
 
 impl Arguments {
-  pub fn stream(&self, abort: Abort) -> (Task, Receiver<Payload>) {
+  pub fn stream(&self, abort: Arc<Abort>) -> (Task, Receiver<Payload>) {
     if let Some(preview) = &self.internal_preview {
       stream_patch(abort, preview.clone())
     } else if let Some(patch) = &self.internal_patch {

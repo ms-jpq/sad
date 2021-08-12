@@ -1,7 +1,7 @@
 use super::types::{Abort, Task};
 use async_channel::Receiver;
 use futures::future::try_join;
-use std::{collections::HashMap, path::PathBuf, process::Stdio};
+use std::{collections::HashMap, path::PathBuf, process::Stdio, sync::Arc};
 use tokio::{
   io::{AsyncWriteExt, BufWriter},
   process::Command,
@@ -16,7 +16,7 @@ pub struct SubprocessCommand {
 }
 
 impl SubprocessCommand {
-  pub fn stream(&self, abort: Abort, stream: Receiver<String>) -> Task {
+  pub fn stream(&self, abort: &Arc<Abort>, stream: Receiver<String>) -> Task {
     let subprocess = Command::new(&self.program)
       .kill_on_drop(true)
       .args(&self.arguments)

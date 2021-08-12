@@ -21,7 +21,7 @@ mod types;
 mod udiff;
 
 fn stream_process(
-  abort: Abort,
+  abort: &Arc<Abort>,
   opts: Options,
   stream: Receiver<Payload>,
 ) -> (TryJoinAll<Task>, Receiver<String>) {
@@ -57,14 +57,15 @@ fn stream_process(
   (handle, rx)
 }
 
-async fn run(abort: Abort) {
+async fn run(abort: &Arc<Abort>) {
+  let abbr = Arc::clone(abort);
   let args = Arguments::new()?;
   let (reader, receiver) = args.stream(abort);
   let opts = Options::new(args)?;
   let (steps, rx) = stream_process(abort, opts.clone(), receiver);
   let writer = stream_output(abort, opts, rx);
   if let Err(err) = try_join3(reader, steps, writer).await {
-    abort.tx.send(Box::new(err)).await.expect("<CHANNEL>")
+    abbr.tx.send(Box::new(err)).await.expect("<CHANNEL>")
   }
 }
 
@@ -75,7 +76,7 @@ fn main() {
     .expect("runtime failure");
   rt.block_on(async {
     let (tx, rx) = watch::channel(Box::new(Failure::Gucci));
-    let abort = Abort { tx, rx };
+    let abort = Arc::new(Abort { tx, rx });
     let exiting = select! {
       maybe = rx.changed() => maybe,
       handle = run(abort) => handle
