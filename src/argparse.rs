@@ -29,9 +29,9 @@ pub struct Arguments {
   #[structopt(short, long)]
   pub exact: bool,
 
-  /// Standard regex flags: lowercase on, uppercase off
+  /// Regex flags: use `--help` instead of `-h` to see details
   ///
-  /// ie i => on, I => off
+  /// [lowercase on, uppercase off] ie i => on, I => off
   ///
   /// i :: ignore case (works for --exact)
   ///
