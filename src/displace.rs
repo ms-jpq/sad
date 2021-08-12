@@ -51,7 +51,7 @@ async fn displace_impl(opts: &Options, payload: &Payload) -> SadResult<String> {
         spit(&canonical, &meta, &after).await?;
         format!("{}\n", name)
       }
-      (Action::Fzf, _) => {
+      (Action::Fzf(_, _), _) => {
         let ranges: DiffRanges = Picker::new(opts.unified, &before, &after);
         let mut fzf_lines = String::new();
         for range in ranges {

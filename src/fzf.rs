@@ -1,10 +1,9 @@
-use super::argparse::Options;
 use super::errors::{Failure, SadResult, SadnessFrom};
 use super::subprocess::SubprocessCommand;
 use super::types::Task;
 use async_channel::{bounded, Receiver, Sender};
 use futures::future::try_join;
-use std::{collections::HashMap, env, process::Stdio};
+use std::{collections::HashMap, env, path::PathBuf, process::Stdio};
 use tokio::{
   io::{self, AsyncWriteExt, BufWriter},
   process::Command,
@@ -13,7 +12,8 @@ use tokio::{
 use which::which;
 
 pub fn run_fzf(
-  opts: &Options,
+  bin: PathBuf,
+  args: Vec<String>,
   stream: Receiver<SadResult<String>>,
 ) -> (Task, Receiver<SadResult<String>>) {
   let sad = env::current_exe()
@@ -39,11 +39,11 @@ pub fn run_fzf(
     ),
     "--preview-window=70%:wrap".to_owned(),
   ];
-  arguments.extend(opts.fzf.clone().unwrap_or_default());
+  arguments.extend(args);
   let mut env = HashMap::new();
   env.insert("SHELL".to_owned(), sad);
   let cmd = SubprocessCommand {
-    program: "fzf".to_owned(),
+    program: bin,
     arguments,
     env,
   };

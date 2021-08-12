@@ -2,7 +2,7 @@ use super::errors::{Failure, SadResult, SadnessFrom};
 use super::types::Task;
 use async_channel::{bounded, Receiver, Sender};
 use futures::future::try_join4;
-use std::{collections::HashMap, process::Stdio};
+use std::{collections::HashMap, path::PathBuf, process::Stdio};
 use tokio::{
   io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader, BufWriter},
   process::Command,
@@ -11,7 +11,7 @@ use tokio::{
 
 #[derive(Clone, Debug)]
 pub struct SubprocessCommand {
-  pub program: String,
+  pub program: PathBuf,
   pub arguments: Vec<String>,
   pub env: HashMap<String, String>,
 }

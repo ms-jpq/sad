@@ -82,7 +82,7 @@ pub enum Engine {
 pub enum Action {
   Preview,
   Commit,
-  Fzf,
+  Fzf(PathBuf, Vec<String>),
 }
 
 #[derive(Clone, Debug)]
@@ -96,7 +96,6 @@ pub struct Options {
   pub cwd: PathBuf,
   pub action: Action,
   pub engine: Engine,
-  pub fzf: Option<Vec<String>>,
   pub printer: Printer,
   pub unified: usize,
 }
@@ -122,17 +121,17 @@ impl Options {
       }
     };
 
-    let fzf = p_fzf(args.fzf);
-
     let action = if args.commit || args.internal_patch != None {
       Action::Commit
-    } else if args.internal_preview != None || fzf == None {
-      Action::Preview
     } else {
-      Action::Fzf
+      match (args.internal_preview, p_fzf(args.fzf)) {
+        (Some(_), _) => Action::Preview,
+        (_, None) => Action::Preview,
+        (_, Some((bin, args))) => Action::Fzf(bin, args),
+      }
     };
 
-    let printer = match p_pager(args.pager) {
+    let printer = match p_pager(&args.pager) {
       Some(cmd) => Printer::Pager(cmd),
       None => Printer::Stdout,
     };
@@ -141,7 +140,6 @@ impl Options {
       cwd: env::current_dir().unwrap_or(PathBuf::new()),
       action,
       engine,
-      fzf,
       printer,
       unified: args.unified.unwrap_or(3),
     })
@@ -189,37 +187,39 @@ fn p_regex(pattern: &str, flags: &[String]) -> SadResult<Regex> {
   re.build().into_sadness()
 }
 
-fn p_fzf(fzf: Option<String>) -> Option<Vec<String>> {
+fn p_fzf(fzf: Option<String>) -> Option<(PathBuf, Vec<String>)> {
   match (which("fzf"), atty::is(atty::Stream::Stdout)) {
-    (Ok(_), true) => match fzf {
+    (Ok(p), true) => match fzf {
       Some(v) if v == "never" => None,
-      Some(val) => Some(val.split_whitespace().map(String::from).collect()),
-      None => Some(Vec::new()),
+      Some(val) => Some((p, val.split_whitespace().map(String::from).collect())),
+      None => Some((p, Vec::new())),
     },
     _ => None,
   }
 }
 
-fn find_exec(exe: &str) -> Option<String> {
-  which(exe).ok().map(|p| format!("{}", p.display()))
-}
-
-fn p_pager(pager: Option<String>) -> Option<SubprocessCommand> {
-  pager
-    .or_else(|| env::var("GIT_PAGER").ok())
-    .or_else(|| find_exec("delta"))
-    .or_else(|| find_exec("diff-so-fancy"))
-    .and_then(|val| {
-      if val == "never" {
-        None
-      } else {
+fn p_pager(pager: &Option<String>) -> Option<SubprocessCommand> {
+  let (prog, arguments) = match pager {
+    Some(val) => match val as &str {
+      "never" => (None, Vec::new()),
+      _ => (Some(PathBuf::from(val)), Vec::new()),
+    },
+    None => match env::var("GIT_PAGER") {
+      Ok(val) => {
         let less_less = val.split('|').next().unwrap_or(&val).trim();
         let mut commands = less_less.split_whitespace().map(String::from);
-        commands.next().map(|program| SubprocessCommand {
-          arguments: commands.collect(),
-          program,
-          env: HashMap::new(),
-        })
+        (commands.next().map(PathBuf::from), commands.collect())
       }
-    })
+      Err(_) => (
+        which("delta").or_else(|_| which("diff-so-fancy")).ok(),
+        Vec::new(),
+      ),
+    },
+  };
+
+  prog.map(|program| SubprocessCommand {
+    arguments,
+    program,
+    env: HashMap::new(),
+  })
 }

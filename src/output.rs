@@ -32,8 +32,8 @@ fn stream_stdout(stream: Receiver<SadResult<String>>) -> Task {
 
 pub fn stream_output(opts: Options, stream: Receiver<SadResult<String>>) -> Task {
   match (&opts.action, &opts.printer) {
-    (Action::Fzf, _) => {
-      let (child, rx) = run_fzf(&opts, stream);
+    (Action::Fzf(fzf_p, fzf_a), _) => {
+      let (child, rx) = run_fzf(fzf_p.to_owned(), fzf_a.to_owned(), stream);
       let recv = stream_stdout(rx);
       task::spawn(async {
         if let Err(e) = try_join(child, recv).await {
