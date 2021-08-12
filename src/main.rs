@@ -31,7 +31,7 @@ fn stream_process(
   stream: Receiver<Payload>,
 ) -> (TryJoinAll<Task>, Receiver<String>) {
   let oo = Arc::new(opts);
-  let (tx, rx) = bounded::<SadResult<String>>(1);
+  let (tx, rx) = bounded::<String>(1);
 
   let handles = (1..=num_cpus::get() * 2)
     .map(|_| {
@@ -89,6 +89,6 @@ fn main() {
     //  eprintln!("{}", Colour::Red.paint(msg));
     //}
   });
-  rt.shutdown_timeout(Duration.MAX)
+  rt.shutdown_timeout(Duration::MAX)
   //exit(err.exit_code())
 }

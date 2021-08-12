@@ -1,4 +1,5 @@
 use super::argparse::Arguments;
+use super::errors::Failure;
 use super::types::{Abort, Task};
 use super::udiff::DiffRange;
 use async_channel::{bounded, Receiver};
@@ -7,6 +8,7 @@ use std::os::unix::ffi::OsStringExt;
 use std::{
   collections::{HashMap, HashSet},
   convert::TryFrom,
+  error::Error,
   ffi::OsString,
   path::PathBuf,
 };
@@ -31,33 +33,31 @@ struct DiffLine(PathBuf, DiffRange);
 impl TryFrom<&str> for DiffLine {
   type Error = Failure;
 
-  fn try_from(candidate: &str) -> SadResult<Self> {
+  fn try_from(candidate: &str) -> Result<Self, Boxed<dyn Error>> {
     let preg = "\n\n\n\n@@ -(\\d+),(\\d+) \\+(\\d+),(\\d+) @@$";
     let re = Regex::new(preg).into_sadness()?;
-    let captures = re
-      .captures(candidate)
-      .ok_or_else(|| Failure::Parse(candidate.into()))?;
+    let captures = re.captures(candidate).ok_or_else(|| Failure::Sucks(""))?;
     let before_start = captures
       .get(1)
-      .ok_or_else(|| Failure::Parse(candidate.into()))?
+      .ok_or_else(|| Failure::Sucks(""))?
       .as_str()
       .parse::<usize>()
       .into_sadness()?;
     let before_inc = captures
       .get(2)
-      .ok_or_else(|| Failure::Parse(candidate.into()))?
+      .ok_or_else(|| Failure::Sucks(""))?
       .as_str()
       .parse::<usize>()
       .into_sadness()?;
     let after_start = captures
       .get(3)
-      .ok_or_else(|| Failure::Parse(candidate.into()))?
+      .ok_or_else(|| Failure::Sucks(""))?
       .as_str()
       .parse::<usize>()
       .into_sadness()?;
     let after_inc = captures
       .get(4)
-      .ok_or_else(|| Failure::Parse(candidate.into()))?
+      .ok_or_else(|| Failure::Sucks(""))?
       .as_str()
       .parse::<usize>()
       .into_sadness()?;
@@ -72,7 +72,9 @@ impl TryFrom<&str> for DiffLine {
   }
 }
 
-async fn read_patches(path: &PathBuf) -> SadResult<HashMap<PathBuf, HashSet<DiffRange>>> {
+async fn read_patches(
+  path: &PathBuf,
+) -> Result<HashMap<PathBuf, HashSet<DiffRange>>, Boxed<dyn Error>> {
   let mut acc: HashMap<PathBuf, HashSet<DiffRange>> = HashMap::new();
   let fd = File::open(path).await.into_sadness()?;
   let mut reader = BufReader::new(fd);
@@ -126,7 +128,11 @@ fn stream_stdin(abort: Abort, use_nul: bool) -> (Task, Receiver<Payload>) {
     let delim = if use_nul { b'\0' } else { b'\n' };
     let mut reader = BufReader::new(io::stdin());
     if atty::is(atty::Stream::Stdin) {
-      abort.tx.send(Err(Failure::NilStdin)).await.expect("<CHAN>")
+      abort
+        .tx
+        .send(Err(Failure::Sucks("")))
+        .await
+        .expect("<CHAN>")
     } else {
       let mut seen = HashSet::new();
       loop {
@@ -162,7 +168,7 @@ fn stream_stdin(abort: Abort, use_nul: bool) -> (Task, Receiver<Payload>) {
 }
 
 impl Arguments {
-  pub fn stream(&self, abort: Abort) -> (Task, Receiver<SadResult<Payload>>) {
+  pub fn stream(&self, abort: Abort) -> (Task, Receiver<Payload>) {
     if let Some(preview) = &self.internal_preview {
       stream_patch(abort, preview.clone())
     } else if let Some(patch) = &self.internal_patch {

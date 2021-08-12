@@ -1,11 +1,11 @@
 use super::argparse::{Action, Engine, Options};
-use super::errors::{Failure, SadResult};
+use super::errors::Failure;
 use super::fs_pipe::{slurp, spit};
 use super::input::Payload;
 use super::udiff::{udiff, DiffRanges, Diffs, Patchable, Picker};
 use ansi_term::Colour;
 use pathdiff::diff_paths;
-use std::path::PathBuf;
+use std::{error::Error, path::PathBuf};
 
 impl Engine {
   fn replace(&self, before: &str) -> String {
@@ -25,7 +25,7 @@ impl Payload {
   }
 }
 
-async fn displace_impl(opts: &Options, payload: &Payload) -> SadResult<String> {
+async fn displace_impl(opts: &Options, payload: &Payload) -> Result<String, Boxed<dyn Error>> {
   let path = payload.path().clone();
   let slurped = slurp(&path).await?;
   let rel_path = opts
@@ -72,9 +72,9 @@ async fn displace_impl(opts: &Options, payload: &Payload) -> SadResult<String> {
   }
 }
 
-pub async fn displace(opts: &Options, payload: Payload) -> SadResult<String> {
+pub async fn displace(opts: &Options, payload: Payload) -> Result<String, Boxed<dyn Error>> {
   match displace_impl(opts, &payload).await {
     Ok(ret) => Ok(ret),
-    Err(err) => Err(Failure::Displace(format!("{:#?}", payload), Box::new(err))),
+    Err(err) => Err(Failure::Sucks(format!("{:#?}{:#?}", payload, err))),
   }
 }

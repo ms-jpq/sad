@@ -4,7 +4,6 @@ use super::types::{Abort, Task};
 use ansi_term::Colour;
 use async_channel::Receiver;
 use futures::future::try_join;
-use std::process;
 use tokio::{
   io::{self, AsyncWriteExt, BufWriter},
   select, task,
@@ -21,10 +20,6 @@ fn stream_stdout(abort: Abort, stream: Receiver<String>) -> Task {
         print = stream.recv() => {
         match print {
           Ok(val) => match stdout.write(val.as_bytes()).await {
-            Err(e) if e.kind() == std::io::ErrorKind::BrokenPipe => {
-              abort.tx.send(Failure::Interrupt).await.expect("<CHANNEL>");
-              break;
-            }
             Err(e) => {
               abort.tx.send(e).await.expect("<CHANNEL>");
               break;

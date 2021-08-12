@@ -1,3 +1,4 @@
+use super::errors::Failure;
 use std::{error::Error, fs::Metadata, io::ErrorKind, path::PathBuf};
 use tokio::fs::{metadata, read_to_string, remove_file, rename, set_permissions, write};
 use uuid::Uuid;
@@ -8,7 +9,7 @@ pub struct Slurpee {
   pub content: String,
 }
 
-pub async fn slurp(path: &PathBuf) -> Result<Slurpee, Error> {
+pub async fn slurp(path: &PathBuf) -> Result<Slurpee, Boxed<dyn Error>> {
   let meta = metadata(&path).await.into_sadness()?;
   let content = if meta.is_file() {
     match read_to_string(&path).await {
@@ -27,7 +28,7 @@ pub async fn slurp(path: &PathBuf) -> Result<Slurpee, Error> {
   Ok(slurpee)
 }
 
-pub async fn spit(canonical: &PathBuf, meta: &Metadata, text: &str) -> Result<(), Error> {
+pub async fn spit(canonical: &PathBuf, meta: &Metadata, text: &str) -> Result<(), Boxed<dyn Error>> {
   let uuid = Uuid::new_v4().to_simple().to_string();
   let mut file_name = canonical
     .file_name()

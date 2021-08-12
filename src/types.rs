@@ -1,4 +1,4 @@
-use std::{any::Any, error::Error};
+use std::error::Error;
 use tokio::{
   sync::watch::{Receiver, Sender},
   task::JoinHandle,
@@ -7,6 +7,6 @@ use tokio::{
 pub type Task = JoinHandle<()>;
 
 pub struct Abort {
-  tx: Sender<Error>,
-  rx: Receiver<Error>,
+  pub tx: Sender<Boxed<dyn Error>>,
+  pub rx: Receiver<Boxed<dyn Error>>,
 }
