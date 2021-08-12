@@ -277,7 +277,7 @@ mod tests {
           }
         })
         .collect::<Vec<_>>();
-      let imp = udiff(None, unified, "", &before, &after)
+      let imp = udiff(None, unified, &PathBuf::new().display(), &before, &after)
         .lines()
         .skip(3)
         .map(|s| {
