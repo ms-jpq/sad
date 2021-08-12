@@ -63,8 +63,6 @@ fn stream_fzf(
     .envs(&cmd.env)
     .kill_on_drop(true)
     .stdin(Stdio::piped())
-    .stdout(Stdio::inherit())
-    .stderr(Stdio::inherit())
     .spawn();
 
   let mut child = match subprocess.into_sadness() {
