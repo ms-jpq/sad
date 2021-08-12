@@ -29,7 +29,19 @@ pub struct Arguments {
   #[structopt(short, long)]
   pub exact: bool,
 
-  /// Standard regex flags: ie. -f imx, full list: https://github.com/ms-jpq/sad
+  /// Standard regex flags: lowercase on, uppercase off
+  ///
+  /// ie i => on, I => off
+  ///
+  /// i :: ignore case (works for --exact)
+  ///
+  /// m :: multiline '^', '$'
+  ///
+  /// s :: '.' match newlines
+  ///
+  /// u :: swap the meaning of '*' and '*?' (lazy & greedy matching)
+  ///
+  /// x :: ignore whitespaces and '#' comments
   #[structopt(short, long)]
   pub flags: Option<String>,
 
@@ -161,10 +173,14 @@ fn p_aho_corasick(pattern: &str, flags: &[String]) -> SadResult<AhoCorasick> {
   let mut ac = AhoCorasickBuilder::new();
   for flag in flags {
     match flag.as_str() {
-      "I" => ac.ascii_case_insensitive(false),
       "i" => ac.ascii_case_insensitive(true),
-      "m" => &mut ac,
-      _ => return Err(Failure::Simple(format!("Invaild regex flag -{}", flag))),
+      "I" => ac.ascii_case_insensitive(false),
+      _ => {
+        return Err(Failure::Simple(format!(
+          "Invaild regex flag for exact matches -{}",
+          flag
+        )))
+      }
     };
   }
   Ok(ac.build(&[pattern]))
@@ -179,8 +195,11 @@ fn p_regex(pattern: &str, flags: &[String]) -> SadResult<Regex> {
       "m" => re.multi_line(true),
       "M" => re.multi_line(false),
       "s" => re.dot_matches_new_line(true),
-      "U" => re.swap_greed(true),
+      "S" => re.dot_matches_new_line(false),
+      "u" => re.swap_greed(true),
+      "U" => re.swap_greed(false),
       "x" => re.ignore_whitespace(true),
+      "X" => re.ignore_whitespace(false),
       _ => return Err(Failure::Simple(format!("Invaild regex flag -{}", flag))),
     };
   }

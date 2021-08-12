@@ -115,14 +115,17 @@ Any `git` compatible colourizer would work. I perfer these two:
 
 By default, `sad` uses smartcase, and multiline matching.
 
-| Name | Function                                            |
-| ---- | --------------------------------------------------- |
-| `i`  | case insensitive (works for `--exact` mode as well) |
-| `I`  | case sensitive (works for `--exact` mode as well)   |
-| `m`  | multiline: `^` `$` match each line                  |
-| `M`  | singleline: `^` `$` match entire document           |
-| `s`  | allow `.` match `\n`                                |
-| `x`  | ignore whitespace and allow `#` comments            |
+For each options, lowercase toggles on and uppercase toggles off.
+
+ie. `i` => on, `I` => off
+
+| Name | Function                                                                             |
+| ---- | ------------------------------------------------------------------------------------ |
+| `i`  | case insensitive (works for `--exact` mode as well)                                  |
+| `m`  | multiline: `^` `$` match each line                                                   |
+| `s`  | allow `.` match `\n`                                                                 |
+| `u`  | swap the meaning of `*` and `*?` patterns, (normally `*` is lazy and `*?` is greedy) |
+| `x`  | ignore whitespace and allow `#` comments                                             |
 
 ## Exit Codes
 
@@ -198,7 +201,6 @@ command1 | rg --passthru --replace '<replacement>' -- '<pattern>' | command2
 ```
 
 Take note however, `rg` will `exit 1`, it it finds no matches.
-
 
 ## Thank yous
 
