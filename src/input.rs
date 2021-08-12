@@ -146,7 +146,7 @@ fn stream_stdin(use_nul: bool) -> (Task, Receiver<SadResult<Payload>>) {
       let mut buf = Vec::new();
       let n = reader.read_until(delim, &mut buf).await.into_sadness();
       match n {
-        Ok(0) => return,
+        Ok(0) => break,
         Ok(_) => {
           buf.pop();
           let path = p_path(buf);
@@ -160,7 +160,7 @@ fn stream_stdin(use_nul: bool) -> (Task, Receiver<SadResult<Payload>>) {
         }
         Err(err) => {
           tx.send(Err(err)).await.expect("<CHAN>");
-          return;
+          break;
         }
       }
     }

@@ -39,7 +39,7 @@ fn stream_process(
       task::spawn(async move {
         while let Ok(path) = stream.recv().await {
           if stp.load(Ordering::Relaxed) {
-            return;
+            break;
           } else {
             match path {
               Ok(val) => {
@@ -49,7 +49,7 @@ fn stream_process(
               Err(err) => {
                 sender.send(Err(err)).await.expect("<CHANNEL>");
                 stp.store(true, Ordering::Relaxed);
-                return;
+                break;
               }
             }
           }

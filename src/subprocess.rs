@@ -45,12 +45,12 @@ impl SubprocessCommand {
           Ok(val) => {
             if let Err(err) = stdin.write(val.as_bytes()).await.into_sadness() {
               tx.send(Err(err)).await.expect("<CHAN>");
-              return;
+              break;
             }
           }
           Err(err) => {
             tx.send(Err(err)).await.expect("<CHAN>");
-            return;
+            break;
           }
         }
       }

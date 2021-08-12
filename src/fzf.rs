@@ -85,7 +85,7 @@ fn stream_fzf(
         }
         Err(err) => {
           tix.send(err).await.expect("<CHANNEL>");
-          return;
+          break;
         }
       }
     }

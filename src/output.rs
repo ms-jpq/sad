@@ -18,12 +18,19 @@ fn stream_stdout(stream: Receiver<SadResult<String>>) -> Task {
       match print {
         Ok(val) => match stdout.write(val.as_bytes()).await {
           Err(e) if e.kind() == std::io::ErrorKind::BrokenPipe => {
-            err_exit(Failure::Interrupt).await
+            err_exit(Failure::Interrupt).await;
+            break;
           }
-          Err(e) => err_exit(e.into()).await,
+          Err(e) => {
+            err_exit(e.into()).await;
+            break;
+          }
           _ => {}
         },
-        Err(e) => err_exit(e).await,
+        Err(e) => {
+          err_exit(e).await;
+          break;
+        }
       }
     }
     stdout.shutdown().await.expect("shutdown failure")
