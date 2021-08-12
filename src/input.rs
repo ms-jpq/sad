@@ -116,7 +116,7 @@ fn stream_patch(abort: Abort, patch: PathBuf) -> (Task, Receiver<Payload>) {
             .expect("<CHAN>")
         }
       }
-      Err(err) => abort.tx(Err(err)).await.expect("<CHAN>"),
+      Err(err) => abort.tx(Err(err)).expect("<CHAN>"),
     }
   });
   (handle, rx)
@@ -130,7 +130,7 @@ fn stream_stdin(abort: Abort, use_nul: bool) -> (Task, Receiver<Payload>) {
     if atty::is(atty::Stream::Stdin) {
       abort
         .tx
-        .send(Err(Failure::Sucks("")))
+        .send(Err(Box::new(Failure::Sucks(""))))
         .await
         .expect("<CHAN>")
     } else {
@@ -155,7 +155,7 @@ fn stream_stdin(abort: Abort, use_nul: bool) -> (Task, Receiver<Payload>) {
             }
           }
           Err(err) => {
-            abort.tx.send(Err(err)).await.expect("<CHAN>");
+            abort.tx.send(Box::new(err)).expect("<CHAN>");
             break;
           }
         }
