@@ -16,6 +16,6 @@ num_cpus = "1"
 pathdiff = "0.2.0"
 regex = "1"
 structopt = "0.3"
-tokio = { version = "1.9", features = ["full"] }
+tokio = { version = "1.10", features = ["full"] }
 uuid = { version = "0.8", features = ["v4"] }
 which = "4"
