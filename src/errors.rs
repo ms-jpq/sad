@@ -10,6 +10,7 @@ use std::{
 
 #[derive(Debug)]
 pub enum Failure {
+  Gucci,
   Interrupt,
   Sucks(String),
 }

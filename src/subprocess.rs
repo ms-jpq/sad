@@ -1,5 +1,5 @@
 use super::types::{Abort, Task};
-use async_channel::{bounded, Receiver, Sender};
+use async_channel::Receiver;
 use futures::future::try_join;
 use std::{collections::HashMap, path::PathBuf, process::Stdio};
 use tokio::{
@@ -28,7 +28,7 @@ impl SubprocessCommand {
       Ok(child) => child,
       Err(err) => {
         abort.tx.send(Box::new(err)).expect("<CHAN>");
-        return task::spawn(async move {  });
+        return task::spawn(async move {});
       }
     };
 

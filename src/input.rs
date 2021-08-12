@@ -36,31 +36,29 @@ impl TryFrom<&str> for DiffLine {
   fn try_from(candidate: &str) -> Result<Self, Box<dyn Error>> {
     let preg = "\n\n\n\n@@ -(\\d+),(\\d+) \\+(\\d+),(\\d+) @@$";
     let re = Regex::new(preg)?;
-    let captures = re.captures(candidate).ok_or_else(|| Failure::Sucks(String::new()))?;
+    let captures = re
+      .captures(candidate)
+      .ok_or_else(|| Failure::Sucks(String::new()))?;
     let before_start = captures
       .get(1)
       .ok_or_else(|| Failure::Sucks(String::new()))?
       .as_str()
-      .parse::<usize>()
-      ?;
+      .parse::<usize>()?;
     let before_inc = captures
       .get(2)
       .ok_or_else(|| Failure::Sucks(String::new()))?
       .as_str()
-      .parse::<usize>()
-      ?;
+      .parse::<usize>()?;
     let after_start = captures
       .get(3)
       .ok_or_else(|| Failure::Sucks(String::new()))?
       .as_str()
-      .parse::<usize>()
-      ?;
+      .parse::<usize>()?;
     let after_inc = captures
       .get(4)
       .ok_or_else(|| Failure::Sucks(String::new()))?
       .as_str()
-      .parse::<usize>()
-      ?;
+      .parse::<usize>()?;
 
     let range = DiffRange {
       before: (before_start - 1, before_inc),

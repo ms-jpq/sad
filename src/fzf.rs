@@ -1,12 +1,11 @@
 use super::errors::Failure;
 use super::subprocess::SubprocessCommand;
 use super::types::{Abort, Task};
-use async_channel::{bounded, Receiver, Sender};
+use async_channel::Receiver;
 use futures::future::try_join;
 use std::{
   collections::HashMap,
   env,
-  error::Error,
   path::PathBuf,
   process::{ExitStatus, Stdio},
 };
@@ -24,7 +23,10 @@ async fn reset_term(abort: Abort) {
   } else if let Ok(path) = which("reset") {
     Command::new("reset").status().await
   } else {
-    abort.tx.send(Failure::Sucks(String::new())).expect("<CHANNEL>")
+    abort
+      .tx
+      .send(Failure::Sucks(String::new()))
+      .expect("<CHANNEL>")
   }
 }
 async fn process_status_code(abort: Abort, status: ExitStatus) {
@@ -53,7 +55,7 @@ fn stream_fzf(abort: Abort, cmd: &SubprocessCommand, stream: Receiver<String>) -
     Ok(child) => child,
     Err(err) => {
       abort.tx.send(Box::new(err)).expect("<CHANNEL>");
-      task::spawn(async move {  });
+      task::spawn(async move {});
     }
   };
   let mut stdin = child.stdin.take().map(BufWriter::new).expect("nil stdin");
@@ -89,7 +91,7 @@ fn stream_fzf(abort: Abort, cmd: &SubprocessCommand, stream: Receiver<String>) -
           Ok(Some(err)) => {
             let err1 = child.kill().await;
             let err2 = child.wait().await;
-            let err3 = reset_term().await;
+            let err3 = reset_term(abort).await;
             if let Err(err) = err1 {
               abort.tx.send(Box::new(err)).expect("<CHAN>")
             } else
@@ -155,5 +157,5 @@ pub fn run_fzf(abort: Abort, bin: PathBuf, args: Vec<String>, stream: Receiver<S
     arguments,
     env,
   };
-  stream_fzf(abort,&cmd, stream)
+  stream_fzf(abort, &cmd, stream)
 }

@@ -1,16 +1,11 @@
 use argparse::{Arguments, Options};
 use async_channel::{bounded, Receiver, Sender};
 use displace::displace;
+use errors::Failure;
 use futures::future::{try_join3, try_join_all, TryJoinAll};
 use input::Payload;
 use output::stream_output;
-use std::{
-  sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc,
-  },
-  time::Duration,
-};
+use std::{sync::Arc, time::Duration};
 use tokio::{runtime::Builder, select, sync::watch, task};
 use types::{Abort, Task};
 
@@ -79,7 +74,7 @@ fn main() {
     .build()
     .expect("runtime failure");
   rt.block_on(async {
-    let (tx, rx) = watch::channel(());
+    let (tx, rx) = watch::channel(Box::new(Failure::Gucci));
     let abort = Abort { tx, rx };
     let exiting = select! {
       maybe = rx.changed() => maybe,

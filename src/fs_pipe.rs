@@ -41,9 +41,7 @@ pub async fn spit(canonical: &PathBuf, meta: &Metadata, text: &str) -> Result<()
   let backup = canonical.with_file_name(file_name);
   rename(&canonical, &backup).await?;
   write(&canonical, text).await?;
-  set_permissions(&canonical, meta.permissions())
-    .await
-    ?;
+  set_permissions(&canonical, meta.permissions()).await?;
   remove_file(&backup).await?;
 
   Ok(())
