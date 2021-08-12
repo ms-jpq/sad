@@ -16,10 +16,15 @@ pub fn run_fzf(
   opts: &Options,
   stream: Receiver<SadResult<String>>,
 ) -> (Task, Receiver<SadResult<String>>) {
+  let sad = env::current_exe()
+    .or_else(|_| which("sad".to_owned()))
+    .map(|p| format!("{}", p.display()))
+    .unwrap_or("sad".to_owned());
+
   let preview_args = env::args().skip(1).collect::<Vec<_>>().join("\x04");
   let execute = format!(
     "abort+execute:{}\x04--internal-patch\x04{{+f}}\x04{}",
-    opts.name, preview_args
+    sad, preview_args
   );
   let mut arguments = vec![
     "--read0".to_owned(),
@@ -30,13 +35,13 @@ pub fn run_fzf(
     format!("--bind=double-click:{}", execute),
     format!(
       "--preview={}\x04--internal-preview\x04{{f}}\x04{}",
-      opts.name, preview_args
+      sad, preview_args
     ),
     "--preview-window=70%:wrap".to_owned(),
   ];
   arguments.extend(opts.fzf.clone().unwrap_or_default());
   let mut env = HashMap::new();
-  env.insert("SHELL".to_owned(), opts.name.clone());
+  env.insert("SHELL".to_owned(), sad);
   let cmd = SubprocessCommand {
     program: "fzf".to_owned(),
     arguments,

@@ -4,6 +4,7 @@ use super::fs_pipe::{slurp, spit};
 use super::input::Payload;
 use super::udiff::{udiff, DiffRanges, Diffs, Patchable, Picker};
 use ansi_term::Colour;
+use pathdiff::diff_paths;
 use std::path::PathBuf;
 
 impl Engine {
@@ -26,8 +27,9 @@ impl Payload {
 
 async fn displace_impl(opts: &Options, payload: &Payload) -> SadResult<String> {
   let path = payload.path().clone();
-  let name = path.display();
   let slurped = slurp(&path).await?;
+  let rel_path = diff_paths(&path, &opts.cwd).map(|p| p).unwrap_or(path);
+  let name = rel_path.display();
   let (canonical, meta, before) = (slurped.path, slurped.meta, slurped.content);
   let after = opts.engine.replace(&before);
 

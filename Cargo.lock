@@ -364,6 +364,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "pathdiff"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "877630b3de15c0b64cc52f659345724fbf6bdad9bd9566699fc53688f3c34a34"
+
+[[package]]
 name = "pin-project-lite"
 version = "0.2.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -457,7 +463,7 @@ checksum = "f497285884f3fcff424ffc933e56d7cbca511def0c9831a7f9b5f6153e3cc89b"
 
 [[package]]
 name = "sad"
-version = "0.4.8"
+version = "0.4.9"
 dependencies = [
  "aho-corasick",
  "ansi_term 0.12.1",
@@ -466,6 +472,7 @@ dependencies = [
  "difflib",
  "futures",
  "num_cpus",
+ "pathdiff",
  "regex",
  "structopt",
  "tokio",

@@ -2,7 +2,7 @@ use super::errors::{Failure, SadResult, SadnessFrom};
 use super::subprocess::SubprocessCommand;
 use aho_corasick::{AhoCorasick, AhoCorasickBuilder};
 use regex::{Regex, RegexBuilder};
-use std::{collections::HashMap, env, fs, path::PathBuf};
+use std::{collections::HashMap, env, path::PathBuf};
 use structopt::StructOpt;
 use which::which;
 
@@ -93,7 +93,7 @@ pub enum Printer {
 
 #[derive(Clone, Debug)]
 pub struct Options {
-  pub name: String,
+  pub cwd: PathBuf,
   pub action: Action,
   pub engine: Engine,
   pub fzf: Option<Vec<String>>,
@@ -103,16 +103,6 @@ pub struct Options {
 
 impl Options {
   pub fn new(args: Arguments) -> SadResult<Options> {
-    let name = env::args()
-      .next()
-      .and_then(|s| {
-        let path = PathBuf::from(s);
-        fs::canonicalize(path).ok()
-      })
-      .or_else(|| which::which("sad").ok())
-      .and_then(|p| p.to_str().map(|p| p.to_owned()))
-      .unwrap_or_else(|| "sad".to_owned());
-
     let mut flagset = p_auto_flags(&args.pattern);
     flagset.extend(
       args
@@ -148,7 +138,7 @@ impl Options {
     };
 
     Ok(Options {
-      name,
+      cwd: env::current_dir().unwrap_or(PathBuf::new()),
       action,
       engine,
       fzf,
@@ -211,9 +201,7 @@ fn p_fzf(fzf: Option<String>) -> Option<Vec<String>> {
 }
 
 fn find_exec(exe: &str) -> Option<String> {
-  which(exe)
-    .ok()
-    .and_then(|p| p.to_str().map(|p| p.to_owned()))
+  which(exe).ok().map(|p| format!("{}", p.display()))
 }
 
 fn p_pager(pager: Option<String>) -> Option<SubprocessCommand> {
