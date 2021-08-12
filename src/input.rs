@@ -158,7 +158,10 @@ fn stream_stdin(use_nul: bool) -> (Task, Receiver<SadResult<Payload>>) {
             }
           }
         }
-        Err(err) => tx.send(Err(err)).await.expect("<CHAN>"),
+        Err(err) => {
+          tx.send(Err(err)).await.expect("<CHAN>");
+          return;
+        }
       }
     }
   });

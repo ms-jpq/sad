@@ -22,7 +22,6 @@ pub enum Failure {
   IO(io::Error),
   JoinError,
   NilStdin,
-  Pager(String),
   Parse(String),
   Regex(regex::Error),
   Simple(String),
