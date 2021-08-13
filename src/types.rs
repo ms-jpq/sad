@@ -6,14 +6,14 @@ use std::{
   io::ErrorKind,
   path::PathBuf,
 };
-use tokio::sync::broadcast::Sender;
+use tokio::{sync::broadcast::Sender, task::JoinError};
 
 #[derive(Clone, Debug)]
 pub enum Fail {
   Join,
   Interrupt,
-  ArgumentError(String),
   RegexError(RegexError),
+  ArgumentError(String),
   IO(PathBuf, ErrorKind),
   BadExit(PathBuf, i32),
 }
@@ -27,3 +27,19 @@ impl Display for Fail {
 }
 
 pub type Abort = Sender<Fail>;
+
+impl From<JoinError> for Fail {
+  fn from(e: JoinError) -> Self {
+    if e.is_cancelled() {
+      Fail::Interrupt
+    } else {
+      Fail::Join
+    }
+  }
+}
+
+impl From<RegexError> for Fail {
+  fn from(e: RegexError) -> Self {
+    Fail::RegexError(e)
+  }
+}
