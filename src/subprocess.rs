@@ -19,11 +19,11 @@ pub struct SubprocessCommand {
 pub fn stream_subprocess(
   abort: &Abort,
   cmd: SubprocessCommand,
-  stream: Receiver<String>,
+  mut stream: Receiver<String>,
 ) -> JoinHandle<()> {
   let abort = abort.clone();
 
-  spawn(async {
+  spawn(async move {
     let subprocess = Command::new(&cmd.prog)
       .kill_on_drop(true)
       .args(&cmd.args)
@@ -35,7 +35,7 @@ pub fn stream_subprocess(
       Err(err) => {
         let _ = abort.send(Fail::IO(cmd.prog, err.kind()));
       }
-      Ok(child) => {
+      Ok(mut child) => {
         let mut stdin = child.stdin.take().map(BufWriter::new).expect("nil stdin");
 
         let abort_1 = abort.clone();
@@ -49,7 +49,7 @@ pub fn stream_subprocess(
                 match print {
                   Some(val) => {
                     if let Err(err) = stdin.write(val.as_bytes()).await {
-                      let _ = abort_1.send(Fail::IO(p1, err.kind()));
+                      let _ = abort_1.send(Fail::IO(p1.clone(), err.kind()));
                       break;
                     }
                   }
@@ -73,7 +73,7 @@ pub fn stream_subprocess(
 
         if let Err(err) = try_join(handle_child, handle_in).await {
           if !err.is_cancelled() {
-            let _ = abort_1.send(Fail::Join);
+            let _ = abort.send(Fail::Join);
           }
         }
       }

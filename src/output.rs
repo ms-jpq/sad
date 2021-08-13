@@ -10,7 +10,7 @@ use tokio::{
   task::{spawn, JoinHandle},
 };
 
-fn stream_stdout(abort: &Abort, stream: Receiver<String>) -> JoinHandle<()> {
+fn stream_stdout(abort: &Abort, mut stream: Receiver<String>) -> JoinHandle<()> {
   let abort = abort.clone();
   let mut stdout = BufWriter::new(io::stdout());
 

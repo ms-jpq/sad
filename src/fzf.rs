@@ -35,8 +35,9 @@ async fn reset_term() -> Result<(), Fail> {
   Err(Fail::IO(PathBuf::from("reset"), ErrorKind::NotFound))
 }
 
-fn run_fzf(abort: &Abort, cmd: SubprocessCommand, stream: Receiver<String>) -> JoinHandle<()> {
+fn run_fzf(abort: &Abort, cmd: SubprocessCommand, mut stream: Receiver<String>) -> JoinHandle<()> {
   let abort = abort.clone();
+
   spawn(async move {
     let subprocess = Command::new(&cmd.prog)
       .kill_on_drop(true)
@@ -49,12 +50,13 @@ fn run_fzf(abort: &Abort, cmd: SubprocessCommand, stream: Receiver<String>) -> J
       Err(err) => {
         let _ = abort.send(Fail::IO(cmd.prog, err.kind()));
       }
-      Ok(child) => {
+      Ok(mut child) => {
         let mut stdin = child.stdin.take().map(BufWriter::new).expect("nil stdin");
 
+        let abort_1 = abort.clone();
         let p1 = cmd.prog.clone();
         let handle_in = spawn(async move {
-          let mut on_abort = abort.subscribe();
+          let mut on_abort = abort_1.subscribe();
           loop {
             select! {
               _ = on_abort.recv() => break,
@@ -62,7 +64,7 @@ fn run_fzf(abort: &Abort, cmd: SubprocessCommand, stream: Receiver<String>) -> J
                 match print {
                   Some(val) => {
                     if let Err(err) = stdin.write(val.as_bytes()).await {
-                      let _ = abort.send(Fail::IO(p1,err.kind()));
+                      let _ = abort_1.send(Fail::IO(p1.clone(),err.kind()));
                       break;
                     }
                   }
@@ -72,13 +74,14 @@ fn run_fzf(abort: &Abort, cmd: SubprocessCommand, stream: Receiver<String>) -> J
             }
           }
           if let Err(err) = stdin.shutdown().await {
-            let _ = abort.send(Fail::IO(p1, err.kind()));
+            let _ = abort_1.send(Fail::IO(p1, err.kind()));
           }
         });
 
+        let abort_2 = abort.clone();
         let p2 = cmd.prog.clone();
         let handle_child = spawn(async move {
-          let mut on_abort = abort.subscribe();
+          let mut on_abort = abort_2.subscribe();
           select! {
             lhs = child.wait() => {
               match lhs {
@@ -86,29 +89,29 @@ fn run_fzf(abort: &Abort, cmd: SubprocessCommand, stream: Receiver<String>) -> J
                   match status.code() {
                     Some(0) | Some(1) | None => (),
                     Some(130) => {
-                      let _ = abort.send(Fail::Interrupt);
+                      let _ = abort_2.send(Fail::Interrupt);
                     }
                     Some(c) => {
-                      let _ = abort.send(Fail::BadExit(p2, c));
+                      let _ = abort_2.send(Fail::BadExit(p2, c));
                       if let Err(err) = reset_term().await {
-                        let _ = abort.send(err);
+                        let _ = abort_2.send(err);
                       }
                     }
                   }
                 }
                 Err(err) => {
-                  let _ = abort.send(Fail::IO(p2, err.kind()));
+                  let _ = abort_2.send(Fail::IO(p2, err.kind()));
                 }
               }
             },
             _ = on_abort.recv() => {
               match child.kill().await {
                 Err(err) => {
-                  let _ = abort.send(Fail::IO(p2, err.kind()));
+                  let _ = abort_2.send(Fail::IO(p2, err.kind()));
                 },
                 _ => {
                   if let Err(err) = reset_term().await {
-                    let _ = abort.send(err);
+                    let _ = abort_2.send(err);
                   }
                 }
               }
@@ -155,7 +158,7 @@ pub fn stream_fzf(
     ),
     "--preview-window=70%:wrap".to_owned(),
   ];
-  arguments.extend(args);
+  arguments.extend(args.clone());
   let mut env = HashMap::new();
   env.insert("SHELL".to_owned(), sad);
   let cmd = SubprocessCommand {

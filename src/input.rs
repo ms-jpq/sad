@@ -29,32 +29,32 @@ fn p_line(line: String) -> Result<DiffLine, Fail> {
   let f = Fail::ArgumentError(String::new());
   let preg = "\n\n\n\n@@ -(\\d+),(\\d+) \\+(\\d+),(\\d+) @@$";
   let re = Regex::new(preg).map_err(|e| Fail::RegexError(e))?;
-  let captures = re.captures(&line).ok_or_else(|| f)?;
+  let captures = re.captures(&line).ok_or_else(|| f.clone())?;
 
   let before_start = captures
     .get(1)
-    .ok_or_else(|| f)?
+    .ok_or_else(|| f.clone())?
     .as_str()
     .parse::<usize>()
-    .map_err(|_| f)?;
+    .map_err(|_| f.clone())?;
   let before_inc = captures
     .get(2)
-    .ok_or_else(|| f)?
+    .ok_or_else(|| f.clone())?
     .as_str()
     .parse::<usize>()
-    .map_err(|_| f)?;
+    .map_err(|_| f.clone())?;
   let after_start = captures
     .get(3)
-    .ok_or_else(|| f)?
+    .ok_or_else(|| f.clone())?
     .as_str()
     .parse::<usize>()
-    .map_err(|_| f)?;
+    .map_err(|_| f.clone())?;
   let after_inc = captures
     .get(4)
-    .ok_or_else(|| f)?
+    .ok_or_else(|| f.clone())?
     .as_str()
     .parse::<usize>()
-    .map_err(|_| f)?;
+    .map_err(|_| f.clone())?;
 
   let range = DiffRange {
     before: (before_start - 1, before_inc),

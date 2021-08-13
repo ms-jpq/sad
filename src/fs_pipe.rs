@@ -51,11 +51,12 @@ pub async fn spit(canonical: &PathBuf, meta: &Metadata, text: &str) -> Result<()
     .open(&tmp)
     .await
     .map_err(|e| Fail::IO(tmp.clone(), e.kind()))?;
-
   fd.set_permissions(meta.permissions())
     .await
     .map_err(|e| Fail::IO(tmp.clone(), e.kind()))?;
-  fd.write_all(text.as_bytes());
+  fd.write_all(text.as_bytes())
+    .await
+    .map_err(|e| Fail::IO(tmp.clone(), e.kind()))?;
 
   rename(&tmp, &canonical)
     .await
