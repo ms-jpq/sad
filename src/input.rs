@@ -43,23 +43,26 @@ impl TryFrom<&str> for DiffLine {
       .get(1)
       .ok_or_else(|| Fail::ArgumentError(String::new()))?
       .as_str()
-      .parse().map_err(|_| Failure::ArgumentError(String:new()))?;
+      .parse()
+      .map_err(|_| Failure::ArgumentError(String: new()))?;
     let before_inc = captures
       .get(2)
       .ok_or_else(|| Fail::ArgumentError(String::new()))?
       .as_str()
-      .parse().map_err(|_| Failure::ArgumentError(String:new()))?;
+      .parse()
+      .map_err(|_| Failure::ArgumentError(String: new()))?;
     let after_start = captures
       .get(3)
       .ok_or_else(|| Fail::ArgumentError(String::new()))?
       .as_str()
-      .parse().map_err(|_| Failure::ArgumentError(String:new()))?;
+      .parse()
+      .map_err(|_| Failure::ArgumentError(String: new()))?;
     let after_inc = captures
       .get(4)
       .ok_or_else(|| Fail::ArgumentError(String::new()))?
       .as_str()
-      .parse().map_err(|_| Failure::ArgumentError(String:new()))?;
-
+      .parse()
+      .map_err(|_| Failure::ArgumentError(String: new()))?;
 
     let range = DiffRange {
       before: (before_start - 1, before_inc),

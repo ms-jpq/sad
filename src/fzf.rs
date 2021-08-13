@@ -90,11 +90,11 @@ fn run_fzf(abort: &Abort, cmd: &SubprocessCommand, stream: Receiver<String>) -> 
             _ = on_abort.recv() => {
               match child.kill().await {
                 Err(err) => {
-                  abort.send(err);
+                  let _ = abort.send(err);
                 },
                 _ => {
                   if let Err(err) = reset_term().await {
-                    abort.send(err)
+                    let _ = abort.send(err)
                   }
                 }
               }
@@ -102,11 +102,11 @@ fn run_fzf(abort: &Abort, cmd: &SubprocessCommand, stream: Receiver<String>) -> 
           }
         });
 
-        spawn(async move {
-          if let Err(err) = try_join(handle_child, handle_in).await {
-            abort.send(Box::new(err));
+        if let Err(err) = try_join(handle_child, handle_in).await {
+          if !err.is_cancelled() {
+            let _ = abort.send(Fail::Join);
           }
-        })
+        }
       }
     }
   })
