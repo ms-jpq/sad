@@ -20,7 +20,7 @@ fn stream_stdout(abort: &Abort, stream: Receiver<String>) -> JoinHandle<()> {
           match print {
             Ok(val) => match stdout.write(val.as_bytes()).await {
               Err(err) => {
-                abort.send(Box::new(err));
+                let _ = abort.send(Box::new(err));
                 break;
               }
               _ => ()

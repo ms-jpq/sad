@@ -31,7 +31,7 @@ pub fn stream_subprocess(
   spawn(async move {
     match subprocess {
       Err(err) => {
-        abort.send(Box::new(err));
+        let _ = abort.send(Box::new(err));
       }
       Ok(child) => {
         let mut stdin = child.stdin.take().map(BufWriter::new).expect("nil stdin");
@@ -45,7 +45,7 @@ pub fn stream_subprocess(
                 match print {
                   Some(val) => {
                     if let Err(err) = stdin.write(val.as_bytes()).await {
-                      abort.send(Box::new(err));
+                      let _ = abort.send(Box::new(err));
                       break;
                     }
                   }
@@ -55,18 +55,18 @@ pub fn stream_subprocess(
             }
           }
           if let Err(err) = stdin.shutdown().await {
-            abort.send(Box::new(err));
+            let _ = abort.send(Box::new(err));
           }
         });
 
         let handle_child = spawn(async move {
           if let Err(err) = child.wait().await {
-            abort.send(Box::new(err));
+            let _ = abort.send(Box::new(err));
           }
         });
 
         if let Err(err) = try_join(handle_child, handle_in).await {
-          abort.send(Box::new(err));
+          let _ = abort.send(Box::new(err));
         }
       }
     }

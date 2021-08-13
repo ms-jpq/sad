@@ -39,7 +39,7 @@ fn run_fzf(abort: &Abort, cmd: &SubprocessCommand, stream: Receiver<String>) -> 
   spawn(async move {
     match subprocess {
       Err(err) => {
-        abort.send(Box::new(err));
+        let _ = abort.send(Box::new(err));
       }
       Ok(child) => {
         let mut stdin = child.stdin.take().map(BufWriter::new).expect("nil stdin");
@@ -53,7 +53,7 @@ fn run_fzf(abort: &Abort, cmd: &SubprocessCommand, stream: Receiver<String>) -> 
                 match print {
                   Some(val) => {
                     if let Err(err) = stdin.write(val.as_bytes()).await {
-                      abort.send(Box::new(err));
+                      let _ = abort.send(Box::new(err));
                       break;
                     }
                   }
@@ -63,7 +63,7 @@ fn run_fzf(abort: &Abort, cmd: &SubprocessCommand, stream: Receiver<String>) -> 
             }
           }
           if let Err(err) = stdin.shutdown().await {
-            abort.send(Box::new(err));
+            let _ = abort.send(Box::new(err));
           }
         });
 
@@ -76,29 +76,29 @@ fn run_fzf(abort: &Abort, cmd: &SubprocessCommand, stream: Receiver<String>) -> 
                   match status.code() {
                     Some(0) | Some(1) | None => (),
                     Some(130) => {
-                      abort.send(Box::new(Failure::Interrupt));
+                      let _ = abort.send(Box::new(Failure::Interrupt));
                     }
                     Some(c) => {
-                      abort.send(Box::new(Failure::Sucks(format!("Error exit - {}", c))));
+                      let _ = abort.send(Box::new(Failure::Sucks(format!("Error exit - {}", c))));
                       if let Err(err) = reset_term().await {
-                        abort.send(err)
+                        let _ = abort.send(err)
                       }
                     }
                   }
                 }
                 Err(err) => {
-                  abort.send(Box::new(err));
+                  let _ = abort.send(Box::new(err));
                 }
               }
             },
             _ = on_abort.recv() => {
               match child.kill().await {
                 Err(err) => {
-                  abort.send(err);
+                  let _ = abort.send(err);
                 },
                 _ => {
                   if let Err(err) = reset_term().await {
-                    abort.send(err)
+                    let _ = abort.send(err)
                   }
                 }
               }
@@ -108,7 +108,7 @@ fn run_fzf(abort: &Abort, cmd: &SubprocessCommand, stream: Receiver<String>) -> 
 
         spawn(async move {
           if let Err(err) = try_join(handle_child, handle_in).await {
-            abort.send(Box::new(err));
+            let _ = abort.send(Box::new(err));
           }
         })
       }

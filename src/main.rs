@@ -52,7 +52,7 @@ fn stream_trans(
                 Ok(p) => {
                   let displaced = displace(&opts, payload).await;
                   if let Err(err) = tx.send(displaced).await {
-                    abort.send(Box::new(err));
+                    let _ = abort.send(Box::new(err));
                   }
                 },
                 _ => break
@@ -67,7 +67,7 @@ fn stream_trans(
   let handle = spawn(async move {
     match try_join_all(handles).await {
       Err(err) => {
-        abort.send(Box::new(err));
+        let _ = abort.send(Box::new(err));
       }
       _ => (),
     }
@@ -103,6 +103,7 @@ fn main() {
     }
   });
   rt.shutdown_timeout(Duration::MAX);
+
   if let Some(err) = status {
     eprintln!("{}", Colour::Red.paint(format!("{}", err)));
     exit(1)

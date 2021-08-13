@@ -111,14 +111,14 @@ fn stream_patch(abort: &Abort, patch: PathBuf) -> (JoinHandle<()>, Receiver<Payl
         for patch in patches {
           match tx.send(Payload::Piecewise(patch.0, patch.1)).await {
             Err(err) => {
-              abort.send(Box::new(err));
+              let _ = abort.send(Box::new(err));
               break;
             }
             _ => (),
           }
         }
       }
-      Err(err) => abort.send(Box::new(err)),
+      Err(err) => let _ = abort.send(Box::new(err)),
     }
   });
   (handle, rx)
@@ -129,7 +129,7 @@ fn stream_stdin(abort: &Abort, use_nul: bool) -> (JoinHandle<()>, Receiver<Paylo
 
   let handle = spawn(async move {
     if atty::is(atty::Stream::Stdin) {
-      abort.send(Box::new(Failure::Sucks(String::new())));
+      let _ = abort.send(Box::new(Failure::Sucks(String::new())));
     } else {
       let delim = if use_nul { b'\0' } else { b'\n' };
       let mut on_abort = abort.subscribe();
@@ -154,7 +154,7 @@ fn stream_stdin(abort: &Abort, use_nul: bool) -> (JoinHandle<()>, Receiver<Paylo
                 }
               }
               Err(err) => {
-                abort.send(Box::new(err));
+                let _ = abort.send(Box::new(err));
                 break;
               }
             }
