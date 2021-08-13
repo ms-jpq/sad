@@ -150,11 +150,17 @@ fn stream_stdin(abort: &Abort, use_nul: bool) -> (JoinHandle<()>, Receiver<Paylo
               Ok(_) => {
                 buf.pop();
                 let path = PathBuf::from(OsString::from_vec(buf));
-                if let Ok(canonical) = canonicalize(&path).await {
-                  if seen.insert(canonical.clone()) &&
-                     tx.send(Payload::Entire(canonical)).await.is_err() {
-                      let _ = abort.send(Fail::Join);
-                      break
+                match canonicalize(&path).await {
+                  Ok(canonical) => {
+                    if seen.insert(canonical.clone()) &&
+                       tx.send(Payload::Entire(canonical)).await.is_err() {
+                        let _ = abort.send(Fail::Join);
+                        break
+                    }
+                  },
+                  Err(err) => {
+                    let _ = abort.send(Fail::IO(path, err.kind()));
+                    break;
                   }
                 }
               }
