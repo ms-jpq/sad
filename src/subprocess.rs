@@ -18,17 +18,19 @@ pub struct SubprocessCommand {
 
 pub fn stream_subprocess(
   abort: &Abort,
-  cmd: &SubprocessCommand,
+  cmd: SubprocessCommand,
   stream: Receiver<String>,
 ) -> JoinHandle<()> {
-  let subprocess = Command::new(&cmd.prog)
-    .kill_on_drop(true)
-    .args(&cmd.args)
-    .envs(&cmd.env)
-    .stdin(Stdio::piped())
-    .spawn();
+  let abort = abort.clone();
 
-  spawn(async move {
+  spawn(async {
+    let subprocess = Command::new(&cmd.prog)
+      .kill_on_drop(true)
+      .args(&cmd.args)
+      .envs(&cmd.env)
+      .stdin(Stdio::piped())
+      .spawn();
+
     match subprocess {
       Err(err) => {
         let _ = abort.send(Fail::IO(cmd.prog, err.kind()));
@@ -37,6 +39,7 @@ pub fn stream_subprocess(
         let mut stdin = child.stdin.take().map(BufWriter::new).expect("nil stdin");
 
         let abort_1 = abort.clone();
+        let p1 = cmd.prog.clone();
         let handle_in = spawn(async move {
           let mut on_abort = abort_1.subscribe();
           loop {
@@ -46,7 +49,7 @@ pub fn stream_subprocess(
                 match print {
                   Some(val) => {
                     if let Err(err) = stdin.write(val.as_bytes()).await {
-                      let _ = abort_1.send(Fail::IO(cmd.prog.clone(), err.kind()));
+                      let _ = abort_1.send(Fail::IO(p1, err.kind()));
                       break;
                     }
                   }
@@ -56,14 +59,15 @@ pub fn stream_subprocess(
             }
           }
           if let Err(err) = stdin.shutdown().await {
-            let _ = abort_1.send(Fail::IO(cmd.prog.clone(), err.kind()));
+            let _ = abort_1.send(Fail::IO(p1, err.kind()));
           }
         });
 
+        let p2 = cmd.prog.clone();
         let abort_2 = abort.clone();
         let handle_child = spawn(async move {
           if let Err(err) = child.wait().await {
-            let _ = abort_2.send(Fail::IO(cmd.prog.clone(), err.kind()));
+            let _ = abort_2.send(Fail::IO(p2, err.kind()));
           }
         });
 

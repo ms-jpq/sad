@@ -1,9 +1,10 @@
 use super::argparse::{Action, Options, Printer};
 use super::fzf::stream_fzf;
 use super::subprocess::stream_subprocess;
-use super::types::Abort;
+use super::types::{Abort, Fail};
 use tokio::{
   io::{self, AsyncWriteExt, BufWriter},
+  path::PathBuf,
   select,
   sync::mpsc::Receiver,
   task::{spawn, JoinHandle},
@@ -18,9 +19,9 @@ fn stream_stdout(abort: &Abort, stream: Receiver<String>) -> JoinHandle<()> {
         _ = on_abort.recv() => break ,
         print = stream.recv() => {
           match print {
-            Ok(val) => match stdout.write(val.as_bytes()).await {
+            Some(val) => match stdout.write(val.as_bytes()).await {
               Err(err) => {
-                let _ = abort.send(Box::new(err));
+                let _ = abort.send(Fail::IO(PathBuf::from("/dev/stdout") ,err.kind()));
                 break;
               }
               _ => ()
@@ -34,9 +35,9 @@ fn stream_stdout(abort: &Abort, stream: Receiver<String>) -> JoinHandle<()> {
 }
 
 pub fn stream_output(abort: &Abort, opts: Options, stream: Receiver<String>) -> JoinHandle<()> {
-  match (&opts.action, &opts.printer) {
+  match (&opts.action, opts.printer) {
     (Action::Fzf(fzf_p, fzf_a), _) => stream_fzf(abort, fzf_p.to_owned(), fzf_a.to_owned(), stream),
-    (_, Printer::Pager(cmd)) => stream_subprocess(abort, &cmd, stream),
+    (_, Printer::Pager(cmd)) => stream_subprocess(abort, cmd, stream),
     (_, Printer::Stdout) => stream_stdout(abort, stream),
   }
 }
