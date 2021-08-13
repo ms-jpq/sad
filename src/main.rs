@@ -4,7 +4,7 @@ use displace::displace;
 use futures::future::{try_join3, try_join_all};
 use input::{stream_input, Payload};
 use output::stream_output;
-use std::{sync::Arc, time::Duration};
+use std::{sync::Arc, time::Duration, process::exit, error::Error};
 use tokio::{
   runtime::Builder,
   select,
@@ -15,7 +15,6 @@ use tokio::{
   task::{spawn, JoinHandle},
 };
 use types::Abort;
-use types::Failure;
 
 mod argparse;
 mod displace;

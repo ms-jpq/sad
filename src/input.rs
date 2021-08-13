@@ -75,7 +75,7 @@ async fn read_patches(
 ) -> Result<HashMap<PathBuf, HashSet<DiffRange>>, Box<dyn Error>> {
   let fd = File::open(path).await?;
   let mut reader = BufReader::new(fd);
-  let mut acc = HashMap::new::<PathBuf, HashSet<DiffRange>>();
+  let mut acc = HashMap::new();
 
   loop {
     let mut buf = Vec::new();

@@ -2,7 +2,6 @@ use super::argparse::{Action, Options, Printer};
 use super::fzf::stream_fzf;
 use super::subprocess::stream_subprocess;
 use super::types::Abort;
-use std::sync::Arc;
 use tokio::{
   io::{self, AsyncWriteExt, BufWriter},
   select,

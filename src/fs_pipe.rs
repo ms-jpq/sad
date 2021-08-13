@@ -1,4 +1,4 @@
-use super::errors::Failure;
+use super::types::Failure;
 use std::{error::Error, fs::Metadata, io::ErrorKind, path::PathBuf};
 use tokio::fs::{metadata, read_to_string, remove_file, rename, set_permissions, write};
 use uuid::Uuid;

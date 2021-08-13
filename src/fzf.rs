@@ -6,7 +6,7 @@ use std::{
   env,
   error::Error,
   path::PathBuf,
-  process::{ExitStatus, Stdio},
+  process:: Stdio,
 };
 use tokio::{
   io::{self, AsyncWriteExt, BufWriter},
@@ -17,7 +17,7 @@ use tokio::{
 };
 use which::which;
 
-async fn reset_term(abort: &Abort) -> Result<(), Error> {
+async fn reset_term() -> Result<(), dyn Error> {
   try_join(io::stdout().flush(), io::stderr()).await?;
   if let Ok(path) = which("tput") {
     Command::new("tput").arg("reset").status().await?
@@ -28,7 +28,7 @@ async fn reset_term(abort: &Abort) -> Result<(), Error> {
   }
 }
 
-fn stream_fzf(abort: &Abort, cmd: &SubprocessCommand, stream: Receiver<String>) -> Task {
+fn run_fzf(abort: &Abort, cmd: &SubprocessCommand, stream: Receiver<String>) -> Task {
   let subprocess = Command::new(&cmd.program)
     .kill_on_drop(true)
     .args(&cmd.arguments)
@@ -153,5 +153,5 @@ pub fn stream_fzf(
     arguments,
     env,
   };
-  stream_fzf(abort, &cmd, stream)
+  run_fzf(abort, &cmd, stream)
 }

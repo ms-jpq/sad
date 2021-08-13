@@ -1,4 +1,4 @@
-use super::errors::Failure;
+use super::types::Failure;
 use super::subprocess::SubprocessCommand;
 use aho_corasick::{AhoCorasick, AhoCorasickBuilder};
 use regex::{Regex, RegexBuilder};
