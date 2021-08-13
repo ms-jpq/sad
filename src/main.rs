@@ -119,7 +119,7 @@ fn main() {
       }
     }
   });
-  rt.shutdown_timeout(Duration::from_secs(9001));
+  drop(rt);
 
   match status {
     Some(Fail::Interrupt) => exit(130),
