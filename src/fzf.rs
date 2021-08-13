@@ -39,7 +39,11 @@ async fn reset_term() -> Result<(), Fail> {
   Err(Fail::IO(PathBuf::from("reset"), ErrorKind::NotFound))
 }
 
-fn run_fzf(abort: &Arc<Abort>, cmd: SubprocessCommand, mut stream: Receiver<String>) -> JoinHandle<()> {
+fn run_fzf(
+  abort: &Arc<Abort>,
+  cmd: SubprocessCommand,
+  mut stream: Receiver<String>,
+) -> JoinHandle<()> {
   let abort = abort.clone();
 
   spawn(async move {

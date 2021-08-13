@@ -2,7 +2,7 @@ use super::argparse::{Action, Options, Printer};
 use super::fzf::stream_fzf;
 use super::subprocess::stream_subprocess;
 use super::types::{Abort, Fail};
-use std::{sync:: Arc,path::PathBuf};
+use std::{path::PathBuf, sync::Arc};
 use tokio::{
   io::{self, AsyncWriteExt, BufWriter},
   select,
@@ -41,7 +41,11 @@ fn stream_stdout(abort: &Arc<Abort>, mut stream: Receiver<String>) -> JoinHandle
   })
 }
 
-pub fn stream_output(abort: &Arc<Abort>, opts: &Options, stream: Receiver<String>) -> JoinHandle<()> {
+pub fn stream_output(
+  abort: &Arc<Abort>,
+  opts: &Options,
+  stream: Receiver<String>,
+) -> JoinHandle<()> {
   match (&opts.action, &opts.printer) {
     (Action::Fzf(fzf_p, fzf_a), _) => stream_fzf(abort, fzf_p.to_owned(), fzf_a.to_owned(), stream),
     (_, Printer::Pager(cmd)) => stream_subprocess(abort, cmd.clone(), stream),

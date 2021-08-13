@@ -95,13 +95,13 @@ fn main() {
     .expect("runtime failure");
 
   let errors = rt.block_on(async {
-    let abort = Arc::new( Abort::new());
+    let abort = Arc::new(Abort::new());
     if let Err(err) = run(&abort, cpus).await {
-      let mut errs = abort.fin();
+      let mut errs = abort.fin().await;
       errs.push(err);
       errs
     } else {
-      abort.fin()
+      abort.fin().await
     }
   });
 

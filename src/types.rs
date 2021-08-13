@@ -58,8 +58,8 @@ impl Abort {
     }
   }
 
-  pub fn fin(self: Self) -> Vec<Fail> {
-    self.errors.into_inner()
+  pub async fn fin(self: &Self) -> Vec<Fail> {
+    self.errors.lock().await.to_vec()
   }
 
   pub async fn send(self: &Self, fail: Fail) {

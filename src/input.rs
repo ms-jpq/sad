@@ -6,10 +6,10 @@ use regex::Regex;
 use std::{
   collections::{HashMap, HashSet},
   ffi::OsString,
-  sync::Arc,
   io::ErrorKind,
   os::unix::ffi::OsStringExt,
   path::{Path, PathBuf},
+  sync::Arc,
 };
 use tokio::{
   fs::{canonicalize, File},

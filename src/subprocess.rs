@@ -21,7 +21,7 @@ pub fn stream_subprocess(
   cmd: SubprocessCommand,
   mut stream: Receiver<String>,
 ) -> JoinHandle<()> {
-  let abort= abort.clone();
+  let abort = abort.clone();
 
   spawn(async move {
     let subprocess = Command::new(&cmd.prog)
