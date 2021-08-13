@@ -6,6 +6,7 @@ use regex::Regex;
 use std::{
   collections::{HashMap, HashSet},
   ffi::OsString,
+  io::ErrorKind,
   os::unix::ffi::OsStringExt,
   path::PathBuf,
 };
@@ -22,16 +23,13 @@ pub enum Payload {
   Piecewise(PathBuf, HashSet<DiffRange>),
 }
 
-
 struct DiffLine(PathBuf, DiffRange);
 
 fn p_line(line: String) -> Result<Self, Fail> {
   let f = Fail::ArgumentError(String::new());
   let preg = "\n\n\n\n@@ -(\\d+),(\\d+) \\+(\\d+),(\\d+) @@$";
   let re = Regex::new(preg).map_err(|e| Fail::RegexError(e))?;
-  let captures = re
-    .captures(&line)
-    .ok_or_else(|| f)?;
+  let captures = re.captures(&line).ok_or_else(|| f)?;
 
   let before_start = captures
     .get(1)
@@ -62,26 +60,25 @@ fn p_line(line: String) -> Result<Self, Fail> {
     before: (before_start - 1, before_inc),
     after: (after_start - 1, after_inc),
   };
-  let path = PathBuf::from( String::from( re.replace(&line, "")));
+  let path = PathBuf::from(String::from(re.replace(&line, "")));
   Ok(DiffLine(path, range))
 }
-
 
 async fn read_patches(path: &PathBuf) -> Result<HashMap<PathBuf, HashSet<DiffRange>>, Fail> {
   let fd = File::open(path)
     .await
-    .map_err(|e| Fail::IO(PathBuf::from("/dev/stdin"), e.kind()))?;
+    .map_err(|e| Fail::IO(path.clone(), e.kind()))?;
   let mut reader = BufReader::new(fd);
   let mut acc = HashMap::new();
 
   loop {
     let mut buf = Vec::new();
-    let n = reader.read_until(b'\0', &mut buf).await?;
-    match n {
-      0 => break,
-      _ => {
+    match reader.read_until(b'\0', &mut buf).await {
+      Ok(0) => break,
+      Ok(_) => {
         buf.pop();
-        let line = String::from_utf8(buf)?;
+        let line =
+          String::from_utf8(buf).map_err(|_| Fail::IO(path.clone(), ErrorKind::InvalidData))?;
         let patch = p_line(line)?;
         match acc.get_mut(&patch.0) {
           Some(ranges) => {
@@ -93,6 +90,10 @@ async fn read_patches(path: &PathBuf) -> Result<HashMap<PathBuf, HashSet<DiffRan
             acc.insert(patch.0, ranges);
           }
         }
+      }
+      Err(err) => {
+        let _ = abort.send(Fail::IO(path.clone(), err.kind()));
+        break;
       }
     }
   }

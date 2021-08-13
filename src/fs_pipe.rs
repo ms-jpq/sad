@@ -1,5 +1,5 @@
 use super::types::Fail;
-use std::{error::Error, fs::Metadata, io::ErrorKind, path::PathBuf};
+use std::{fs::Metadata, io::ErrorKind, path::PathBuf};
 use tokio::fs::{metadata, read_to_string, remove_file, rename, set_permissions, write};
 use uuid::Uuid;
 
@@ -10,7 +10,9 @@ pub struct Slurpee {
 }
 
 pub async fn slurp(path: &PathBuf) -> Result<Slurpee, Fail> {
-  let meta = metadata(&path).await?;
+  let meta = metadata(&path)
+    .await
+    .map_err(|e| Fail::IO(path.clone(), e.kind()))?;
   let content = if meta.is_file() {
     match read_to_string(&path).await {
       Ok(text) => text,

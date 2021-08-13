@@ -71,4 +71,3 @@ pub async fn displace(opts: &Options, payload: Payload) -> Result<String, Fail> 
     Ok(print)
   }
 }
-

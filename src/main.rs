@@ -5,7 +5,7 @@ use displace::displace;
 use futures::future::{try_join3, try_join_all};
 use input::{stream_input, Payload};
 use output::stream_output;
-use std::{error::Error, process::exit, sync::Arc, time::Duration};
+use std::{process::exit, sync::Arc, time::Duration};
 use tokio::{
   runtime::Builder,
   select,
@@ -77,7 +77,7 @@ fn stream_trans(
     match try_join_all(handles).await {
       Err(err) => {
         if !err.is_cancelled() {
-        let _ = abort.send(Fail::Join);
+          let _ = abort.send(Fail::Join);
         }
       }
       _ => (),

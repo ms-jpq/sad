@@ -13,19 +13,26 @@ use which::which;
 
 async fn reset_term() -> Result<(), Fail> {
   if let Ok(path) = which("tput") {
-    Command::new(&path)
+    let status = Command::new(&path)
       .arg("reset")
       .status()
       .await
-      .map_err(|e| Fail::IO(path, e.kind()))?
-  } else if let Ok(path) = which("reset") {
-    Command::new(&path)
+      .map_err(|e| Fail::IO(path, e.kind()))?;
+
+    if status.success() {
+      return Ok(());
+    }
+  }
+  if let Ok(path) = which("reset") {
+    let status = Command::new(&path)
       .status()
       .await
-      .map_err(|e| Fail::IO(path, e.kind()))?
-  } else {
-    Err(Fail::IO(PathBuf("reset"), ErrorKind::NotFound))
+      .map_err(|e| Fail::IO(path, e.kind()))?;
+    if status.success() {
+      return Ok(());
+    }
   }
+  Err(Fail::IO(PathBuf("reset"), ErrorKind::NotFound))
 }
 
 fn run_fzf(abort: &Abort, cmd: SubprocessCommand, stream: Receiver<String>) -> JoinHandle<()> {
@@ -45,7 +52,7 @@ fn run_fzf(abort: &Abort, cmd: SubprocessCommand, stream: Receiver<String>) -> J
       Ok(child) => {
         let mut stdin = child.stdin.take().map(BufWriter::new).expect("nil stdin");
 
-        let p1 = cmd.prog.clone():
+        let p1 = cmd.prog.clone();
         let handle_in = spawn(async move {
           let mut on_abort = abort.subscribe();
           loop {
