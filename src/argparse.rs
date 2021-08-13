@@ -129,7 +129,7 @@ fn p_aho_corasick(pattern: &str, flags: Vec<String>) -> Result<AhoCorasick, Fail
       "I" => ac.ascii_case_insensitive(false),
       _ => {
         return Err(Fail::ArgumentError(format!(
-          "Invaild regex flag for exact matches -{}",
+          "Invaild regex flag for exact matches :: {}",
           flag
         )))
       }
@@ -153,7 +153,12 @@ fn p_regex(pattern: &str, mut flags: Vec<String>) -> Result<Regex, Fail> {
       "U" => re.swap_greed(false),
       "x" => re.ignore_whitespace(true),
       "X" => re.ignore_whitespace(false),
-      _ => return Err(Fail::ArgumentError(format!("Invaild regex flag -{}", flag))),
+      _ => {
+        return Err(Fail::ArgumentError(format!(
+          "Invaild regex flag for exact matches :: {}",
+          flag
+        )))
+      }
     };
   }
   re.build().map_err(|e| Fail::RegexError(e))
