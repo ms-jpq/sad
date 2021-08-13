@@ -1,11 +1,11 @@
 ## Good news
 
-v0.4.9
+v0.4.13
 
 - imperceptibly faster
 
-- fzf now shows relative instead of absolute path
+- rewrote error paths
 
-- fix bugs
+- cut down on runtime
 
 **Released by CI**
