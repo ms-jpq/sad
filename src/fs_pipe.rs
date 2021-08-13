@@ -24,7 +24,7 @@ pub async fn slurp(path: &PathBuf) -> Result<Slurpee, Fail> {
   let content = if meta.is_file() {
     let mut s = String::new();
     match fd.read_to_string(&mut s).await {
-      Ok(text) => s,
+      Ok(_) => s,
       Err(err) if err.kind() == ErrorKind::InvalidData => s,
       Err(err) => Err(Fail::IO(path.clone(), err.kind()))?,
     }

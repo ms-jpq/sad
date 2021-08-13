@@ -10,7 +10,7 @@ use tokio::{
   runtime::Builder,
   select,
   sync::{
-    broadcast,
+    broadcast::{self, error::RecvError},
     mpsc::{self, Receiver},
   },
   task::{spawn, JoinHandle},
@@ -53,13 +53,13 @@ fn stream_trans(
                 Ok(p) => {
                   match displace(&opts, p).await {
                     Ok(displaced) => {
-                      if let Err(err) = tx.send(displaced).await {
+                      if let Err(_) = tx.send(displaced).await {
                         let _ = abort.send(Fail::Join);
+                        break;
                       }
                     },
                     Err(err) => {
-                                              let _ = abort.send(err);
-
+                      let _ = abort.send(err);
                     }
                   }
                 },
@@ -104,12 +104,13 @@ fn main() {
     .enable_io()
     .build()
     .expect("runtime failure");
+
   let status = rt.block_on(async {
     let (abort, mut rx) = broadcast::channel::<Fail>(1);
     select! {
       maybe = rx.recv() => match maybe {
         Ok(err) => Some(err),
-        Err(RecvError::Lagged) => None,
+        Err(RecvError::Lagged(_)) => None,
         _ => None
       },
       maybe = run(&abort) => match maybe {
