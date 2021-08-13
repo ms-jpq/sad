@@ -138,7 +138,7 @@ pub fn stream_fzf(
   let sad = env::current_exe()
     .or_else(|_| which("sad".to_owned()))
     .map(|p| format!("{}", p.display()))
-    .unwrap_or("sad".to_owned());
+    .unwrap_or_else(|_| "sad".to_owned());
 
   let preview_args = env::args().skip(1).collect::<Vec<_>>().join("\x04");
   let execute = format!(

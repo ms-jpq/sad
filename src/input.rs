@@ -8,7 +8,7 @@ use std::{
   ffi::OsString,
   io::ErrorKind,
   os::unix::ffi::OsStringExt,
-  path::PathBuf,
+  path::{Path, PathBuf},
 };
 use tokio::{
   fs::{canonicalize, File},
@@ -64,10 +64,10 @@ fn p_line(line: String) -> Result<DiffLine, Fail> {
   Ok(DiffLine(path, range))
 }
 
-async fn read_patches(path: &PathBuf) -> Result<HashMap<PathBuf, HashSet<DiffRange>>, Fail> {
+async fn read_patches(path: &Path) -> Result<HashMap<PathBuf, HashSet<DiffRange>>, Fail> {
   let fd = File::open(path)
     .await
-    .map_err(|e| Fail::IO(path.clone(), e.kind()))?;
+    .map_err(|e| Fail::IO(path.to_owned(), e.kind()))?;
   let mut reader = BufReader::new(fd);
   let mut acc = HashMap::<PathBuf, HashSet<DiffRange>>::new();
 
@@ -76,14 +76,14 @@ async fn read_patches(path: &PathBuf) -> Result<HashMap<PathBuf, HashSet<DiffRan
     let n = reader
       .read_until(b'\0', &mut buf)
       .await
-      .map_err(|e| Fail::IO(path.clone(), e.kind()))?;
+      .map_err(|e| Fail::IO(path.to_owned(), e.kind()))?;
 
     match n {
       0 => break,
       _ => {
         buf.pop();
         let line =
-          String::from_utf8(buf).map_err(|_| Fail::IO(path.clone(), ErrorKind::InvalidData))?;
+          String::from_utf8(buf).map_err(|_| Fail::IO(path.to_owned(), ErrorKind::InvalidData))?;
         let patch = p_line(line)?;
         match acc.get_mut(&patch.0) {
           Some(ranges) => {

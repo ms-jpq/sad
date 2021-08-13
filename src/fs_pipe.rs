@@ -1,5 +1,5 @@
 use super::types::Fail;
-use std::{ffi::OsString, fs::Metadata, io::ErrorKind, path::{PathBuf, Path}};
+use std::{ffi::OsString, fs::Metadata, io::ErrorKind, path::Path};
 use tokio::{
   fs::{rename, File, OpenOptions},
   io::{AsyncReadExt, AsyncWriteExt},
@@ -35,7 +35,7 @@ pub async fn slurp(path: &Path) -> Result<Slurpee, Fail> {
   Ok(Slurpee { meta, content })
 }
 
-pub async fn spit(canonical: &PathBuf, meta: &Metadata, text: &str) -> Result<(), Fail> {
+pub async fn spit(canonical: &Path, meta: &Metadata, text: &str) -> Result<(), Fail> {
   let uuid = Uuid::new_v4().to_simple().to_string();
   let mut file_name = canonical
     .file_name()
@@ -60,7 +60,7 @@ pub async fn spit(canonical: &PathBuf, meta: &Metadata, text: &str) -> Result<()
 
   rename(&tmp, &canonical)
     .await
-    .map_err(|e| Fail::IO(canonical.clone(), e.kind()))?;
+    .map_err(|e| Fail::IO(canonical.to_owned(), e.kind()))?;
 
   Ok(())
 }

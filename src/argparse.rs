@@ -206,14 +206,14 @@ pub fn parse_opts(args: Arguments) -> Result<Options, Fail> {
   flagset.extend(
     args
       .flags
-      .unwrap_or("".to_owned())
+      .unwrap_or_default()
       .split_terminator("")
       .skip(1)
       .map(String::from),
   );
 
   let engine = {
-    let replace = args.replace.unwrap_or("".to_owned());
+    let replace = args.replace.unwrap_or_default();
     if args.exact {
       Engine::AhoCorasick(p_aho_corasick(&args.pattern, flagset)?, replace)
     } else {
