@@ -15,7 +15,7 @@ use tokio::{
   task::{spawn, JoinHandle},
 };
 use ansi_term::Colour;
-use types::Abort;
+use types::{Abort, Fail};
 
 mod argparse;
 mod displace;
