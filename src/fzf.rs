@@ -14,6 +14,8 @@ use which::which;
 async fn reset_term() -> Result<(), Fail> {
   if let Ok(path) = which("tput") {
     let status = Command::new(&path)
+      .kill_on_drop(true)
+      .stdin(Stdio::null())
       .arg("reset")
       .status()
       .await
@@ -25,6 +27,8 @@ async fn reset_term() -> Result<(), Fail> {
   }
   if let Ok(path) = which("reset") {
     let status = Command::new(&path)
+      .kill_on_drop(true)
+      .stdin(Stdio::null())
       .status()
       .await
       .map_err(|e| Fail::IO(path, e.kind()))?;
