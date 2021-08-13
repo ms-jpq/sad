@@ -158,12 +158,12 @@ pub fn stream_fzf(
     ),
     "--preview-window=70%:wrap".to_owned(),
   ];
-  arguments.extend(args.clone());
+  arguments.extend(args);
   let mut env = HashMap::new();
   env.insert("SHELL".to_owned(), sad);
   let cmd = SubprocessCommand {
     prog: bin,
-    args,
+    args: arguments,
     env,
   };
   run_fzf(abort, cmd, stream)
