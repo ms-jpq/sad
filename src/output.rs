@@ -35,9 +35,9 @@ fn stream_stdout(abort: &Abort, mut stream: Receiver<String>) -> JoinHandle<()> 
   })
 }
 
-pub fn stream_output(abort: &Abort, opts: Options, stream: Receiver<String>) -> JoinHandle<()> {
-  match (&opts.action, opts.printer) {
-    (Action::Fzf(fzf_p, fzf_a), _) => stream_fzf(abort, fzf_p.to_owned(), fzf_a.to_owned(), stream),
+pub fn stream_output(abort: &Abort, opts: &Options, stream: Receiver<String>) -> JoinHandle<()> {
+  match (opts.action, opts.printer) {
+    (Action::Fzf(fzf_p, fzf_a), _) => stream_fzf(abort, fzf_p, fzf_a, stream),
     (_, Printer::Pager(cmd)) => stream_subprocess(abort, cmd, stream),
     (_, Printer::Stdout) => stream_stdout(abort, stream),
   }

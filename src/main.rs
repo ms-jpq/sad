@@ -30,10 +30,10 @@ mod udiff;
 fn stream_trans(
   abort: &Abort,
   cpus: usize,
-  opts: &Options,
+  opts: Options,
   stream: MPMCR<Payload>,
 ) -> (JoinHandle<()>, Receiver<String>) {
-  let a_opts = Arc::new(opts.clone());
+  let a_opts = Arc::new(opts);
   let (tx, rx) = mpsc::channel::<String>(1);
 
   let handles = (1..=cpus * 2)
@@ -87,8 +87,8 @@ async fn run(abort: &Abort, cpus: usize) -> Result<(), Fail> {
   let args = parse_args()?;
   let (h_1, input_stream) = stream_input(abort, &args);
   let opts = parse_opts(args)?;
-  let (h_2, trans_stream) = stream_trans(abort, cpus, &opts, input_stream);
-  let h_3 = stream_output(abort, opts, trans_stream);
+  let (h_2, trans_stream) = stream_trans(abort, cpus, opts, input_stream);
+  let h_3 = stream_output(abort, &opts, trans_stream);
   Ok(try_join3(h_1, h_2, h_3).await.map(|_| ())?)
 }
 
