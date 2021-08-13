@@ -156,6 +156,7 @@ fn stream_stdin(abort: &Abort, use_nul: bool) -> (JoinHandle<()>, Receiver<Paylo
                       break
                     }
                   },
+                  Err(err) if err.kind() == ErrorKind::NotFound => (),
                   Err(err) => {
                     let _ = abort.send(Fail::IO(path, err.kind()));
                     break;
