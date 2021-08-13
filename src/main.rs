@@ -5,7 +5,7 @@ use displace::displace;
 use futures::future::{try_join3, try_join_all};
 use input::{stream_input, Payload};
 use output::stream_output;
-use std::{process::exit, sync::Arc, time::Duration};
+use std::{process::exit, sync::Arc};
 use tokio::{
   runtime::Builder,
   select,
