@@ -5,7 +5,7 @@ use super::types::Fail;
 use super::udiff::{udiff, DiffRanges, Diffs, Patchable, Picker};
 use ansi_term::Colour;
 use pathdiff::diff_paths;
-use std::{error::Error, path::PathBuf};
+use std::path::PathBuf;
 
 impl Engine {
   fn replace(&self, before: &str) -> String {
@@ -36,7 +36,7 @@ pub async fn displace(opts: &Options, payload: Payload) -> Result<String, Fail> 
     .unwrap_or(path);
 
   let name = rel_path.display();
-  let (canonical, meta, before) = (slurped.path, slurped.meta, slurped.content);
+  let (meta, before) = (slurped.meta, slurped.content);
   let after = opts.engine.replace(&before);
 
   if before == after {
@@ -48,13 +48,13 @@ pub async fn displace(opts: &Options, payload: Payload) -> Result<String, Fail> 
         udiff(Some(ranges), opts.unified, &name, &before, &after)
       }
       (Action::Commit, Payload::Entire(_)) => {
-        spit(&canonical, &meta, &after).await?;
+        spit(&path, &meta, &after).await?;
         format!("{}\n", name)
       }
       (Action::Commit, Payload::Piecewise(_, ranges)) => {
         let diffs: Diffs = Patchable::new(opts.unified, &before, &after);
         let after = diffs.patch(&ranges, &before);
-        spit(&canonical, &meta, &after).await?;
+        spit(&path, &meta, &after).await?;
         format!("{}\n", name)
       }
       (Action::Fzf(_, _), _) => {

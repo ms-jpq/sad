@@ -1,10 +1,9 @@
 use super::types::Fail;
 use std::{fs::Metadata, io::ErrorKind, path::PathBuf};
 use tokio::fs::{metadata, read_to_string, remove_file, rename, set_permissions, write};
-use uuid::Uuid;
+use uuid::Uuid::new_v4;
 
 pub struct Slurpee {
-  pub path: PathBuf,
   pub meta: Metadata,
   pub content: String,
 }
@@ -23,7 +22,6 @@ pub async fn slurp(path: &PathBuf) -> Result<Slurpee, Fail> {
     String::new()
   };
   let slurpee = Slurpee {
-    path: path.clone(),
     meta,
     content,
   };
@@ -31,7 +29,7 @@ pub async fn slurp(path: &PathBuf) -> Result<Slurpee, Fail> {
 }
 
 pub async fn spit(canonical: &PathBuf, meta: &Metadata, text: &str) -> Result<(), Fail> {
-  let uuid = Uuid::new_v4().to_simple().to_string();
+  let uuid = new_v4().to_simple().to_string();
   let mut file_name = canonical
     .file_name()
     .and_then(|s| s.to_str())
