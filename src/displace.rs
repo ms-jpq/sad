@@ -25,7 +25,7 @@ impl Payload {
   }
 }
 
-async fn displace_impl(opts: &Options, payload: &Payload) -> Result<String, Fail> {
+pub async fn displace(opts: &Options, payload: &Payload) -> Result<String, Fail> {
   let path = payload.path().clone();
   let slurped = slurp(&path).await?;
   let rel_path = opts
@@ -72,9 +72,3 @@ async fn displace_impl(opts: &Options, payload: &Payload) -> Result<String, Fail
   }
 }
 
-pub async fn displace(opts: &Options, payload: Payload) -> Result<String, Fail> {
-  match displace_impl(opts, &payload).await {
-    Ok(ret) => Ok(ret),
-    Err(err) => Err(Fail::Sucks(format!("{:#?}{:#?}", payload, err))),
-  }
-}

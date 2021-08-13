@@ -3,7 +3,7 @@ use super::types::{Abort, Fail};
 use futures::future::try_join;
 use std::{collections::HashMap, env, error::Error, path::PathBuf, process::Stdio};
 use tokio::{
-  io::{self, AsyncWriteExt, BufWriter},
+  io::{self, AsyncWriteExt, BufWriter, ErrorKind},
   process::Command,
   select,
   sync::mpsc::Receiver,
@@ -11,35 +11,41 @@ use tokio::{
 };
 use which::which;
 
-async fn reset_term() -> Result<(), dyn Error> {
-  try_join(io::stdout().flush(), io::stderr().flush())
-    .map(|_| ())
-    .await?;
+async fn reset_term() -> Result<(), Fail> {
   if let Ok(path) = which("tput") {
-    Command::new("tput").arg("reset").status().await?
+    Command::new(&path)
+      .arg("reset")
+      .status()
+      .await
+      .map_err(|e| Fail::IO(path, e.kind()))?
   } else if let Ok(path) = which("reset") {
-    Command::new("reset").status().await?
+    Command::new(&path)
+      .status()
+      .await
+      .map_err(|e| Fail::IO(path, e.kind()))?
   } else {
-    Err(Fail::Sucks(String::new()))
+    Err(Fail::IO(PathBuf("reset"), ErrorKind::NotFound))
   }
 }
 
-fn run_fzf(abort: &Abort, cmd: &SubprocessCommand, stream: Receiver<String>) -> JoinHandle<()> {
-  let subprocess = Command::new(&cmd.prog)
-    .kill_on_drop(true)
-    .args(&cmd.arguments)
-    .envs(&cmd.env)
-    .stdin(Stdio::piped())
-    .spawn();
-
+fn run_fzf(abort: &Abort, cmd: SubprocessCommand, stream: Receiver<String>) -> JoinHandle<()> {
+  let abort = abort.clone();
   spawn(async move {
+    let subprocess = Command::new(&cmd.prog)
+      .kill_on_drop(true)
+      .args(&cmd.args)
+      .envs(&cmd.env)
+      .stdin(Stdio::piped())
+      .spawn();
+
     match subprocess {
       Err(err) => {
-        abort.send(Box::new(err));
+        abort.send(Fail::IO(cmd.prog, err.kind()));
       }
       Ok(child) => {
         let mut stdin = child.stdin.take().map(BufWriter::new).expect("nil stdin");
 
+        let p1 = cmd.prog.clone():
         let handle_in = spawn(async move {
           let mut on_abort = abort.subscribe();
           loop {
@@ -49,7 +55,7 @@ fn run_fzf(abort: &Abort, cmd: &SubprocessCommand, stream: Receiver<String>) -> 
                 match print {
                   Some(val) => {
                     if let Err(err) = stdin.write(val.as_bytes()).await {
-                      let _ = abort.send(Box::new(err));
+                      let _ = abort.send(Fail::IO(p1,err.kind()));
                       break;
                     }
                   }
@@ -59,10 +65,11 @@ fn run_fzf(abort: &Abort, cmd: &SubprocessCommand, stream: Receiver<String>) -> 
             }
           }
           if let Err(err) = stdin.shutdown().await {
-            abort.send(Box::new(err));
+            abort.send(Fail::IO(p1, err.kind()));
           }
         });
 
+        let p2 = cmd.prog.clone();
         let handle_child = spawn(async move {
           let mut on_abort = abort.subscribe();
           select! {
@@ -72,25 +79,25 @@ fn run_fzf(abort: &Abort, cmd: &SubprocessCommand, stream: Receiver<String>) -> 
                   match status.code() {
                     Some(0) | Some(1) | None => (),
                     Some(130) => {
-                      abort.send(Box::new(Fail::Interrupt));
+                      abort.send(Fail::Interrupt);
                     }
                     Some(c) => {
-                      abort.send(Box::new(Fail::Sucks(format!("Error exit - {}", c))));
+                      abort.send(Fail::BadExit(p2, c));
                       if let Err(err) = reset_term().await {
-                        abort.send(err)
+                        let _ = abort.send(err)
                       }
                     }
                   }
                 }
                 Err(err) => {
-                  abort.send(Box::new(err));
+                  abort.send(Fail::IO(p2, err.kind()));
                 }
               }
             },
             _ = on_abort.recv() => {
               match child.kill().await {
                 Err(err) => {
-                  let _ = abort.send(err);
+                  let _ = abort.send(Fail::IO(p2, err.kind()));
                 },
                 _ => {
                   if let Err(err) = reset_term().await {
@@ -149,5 +156,5 @@ pub fn stream_fzf(
     args,
     env,
   };
-  run_fzf(abort, &cmd, stream)
+  run_fzf(abort, cmd, stream)
 }

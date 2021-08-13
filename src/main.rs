@@ -50,9 +50,16 @@ fn stream_trans(
             payload = stream.recv() => {
               match payload {
                 Ok(p) => {
-                  let displaced = displace(&opts, payload).await;
-                  if let Err(err) = tx.send(displaced).await {
-                    let _ = abort.send(Box::new(err));
+                  match displace(&opts, payload).await {
+                    Ok(displaced) => {
+                      if let Err(err) = tx.send(displaced).await {
+                        let _ = abort.send(Fail::Join);
+                      }
+                    },
+                    Err(err) => {
+                                              let _ = abort.send(err);
+
+                    }
                   }
                 },
                 _ => break
@@ -67,7 +74,9 @@ fn stream_trans(
   let handle = spawn(async move {
     match try_join_all(handles).await {
       Err(err) => {
-        let _ = abort.send(Box::new(err));
+        if !err.is_cancelled() {
+        let _ = abort.send(Fail::Join);
+        }
       }
       _ => (),
     }

@@ -15,6 +15,7 @@ pub enum Fail {
   ArgumentError(String),
   RegexError(RegexError),
   IO(PathBuf, ErrorKind),
+  BadExit(PathBuf, i32)
 }
 
 impl Fail {

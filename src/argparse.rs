@@ -111,10 +111,10 @@ pub struct Options {
 }
 
 fn p_auto_flags(pattern: &str) -> Vec<String> {
-  let mut flags = vec!["i".into()];
+  let mut flags = vec!["i".to_owned()];
   for c in pattern.chars() {
     if c.is_uppercase() {
-      flags.push("I".into());
+      flags.push("I".to_owned());
       break;
     }
   }
@@ -139,7 +139,7 @@ fn p_aho_corasick(pattern: &str, flags: Vec<String>) -> Result<AhoCorasick, Fail
 }
 
 fn p_regex(pattern: &str, flags: Vec<String>) -> Result<Regex, Fail> {
-  flags.push("m");
+  flags.push("m".to_owned());
   let mut re = RegexBuilder::new(pattern);
   for flag in flags {
     match flag.as_str() {
