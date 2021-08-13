@@ -130,7 +130,7 @@ fn stream_stdin(abort: &Abort, use_nul: bool) -> (JoinHandle<()>, Receiver<Paylo
   let abort = abort.clone();
   let handle = spawn(async move {
     if atty::is(atty::Stream::Stdin) {
-      let _ = abort.send(Fail::ArgumentError("Nil stdin".to_owned()));
+      let _ = abort.send(Fail::ArgumentError("/dev/stdin connected to tty".to_owned()));
     } else {
       let delim = if use_nul { b'\0' } else { b'\n' };
       let mut on_abort = abort.subscribe();
