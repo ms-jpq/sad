@@ -38,6 +38,7 @@ fn stream_trans(
 
   let handles = (1..=num_cpus::get() * 2)
     .map(|_| {
+      let abort = abort.clone();
       let mut on_abort = abort.subscribe();
       let stream = stream.clone();
       let opts = a_opts.clone();
@@ -50,7 +51,7 @@ fn stream_trans(
             payload = stream.recv() => {
               match payload {
                 Ok(p) => {
-                  match displace(&opts, payload).await {
+                  match displace(&opts, p).await {
                     Ok(displaced) => {
                       if let Err(err) = tx.send(displaced).await {
                         let _ = abort.send(Fail::Join);
@@ -71,6 +72,7 @@ fn stream_trans(
     })
     .collect::<Vec<_>>();
 
+  let abort = abort.clone();
   let handle = spawn(async move {
     match try_join_all(handles).await {
       Err(err) => {

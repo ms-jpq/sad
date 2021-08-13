@@ -25,7 +25,7 @@ impl Payload {
   }
 }
 
-pub async fn displace(opts: &Options, payload: &Payload) -> Result<String, Fail> {
+pub async fn displace(opts: &Options, payload: Payload) -> Result<String, Fail> {
   let path = payload.path().clone();
   let slurped = slurp(&path).await?;
   let rel_path = opts
