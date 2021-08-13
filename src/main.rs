@@ -88,11 +88,7 @@ async fn run(abort: &Abort) -> Result<(), Fail> {
   let opts = parse_opts(args)?;
   let (h_2, trans_stream) = stream_trans(abort, &opts, input_stream);
   let h_3 = stream_output(abort, opts, trans_stream);
-  match try_join3(h_1, h_2, h_3).await {
-    Err(err) if err.is_cancelled() => Ok(()),
-    Err(_) => Err(Fail::Join),
-    _ => Ok(()),
-  }
+  Ok(try_join3(h_1, h_2, h_3).await.map(|_| ())?)
 }
 
 fn main() {
