@@ -81,12 +81,12 @@ fn stream_trans(
   (handle, rx)
 }
 
-async fn run(abort: &Abort, cpus: usize) -> Result<(), Fail> {
+async fn run(abort: Abort, cpus: usize) -> Result<(), Fail> {
   let args = parse_args()?;
-  let (h_1, input_stream) = stream_input(abort, &args);
+  let (h_1, input_stream) = stream_input(&abort, &args);
   let opts = parse_opts(args)?;
-  let (h_2, trans_stream) = stream_trans(abort, cpus, &opts, input_stream);
-  let h_3 = stream_output(abort, &opts, trans_stream);
+  let (h_2, trans_stream) = stream_trans(&abort, cpus, &opts, input_stream);
+  let h_3 = stream_output(&abort, &opts, trans_stream);
   try_join3(h_1, h_2, h_3).await?;
   Ok(())
 }
@@ -100,7 +100,7 @@ fn main() {
     .expect("runtime failure");
 
   let errors = rt.block_on(async {
-    let (abort, rx) = broadcast::channel::<Fail>(1);
+    let (abort, mut rx) = broadcast::channel::<Fail>(1);
 
     let s1 = spawn(async move {
       let mut errors = Vec::new();
@@ -115,7 +115,7 @@ fn main() {
     });
 
     let s2 = spawn(async move {
-      if let Err(err) = run(&abort, cpus).await {
+      if let Err(err) = run(abort, cpus).await {
         vec![err]
       } else {
         Vec::new()
@@ -131,8 +131,8 @@ fn main() {
   match errors[..] {
     [] => exit(0),
     [Fail::Interrupt] => exit(130),
-    errs => {
-      for err in errs.into_iter() {
+    _ => {
+      for err in errors {
         eprintln!("{}", Colour::Red.paint(format!("{}", err)));
       }
       exit(1)
