@@ -32,6 +32,9 @@ fn stream_stdout(abort: &Abort, mut stream: Receiver<String>) -> JoinHandle<()> 
         }
       }
     }
+    if let Err(err) = stdout.flush().await {
+      let _ = abort.send(Fail::IO(PathBuf::from("/dev/stdout"), err.kind()));
+    }
   })
 }
 
