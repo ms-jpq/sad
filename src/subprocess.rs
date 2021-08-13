@@ -37,7 +37,7 @@ pub fn stream_subprocess(
         let mut stdin = child.stdin.take().map(BufWriter::new).expect("nil stdin");
 
         let handle_in = spawn(async move {
-          let on_abort = abort.subscribe();
+          let mut on_abort = abort.subscribe();
           loop {
             select! {
               _ = on_abort.recv() => break,

@@ -75,15 +75,15 @@ fn stream_trans(
   (handle, rx)
 }
 
-async fn run(abort: &Abort) -> Result<(), Box<dyn Error>> {
+async fn run(abort: &Abort) -> Option<Box<dyn Error>> {
   let args = parse_args()?;
   let opts = parse_opts(args)?;
   let (h_1, input_stream) = stream_input(abort, &args);
   let (h_2, trans_stream) = stream_trans(abort, &opts, input_stream);
   let h_3 = stream_output(abort, opts, trans_stream);
   match try_join3(h_1, h_2, h_3).await {
-    Err(err) => err,
-    _ => Ok(()),
+    Err(err) => Some(err),
+    _ => None
   }
 }
 
@@ -99,10 +99,10 @@ fn main() {
         Ok(err) => Some(err),
         _ => None
       },
-      handle = run(&abort) => None
+      maybe = run(&abort) => maybe
     }
   });
-  rt.shutdown_timeout(Duration::MAX);
+  rt.shutdown_timeout(Duration::from_secs(9001));
 
   if let Some(err) = status {
     eprintln!("{}", Colour::Red.paint(format!("{}", err)));
