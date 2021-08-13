@@ -66,14 +66,18 @@ pub async fn displace(opts: &Arc<Options>, payload: Payload) -> Result<String, F
         format!("{}\n", name)
       }
       (Action::Fzf(_, _), _) => {
-        let ranges = pure_diffs(opts.unified, &before, &after);
-        let mut fzf_lines = String::new();
-        for range in ranges {
-          let repr = Colour::Red.paint(format!("{}", range));
-          let line = format!("{}\n\n\n\n{}\0", &name, repr);
-          fzf_lines.push_str(&line);
-        }
-        fzf_lines
+        let o2 = opts.clone();
+        spawn_blocking(move || {
+          let ranges = pure_diffs(o2.unified, &before, &after);
+          let mut fzf_lines = String::new();
+          for range in ranges {
+            let repr = Colour::Red.paint(format!("{}", range));
+            let line = format!("{}\n\n\n\n{}\0", &name, repr);
+            fzf_lines.push_str(&line);
+          }
+          fzf_lines
+        })
+        .await?
       }
     };
     Ok(print)
