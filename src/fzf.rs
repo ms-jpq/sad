@@ -18,7 +18,7 @@ use tokio::{
 use which::which;
 
 async fn reset_term() -> Result<(), dyn Error> {
-  try_join(io::stdout().flush(), io::stderr()).await?;
+  try_join(io::stdout().flush(), io::stderr().flush()).map(|_| ()).await?;
   if let Ok(path) = which("tput") {
     Command::new("tput").arg("reset").status().await?
   } else if let Ok(path) = which("reset") {
@@ -28,7 +28,7 @@ async fn reset_term() -> Result<(), dyn Error> {
   }
 }
 
-fn run_fzf(abort: &Abort, cmd: &SubprocessCommand, stream: Receiver<String>) -> Task {
+fn run_fzf(abort: &Abort, cmd: &SubprocessCommand, stream: Receiver<String>) -> JoinHandle<()> {
   let subprocess = Command::new(&cmd.program)
     .kill_on_drop(true)
     .args(&cmd.arguments)
@@ -39,7 +39,7 @@ fn run_fzf(abort: &Abort, cmd: &SubprocessCommand, stream: Receiver<String>) -> 
   spawn(async move {
     match subprocess {
       Err(err) => {
-        abort.tx.send(Box::new(err));
+        abort.send(Box::new(err));
       }
       Ok(child) => {
         let mut stdin = child.stdin.take().map(BufWriter::new).expect("nil stdin");
@@ -87,7 +87,7 @@ fn run_fzf(abort: &Abort, cmd: &SubprocessCommand, stream: Receiver<String>) -> 
                   }
                 }
                 Err(err) => {
-                  abort.tx.send(Box::new(err));
+                  abort.send(Box::new(err));
                 }
               }
             },
@@ -117,7 +117,7 @@ fn run_fzf(abort: &Abort, cmd: &SubprocessCommand, stream: Receiver<String>) -> 
 }
 
 pub fn stream_fzf(
-  abort: &Arc<Abort>,
+  abort: &Abort,
   bin: PathBuf,
   args: Vec<String>,
   stream: Receiver<String>,

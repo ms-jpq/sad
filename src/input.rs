@@ -172,6 +172,6 @@ pub fn stream_input(abort: &Abort, args: &Arguments) -> (JoinHandle<()>, Receive
   } else if let Some(patch) = &args.internal_patch {
     stream_patch(abort, patch.clone())
   } else {
-    stream_stdin(abort, self.nul_delim)
+    stream_stdin(abort, args.nul_delim)
   }
 }

@@ -1,4 +1,4 @@
-use argparse::{parse_args, parse_opts};
+use argparse::{parse_args, parse_opts, Options};
 use async_channel::Receiver as MPMCR;
 use displace::displace;
 use futures::future::{try_join3, try_join_all};
@@ -14,6 +14,7 @@ use tokio::{
   },
   task::{spawn, JoinHandle},
 };
+use ansi_term::Colour;
 use types::Abort;
 
 mod argparse;
