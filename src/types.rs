@@ -3,7 +3,7 @@ use std::{
   clone::Clone,
   error::Error,
   fmt::{self, Display, Formatter},
-  io::{Error as IOError, ErrorKind},
+  io::ErrorKind,
   path::PathBuf,
 };
 use tokio::{sync::broadcast::Sender, task::JoinError};
@@ -41,11 +41,5 @@ impl From<JoinError> for Fail {
 impl From<RegexError> for Fail {
   fn from(e: RegexError) -> Self {
     Fail::RegexError(e)
-  }
-}
-
-impl Fail {
-  fn from_io(path: PathBuf, err: IOError) -> Self {
-    Fail::IO(path, err.kind())
   }
 }
