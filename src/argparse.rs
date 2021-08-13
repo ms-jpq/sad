@@ -1,4 +1,4 @@
-use super::types::Failure;
+use super::types::Fail;
 use super::subprocess::SubprocessCommand;
 use aho_corasick::{AhoCorasick, AhoCorasickBuilder};
 use regex::{Regex, RegexBuilder};
@@ -66,14 +66,14 @@ pub struct Arguments {
   pub internal_patch: Option<PathBuf>,
 }
 
-pub fn parse_args() -> Result<Arguments, Box<dyn Error>> {
+pub fn parse_args() -> Result<Arguments, Fail> {
   let args = env::args().collect::<Vec<_>>();
   match (args.get(1), args.get(2)) {
     (Some(lhs), Some(rhs)) if lhs == "-c" => {
       if rhs.contains('\x04') {
         Ok(Arguments::from_iter(rhs.split('\x04')))
       } else {
-        Err(Failure::Sucks(
+        Err(Fail::ArgumentError(
           "`-c` is a reserved flag, use --k, or --commit".to_owned(),
         ))
       }
@@ -111,7 +111,7 @@ pub struct Options {
 }
 
 fn p_auto_flags(pattern: &str) -> Vec<String> {
-  let mut flags = vec!["m".into(), "i".into()];
+  let mut flags = vec!["i".into()];
   for c in pattern.chars() {
     if c.is_uppercase() {
       flags.push("I".into());
@@ -121,14 +121,14 @@ fn p_auto_flags(pattern: &str) -> Vec<String> {
   flags
 }
 
-fn p_aho_corasick(pattern: &str, flags: &[String]) -> Result<AhoCorasick, Box<dyn Error>> {
+fn p_aho_corasick(pattern: &str, flags: Vec<String>) -> Result<AhoCorasick, Fail> {
   let mut ac = AhoCorasickBuilder::new();
   for flag in flags {
     match flag.as_str() {
       "i" => ac.ascii_case_insensitive(true),
       "I" => ac.ascii_case_insensitive(false),
       _ => {
-        return Err(Failure::Sucks(format!(
+        return Err(Fail::ArgumentError(format!(
           "Invaild regex flag for exact matches -{}",
           flag
         )))
@@ -138,7 +138,8 @@ fn p_aho_corasick(pattern: &str, flags: &[String]) -> Result<AhoCorasick, Box<dy
   Ok(ac.build(&[pattern]))
 }
 
-fn p_regex(pattern: &str, flags: &[String]) -> Result<Regex, Box<dyn Error>> {
+fn p_regex(pattern: &str, flags: Vec<String>) -> Result<Regex, Fail> {
+  flags.push("m");
   let mut re = RegexBuilder::new(pattern);
   for flag in flags {
     match flag.as_str() {
@@ -152,7 +153,7 @@ fn p_regex(pattern: &str, flags: &[String]) -> Result<Regex, Box<dyn Error>> {
       "U" => re.swap_greed(false),
       "x" => re.ignore_whitespace(true),
       "X" => re.ignore_whitespace(false),
-      _ => return Err(Failure::Sucks(format!("Invaild regex flag -{}", flag))),
+      _ => return Err(Fail::ArgumentError(format!("Invaild regex flag -{}", flag))),
     };
   }
   re.build()
@@ -195,7 +196,7 @@ fn p_pager(pager: &Option<String>) -> Option<SubprocessCommand> {
   })
 }
 
-pub fn parse_opts(args: Arguments) -> Result<Options, Box<dyn Error>> {
+pub fn parse_opts(args: Arguments) -> Result<Options, Fail> {
   let mut flagset = p_auto_flags(&args.pattern);
   flagset.extend(
     args
@@ -209,9 +210,9 @@ pub fn parse_opts(args: Arguments) -> Result<Options, Box<dyn Error>> {
   let engine = {
     let replace = args.replace.unwrap_or_default();
     if args.exact {
-      Engine::AhoCorasick(p_aho_corasick(&args.pattern, &flagset)?, replace)
+      Engine::AhoCorasick(p_aho_corasick(&args.pattern, flagset)?, replace)
     } else {
-      Engine::Regex(p_regex(&args.pattern, &flagset)?, replace)
+      Engine::Regex(p_regex(&args.pattern, flagset)?, replace)
     }
   };
 

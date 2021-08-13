@@ -1,5 +1,5 @@
 use super::argparse::Arguments;
-use super::types::{Abort, Failure};
+use super::types::{Abort, Fail};
 use super::udiff::DiffRange;
 use async_channel::{bounded, Receiver};
 use regex::Regex;
@@ -31,32 +31,32 @@ fn p_path(name: Vec<u8>) -> PathBuf {
 struct DiffLine(PathBuf, DiffRange);
 
 impl TryFrom<&str> for DiffLine {
-  type Error = Failure;
+  type Error = Fail;
 
-  fn try_from(candidate: &str) -> Result<Self, Box<dyn Error>> {
+  fn try_from(candidate: &str) -> Result<Self, Fail> {
     let preg = "\n\n\n\n@@ -(\\d+),(\\d+) \\+(\\d+),(\\d+) @@$";
     let re = Regex::new(preg)?;
     let captures = re
       .captures(candidate)
-      .ok_or_else(|| Failure::Sucks(String::new()))?;
+      .ok_or_else(|| Fail::Sucks(String::new()))?;
     let before_start = captures
       .get(1)
-      .ok_or_else(|| Failure::Sucks(String::new()))?
+      .ok_or_else(|| Fail::Sucks(String::new()))?
       .as_str()
       .parse::<usize>()?;
     let before_inc = captures
       .get(2)
-      .ok_or_else(|| Failure::Sucks(String::new()))?
+      .ok_or_else(|| Fail::Sucks(String::new()))?
       .as_str()
       .parse::<usize>()?;
     let after_start = captures
       .get(3)
-      .ok_or_else(|| Failure::Sucks(String::new()))?
+      .ok_or_else(|| Fail::Sucks(String::new()))?
       .as_str()
       .parse::<usize>()?;
     let after_inc = captures
       .get(4)
-      .ok_or_else(|| Failure::Sucks(String::new()))?
+      .ok_or_else(|| Fail::Sucks(String::new()))?
       .as_str()
       .parse::<usize>()?;
 
@@ -72,7 +72,7 @@ impl TryFrom<&str> for DiffLine {
 
 async fn read_patches(
   path: &PathBuf,
-) -> Result<HashMap<PathBuf, HashSet<DiffRange>>, Box<dyn Error>> {
+) -> Result<HashMap<PathBuf, HashSet<DiffRange>>, Fail> {
   let fd = File::open(path).await?;
   let mut reader = BufReader::new(fd);
   let mut acc = HashMap::new();
@@ -129,7 +129,7 @@ fn stream_stdin(abort: &Abort, use_nul: bool) -> (JoinHandle<()>, Receiver<Paylo
 
   let handle = spawn(async move {
     if atty::is(atty::Stream::Stdin) {
-      let _ = abort.send(Box::new(Failure::Sucks(String::new())));
+      let _ = abort.send(Box::new(Fail::Sucks(String::new())));
     } else {
       let delim = if use_nul { b'\0' } else { b'\n' };
       let mut on_abort = abort.subscribe();

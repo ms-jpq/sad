@@ -1,19 +1,21 @@
 use std::{
+  clone::Clone,
   error::Error,
   fmt::{self, Display, Formatter},
 };
 use tokio::sync::broadcast::Sender;
 
-#[derive(Debug)]
-pub enum Failure {
+#[derive(Clone, Debug)]
+pub enum Fail {
   Interrupt,
-  Sucks(String),
+  ArgumentError(String),
+  RegexError(String),
 }
 
-impl Failure {
+impl Fail {
   pub fn exit_message(&self) -> Option<String> {
     match self {
-      Failure::Interrupt => None,
+      Fail::Interrupt => None,
 
       _ => Some(format!("{}", self)),
     }
@@ -21,18 +23,18 @@ impl Failure {
 
   pub fn exit_code(&self) -> i32 {
     match self {
-      Failure::Interrupt => 130,
+      Fail::Interrupt => 130,
       _ => 1,
     }
   }
 }
 
-impl Error for Failure {}
+impl Error for Fail {}
 
-impl Display for Failure {
+impl Display for Fail {
   fn fmt(&self, f: &mut Formatter) -> fmt::Result {
     write!(f, "Error:\n{:#?}", self)
   }
 }
 
-pub type Abort = Sender<Box<dyn Error>>;
+pub type Abort = Sender<Fail>;

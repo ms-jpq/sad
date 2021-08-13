@@ -1,4 +1,4 @@
-use super::types::Failure;
+use super::types::Fail;
 use std::{error::Error, fs::Metadata, io::ErrorKind, path::PathBuf};
 use tokio::fs::{metadata, read_to_string, remove_file, rename, set_permissions, write};
 use uuid::Uuid;
@@ -9,7 +9,7 @@ pub struct Slurpee {
   pub content: String,
 }
 
-pub async fn slurp(path: &PathBuf) -> Result<Slurpee, Box<dyn Error>> {
+pub async fn slurp(path: &PathBuf) -> Result<Slurpee, Fail> {
   let meta = metadata(&path).await?;
   let content = if meta.is_file() {
     match read_to_string(&path).await {
@@ -28,13 +28,13 @@ pub async fn slurp(path: &PathBuf) -> Result<Slurpee, Box<dyn Error>> {
   Ok(slurpee)
 }
 
-pub async fn spit(canonical: &PathBuf, meta: &Metadata, text: &str) -> Result<(), Box<dyn Error>> {
+pub async fn spit(canonical: &PathBuf, meta: &Metadata, text: &str) -> Result<(), Fail> {
   let uuid = Uuid::new_v4().to_simple().to_string();
   let mut file_name = canonical
     .file_name()
     .and_then(|s| s.to_str())
     .map(String::from)
-    .ok_or_else(|| Failure::Simple(format!("Bad file name - {}", canonical.display())))?;
+    .ok_or_else(|| Fail::Simple(format!("Bad file name - {}", canonical.display())))?;
   file_name.push_str("___");
   file_name.push_str(&uuid);
 

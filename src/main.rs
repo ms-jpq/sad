@@ -9,7 +9,7 @@ use tokio::{
   runtime::Builder,
   select,
   sync::{
-    broadcast,
+    broadcast::{self, RecvError},
     mpsc::{self, Receiver},
   },
   task::{spawn, JoinHandle},
@@ -75,7 +75,7 @@ fn stream_trans(
   (handle, rx)
 }
 
-async fn run(abort: &Abort) -> Option<Box<dyn Error>> {
+async fn run(abort: &Abort) -> Option<Fail> {
   let args = parse_args()?;
   let opts = parse_opts(args)?;
   let (h_1, input_stream) = stream_input(abort, &args);
@@ -93,10 +93,11 @@ fn main() {
     .build()
     .expect("runtime failure");
   let status = rt.block_on(async {
-    let (abort, mut rx) = broadcast::channel::<Box<dyn Error>>(1);
+    let (abort, mut rx) = broadcast::channel::<Fail>(1);
     select! {
       maybe = rx.recv() => match maybe {
         Ok(err) => Some(err),
+        Err(RecvError::Lagged) => None,
         _ => None
       },
       maybe = run(&abort) => maybe

@@ -1,5 +1,5 @@
 use super::argparse::{Action, Engine, Options};
-use super::types::Failure;
+use super::types::Fail;
 use super::fs_pipe::{slurp, spit};
 use super::input::Payload;
 use super::udiff::{udiff, DiffRanges, Diffs, Patchable, Picker};
@@ -25,7 +25,7 @@ impl Payload {
   }
 }
 
-async fn displace_impl(opts: &Options, payload: &Payload) -> Result<String, Box<dyn Error>> {
+async fn displace_impl(opts: &Options, payload: &Payload) -> Result<String, Fail> {
   let path = payload.path().clone();
   let slurped = slurp(&path).await?;
   let rel_path = opts
@@ -72,9 +72,9 @@ async fn displace_impl(opts: &Options, payload: &Payload) -> Result<String, Box<
   }
 }
 
-pub async fn displace(opts: &Options, payload: Payload) -> Result<String, Box<dyn Error>> {
+pub async fn displace(opts: &Options, payload: Payload) -> Result<String, Fail> {
   match displace_impl(opts, &payload).await {
     Ok(ret) => Ok(ret),
-    Err(err) => Err(Failure::Sucks(format!("{:#?}{:#?}", payload, err))),
+    Err(err) => Err(Fail::Sucks(format!("{:#?}{:#?}", payload, err))),
   }
 }
