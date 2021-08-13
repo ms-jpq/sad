@@ -32,7 +32,6 @@ pub async fn displace(opts: &Options, payload: Payload) -> Result<String, Fail> 
     .cwd
     .as_ref()
     .and_then(|cwd| diff_paths(&path, cwd))
-    .map(|p| p)
     .unwrap_or_else(|| path.clone());
 
   let name = rel_path.display();
