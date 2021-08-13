@@ -161,7 +161,7 @@ fn p_regex(pattern: &str, mut flags: Vec<String>) -> Result<Regex, Fail> {
       }
     };
   }
-  re.build().map_err(|e| Fail::RegexError(e))
+  re.build().map_err(Fail::RegexError)
 }
 
 fn p_fzf(fzf: Option<String>) -> Option<(PathBuf, Vec<String>)> {

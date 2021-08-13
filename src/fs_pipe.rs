@@ -1,5 +1,5 @@
 use super::types::Fail;
-use std::{ffi::OsString, fs::Metadata, io::ErrorKind, path::PathBuf};
+use std::{ffi::OsString, fs::Metadata, io::ErrorKind, path::{PathBuf, Path}};
 use tokio::{
   fs::{rename, File, OpenOptions},
   io::{AsyncReadExt, AsyncWriteExt},
@@ -11,22 +11,22 @@ pub struct Slurpee {
   pub content: String,
 }
 
-pub async fn slurp(path: &PathBuf) -> Result<Slurpee, Fail> {
+pub async fn slurp(path: &Path) -> Result<Slurpee, Fail> {
   let mut fd = File::open(path)
     .await
-    .map_err(|e| Fail::IO(path.clone(), e.kind()))?;
+    .map_err(|e| Fail::IO(path.to_owned(), e.kind()))?;
 
   let meta = fd
     .metadata()
     .await
-    .map_err(|e| Fail::IO(path.clone(), e.kind()))?;
+    .map_err(|e| Fail::IO(path.to_owned(), e.kind()))?;
 
   let content = if meta.is_file() {
     let mut s = String::new();
     match fd.read_to_string(&mut s).await {
       Ok(_) => s,
       Err(err) if err.kind() == ErrorKind::InvalidData => s,
-      Err(err) => Err(Fail::IO(path.clone(), err.kind()))?,
+      Err(err) => return Err(Fail::IO(path.to_owned(), err.kind())),
     }
   } else {
     String::new()

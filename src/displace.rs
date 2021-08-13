@@ -10,8 +10,8 @@ use std::path::PathBuf;
 impl Engine {
   fn replace(&self, before: &str) -> String {
     match self {
-      Engine::AhoCorasick(ac, replace) => ac.replace_all(&before, &[replace.as_str()]),
-      Engine::Regex(re, replace) => re.replace_all(&before, replace.as_str()).into(),
+      Engine::AhoCorasick(ac, replace) => ac.replace_all(before, &[replace.as_str()]),
+      Engine::Regex(re, replace) => re.replace_all(before, replace.as_str()).into(),
     }
   }
 }
