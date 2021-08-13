@@ -227,10 +227,12 @@ mod tests {
     let mut unified = 0;
     let diffs = diffs();
     for (before, after) in diffs {
-      let ranges: DiffRanges = Picker::new(unified, &before, &after);
+      let ranges = pure_diffs(unified, &before, &after);
       let rangeset = ranges.into_iter().collect::<HashSet<_>>();
-      let diffs: Diffs = Patchable::new(unified, &before, &after);
-      let patched = diffs.patch(&rangeset, &before);
+
+      let patches = patches(unified, &before, &after);
+      let patched = apply_patches(patches, &rangeset, &before);
+
       let canon = after.lines().map(String::from).collect::<Vec<_>>();
       let imp = patched.lines().map(String::from).collect::<Vec<_>>();
       let len = max(canon.len(), imp.len());
