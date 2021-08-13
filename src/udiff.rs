@@ -2,7 +2,6 @@ use difflib::{sequencematcher::Opcode, sequencematcher::SequenceMatcher};
 use std::{
   collections::HashSet,
   fmt::{self, Display, Formatter},
-  path::Display as PDisplay,
 };
 
 #[derive(Debug, Eq, Hash, PartialEq)]
@@ -124,7 +123,7 @@ pub fn apply_patches(patches: Vec<Patch>, ranges: &HashSet<DiffRange>, before: &
 pub fn udiff(
   ranges: Option<&HashSet<DiffRange>>,
   unified: usize,
-  name: &PDisplay,
+  name: &str,
   before: &str,
   after: &str,
 ) -> String {
@@ -262,7 +261,7 @@ mod tests {
           }
         })
         .collect::<Vec<_>>();
-      let imp = udiff(None, unified, &PathBuf::new().display(), &before, &after)
+      let imp = udiff(None, unified, "", &before, &after)
         .lines()
         .skip(3)
         .map(|s| {

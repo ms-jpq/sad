@@ -48,10 +48,10 @@ pub async fn displace(opts: &Arc<Options>, payload: Payload) -> Result<String, F
   } else {
     let print = match (&opts.action, payload) {
       (Action::Preview, Payload::Entire(_)) => {
-        spawn_blocking(move || udiff(None, opts.unified, &name, &before, &after)).await?
+        spawn_blocking(move || udiff(None, o2.unified, &name, &before, &after)).await?
       }
       (Action::Preview, Payload::Piecewise(_, ranges)) => {
-        spawn_blocking(move || udiff(Some(&ranges), opts.unified, &name, &before, &after)).await?
+        spawn_blocking(move || udiff(Some(&ranges), o2.unified, &name, &before, &after)).await?
       }
       (Action::Commit, Payload::Entire(_)) => {
         spit(&path, &slurped.meta, &after).await?;
