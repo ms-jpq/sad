@@ -121,10 +121,12 @@ fn main() {
   });
   rt.shutdown_timeout(Duration::from_secs(9001));
 
-  if let Some(err) = status {
-    eprintln!("{}", Colour::Red.paint(format!("{}", err)));
-    exit(1)
-  } else {
-    exit(0)
+  match status {
+    Some(Fail::Interrupt) => exit(130),
+    Some(err) => {
+      eprintln!("{}", Colour::Red.paint(format!("{}", err)));
+      exit(1)
+    }
+    None => exit(0),
   }
 }
