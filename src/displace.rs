@@ -28,15 +28,14 @@ impl Payload {
 
 pub async fn displace(opts: &Arc<Options>, payload: Payload) -> Result<String, Fail> {
   let path = payload.path().clone();
-  let slurped = slurp(&path).await?;
   let rel_path = opts
     .cwd
     .as_ref()
     .and_then(|cwd| diff_paths(&path, cwd))
     .unwrap_or_else(|| path.clone());
-
   let name = rel_path.display();
 
+  let slurped = slurp(&path).await?;
   let o = opts.clone();
   let before = Arc::new(slurped.content);
   let b = before.clone();
@@ -67,12 +66,13 @@ pub async fn displace(opts: &Arc<Options>, payload: Payload) -> Result<String, F
       }
       (Action::Fzf(_, _), _) => {
         let o2 = opts.clone();
+        let name = format!("{}", name);
         spawn_blocking(move || {
           let ranges = pure_diffs(o2.unified, &before, &after);
           let mut fzf_lines = String::new();
           for range in ranges {
             let repr = Colour::Red.paint(format!("{}", range));
-            let line = format!("{}\n\n\n\n{}\0", &name, repr);
+            let line = format!("{}\n\n\n\n{}\0", name, repr);
             fzf_lines.push_str(&line);
           }
           fzf_lines
