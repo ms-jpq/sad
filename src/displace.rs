@@ -2,7 +2,7 @@ use super::argparse::{Action, Engine, Options};
 use super::fs_pipe::{slurp, spit};
 use super::input::Payload;
 use super::types::Fail;
-use super::udiff::{udiff,  Diffs, Patchable, Picker};
+use super::udiff::{udiff, Diffs, Patchable, Picker};
 use ansi_term::Colour;
 use pathdiff::diff_paths;
 use std::path::PathBuf;

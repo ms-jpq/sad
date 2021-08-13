@@ -1,7 +1,7 @@
 use super::subprocess::SubprocessCommand;
 use super::types::{Abort, Fail};
 use futures::future::try_join;
-use std::{collections::HashMap, env,  path::PathBuf, process::Stdio};
+use std::{collections::HashMap, env, path::PathBuf, process::Stdio};
 use tokio::{
   io::{AsyncWriteExt, BufWriter, ErrorKind},
   process::Command,

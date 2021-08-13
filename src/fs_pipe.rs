@@ -35,8 +35,6 @@ pub async fn slurp(path: &PathBuf) -> Result<Slurpee, Fail> {
   Ok(Slurpee { meta, content })
 }
 
-const OPENER: OpenOptions = OpenOptions()::new().create_new(true).write(true);
-
 pub async fn spit(canonical: &PathBuf, meta: &Metadata, text: &str) -> Result<(), Fail> {
   let uuid = new_v4().to_simple().to_string();
   let mut file_name = canonical
@@ -47,10 +45,21 @@ pub async fn spit(canonical: &PathBuf, meta: &Metadata, text: &str) -> Result<()
   file_name.push(uuid);
   let tmp = canonical.with_file_name(file_name);
 
-  let fd = OPENER.open(&tmp).await.map_err(|e| Fail::IO(tmp, e.kind()) )?;
-  fd.set_permissions(meta.permissions()).await.map_err(|e| Fail::IO(tmp, e.kind()))?;
+  let fd = OpenOptions::new()
+    .create_new(true)
+    .write(true)
+    .open(&tmp)
+    .await
+    .map_err(|e| Fail::IO(tmp, e.kind()))?;
+
+  fd.set_permissions(meta.permissions())
+    .await
+    .map_err(|e| Fail::IO(tmp, e.kind()))?;
   fd.write_all(text.as_bytes());
-  rename(&tmp, &canonical).await.map_err(|e| Fail::IO(canonical.clone(), e.kind()))?;
-  
+
+  rename(&tmp, &canonical)
+    .await
+    .map_err(|e| Fail::IO(canonical.clone(), e.kind()))?;
+
   Ok(())
 }
