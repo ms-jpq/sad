@@ -45,18 +45,23 @@ pub async fn displace(opts: &Arc<Options>, payload: Payload) -> Result<String, F
   if *before == after {
     Ok(String::new())
   } else {
-    let print = match (&opts.action, &payload) {
+    let print = match (&opts.action, payload) {
       (Action::Preview, Payload::Entire(_)) => udiff(None, opts.unified, &name, &before, &after),
       (Action::Preview, Payload::Piecewise(_, ranges)) => {
-        udiff(Some(ranges), opts.unified, &name, &before, &after)
+        udiff(Some(&ranges), opts.unified, &name, &before, &after)
       }
       (Action::Commit, Payload::Entire(_)) => {
         spit(&path, &slurped.meta, &after).await?;
         format!("{}\n", name)
       }
       (Action::Commit, Payload::Piecewise(_, ranges)) => {
-        let patches = patches(opts.unified, &before, &after);
-        let after = apply_patches(patches, ranges, &before);
+        let o2 = opts.clone();
+        let after = spawn_blocking(move || {
+          let patches = patches(o2.unified, &before, &after);
+          apply_patches(patches, &ranges, &before)
+        })
+        .await?;
+
         spit(&path, &slurped.meta, &after).await?;
         format!("{}\n", name)
       }
