@@ -28,7 +28,7 @@ struct DiffLine(PathBuf, DiffRange);
 fn p_line(line: String) -> Result<DiffLine, Fail> {
   let f = Fail::ArgumentError(String::new());
   let preg = "\n\n\n\n@@ -(\\d+),(\\d+) \\+(\\d+),(\\d+) @@$";
-  let re = Regex::new(preg).map_err(|e| Fail::RegexError(e))?;
+  let re = Regex::new(preg).map_err(Fail::RegexError)?;
   let captures = re.captures(&line).ok_or_else(|| f.clone())?;
 
   let before_start = captures
