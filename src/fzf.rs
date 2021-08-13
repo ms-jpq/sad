@@ -31,7 +31,7 @@ fn run_fzf(abort: &Abort, cmd: &SubprocessCommand, stream: Receiver<String>) -> 
     .envs(&cmd.env)
     .stdin(Stdio::piped())
     .spawn();
-args
+
   spawn(async move {
     match subprocess {
       Err(err) => {
@@ -146,8 +146,8 @@ pub fn stream_fzf(
   env.insert("SHELL".to_owned(), sad);
   let cmd = SubprocessCommand {
     prog: bin,
-    arguments,
+    args,
     env,
   };
   run_fzf(abort, &cmd, stream)
-}args: 
+}

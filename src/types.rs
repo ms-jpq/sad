@@ -10,6 +10,7 @@ use tokio::sync::broadcast::Sender;
 
 #[derive(Clone, Debug)]
 pub enum Fail {
+  Join,
   Interrupt,
   ArgumentError(String),
   RegexError(RegexError),
