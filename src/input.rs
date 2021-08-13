@@ -112,7 +112,6 @@ fn stream_patch(abort: &Abort, patch: &Path) -> (JoinHandle<()>, Receiver<Payloa
       Ok(patches) => {
         for patch in patches {
           if tx.send(Payload::Piecewise(patch.0, patch.1)).await.is_err() {
-            let _ = abort.send(Fail::Join);
             break;
           }
         }
@@ -154,8 +153,7 @@ fn stream_stdin(abort: &Abort, use_nul: bool) -> (JoinHandle<()>, Receiver<Paylo
                   Ok(canonical) => {
                     if seen.insert(canonical.clone()) &&
                        tx.send(Payload::Entire(canonical)).await.is_err() {
-                        let _ = abort.send(Fail::Join);
-                        break
+                      break
                     }
                   },
                   Err(err) => {

@@ -54,7 +54,6 @@ fn stream_trans(
                   match displace(&opts, p).await {
                     Ok(displaced) => {
                       if tx.send(displaced).await.is_err() {
-                        let _ = abort.send(Fail::Join);
                         break;
                       }
                     },
