@@ -2,7 +2,7 @@ use super::argparse::{Action, Engine, Options};
 use super::fs_pipe::{slurp, spit};
 use super::input::Payload;
 use super::types::Fail;
-use super::udiff::{udiff, DiffRanges, Diffs, Patchable, Picker};
+use super::udiff::{udiff,  Diffs, Patchable, Picker};
 use ansi_term::Colour;
 use pathdiff::diff_paths;
 use std::path::PathBuf;
@@ -58,7 +58,7 @@ pub async fn displace(opts: &Options, payload: Payload) -> Result<String, Fail> 
         format!("{}\n", name)
       }
       (Action::Fzf(_, _), _) => {
-        let ranges: DiffRanges = Picker::new(opts.unified, &before, &after);
+        let ranges = Picker::new(opts.unified, &before, &after);
         let mut fzf_lines = String::new();
         for range in ranges {
           let repr = Colour::Red.paint(format!("{}", range));

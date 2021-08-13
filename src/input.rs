@@ -108,7 +108,7 @@ fn stream_patch(abort: &Abort, patch: PathBuf) -> (JoinHandle<()>, Receiver<Payl
       Ok(patches) => {
         for patch in patches {
           if let Err(err) = tx.send(Payload::Piecewise(patch.0, patch.1)).await {
-            let _ = abort.send(Join);
+            let _ = abort.send(Fail::Join);
             break;
           }
         }

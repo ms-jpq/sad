@@ -196,7 +196,7 @@ fn p_pager(pager: &Option<String>) -> Option<SubprocessCommand> {
   })
 }
 
-pub fn parse_opts(args: Arguments) -> Result<Options, Fail> {
+pub fn parse_opts(args: &Arguments) -> Result<Options, Fail> {
   let mut flagset = p_auto_flags(&args.pattern);
   flagset.extend(
     args
