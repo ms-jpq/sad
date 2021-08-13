@@ -53,7 +53,7 @@ fn stream_trans(
                 Ok(p) => {
                   match displace(&opts, p).await {
                     Ok(displaced) => {
-                      if let Err(_) = tx.send(displaced).await {
+                      if tx.send(displaced).await.is_err() {
                         let _ = abort.send(Fail::Join);
                         break;
                       }
@@ -74,13 +74,10 @@ fn stream_trans(
 
   let abort = abort.clone();
   let handle = spawn(async move {
-    match try_join_all(handles).await {
-      Err(err) => {
-        if !err.is_cancelled() {
-          let _ = abort.send(Fail::Join);
-        }
+    if let Err(err) = try_join_all(handles).await {
+      if !err.is_cancelled() {
+        let _ = abort.send(Fail::Join);
       }
-      _ => (),
     }
   });
   (handle, rx)
