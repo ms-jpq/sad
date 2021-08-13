@@ -4,14 +4,16 @@ use super::subprocess::stream_subprocess;
 use super::types::{Abort, Fail};
 use tokio::{
   io::{self, AsyncWriteExt, BufWriter},
-  path::PathBuf,
   select,
   sync::mpsc::Receiver,
   task::{spawn, JoinHandle},
 };
+use std::path::PathBuf;
 
 fn stream_stdout(abort: &Abort, stream: Receiver<String>) -> JoinHandle<()> {
+  let abort = abort.clone();
   let mut stdout = BufWriter::new(io::stdout());
+
   spawn(async move {
     let mut on_abort = abort.subscribe();
     loop {

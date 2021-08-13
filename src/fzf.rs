@@ -32,7 +32,7 @@ async fn reset_term() -> Result<(), Fail> {
       return Ok(());
     }
   }
-  Err(Fail::IO(PathBuf("reset"), ErrorKind::NotFound))
+  Err(Fail::IO(PathBuf::from("reset"), ErrorKind::NotFound))
 }
 
 fn run_fzf(abort: &Abort, cmd: SubprocessCommand, stream: Receiver<String>) -> JoinHandle<()> {
@@ -47,7 +47,7 @@ fn run_fzf(abort: &Abort, cmd: SubprocessCommand, stream: Receiver<String>) -> J
 
     match subprocess {
       Err(err) => {
-        abort.send(Fail::IO(cmd.prog, err.kind()));
+        let _ = abort.send(Fail::IO(cmd.prog, err.kind()));
       }
       Ok(child) => {
         let mut stdin = child.stdin.take().map(BufWriter::new).expect("nil stdin");
@@ -72,7 +72,7 @@ fn run_fzf(abort: &Abort, cmd: SubprocessCommand, stream: Receiver<String>) -> J
             }
           }
           if let Err(err) = stdin.shutdown().await {
-            abort.send(Fail::IO(p1, err.kind()));
+            let _ = abort.send(Fail::IO(p1, err.kind()));
           }
         });
 
@@ -86,18 +86,18 @@ fn run_fzf(abort: &Abort, cmd: SubprocessCommand, stream: Receiver<String>) -> J
                   match status.code() {
                     Some(0) | Some(1) | None => (),
                     Some(130) => {
-                      abort.send(Fail::Interrupt);
+                      let _ = abort.send(Fail::Interrupt);
                     }
                     Some(c) => {
-                      abort.send(Fail::BadExit(p2, c));
+                      let _ = abort.send(Fail::BadExit(p2, c));
                       if let Err(err) = reset_term().await {
-                        let _ = abort.send(err)
+                        let _ = abort.send(err);
                       }
                     }
                   }
                 }
                 Err(err) => {
-                  abort.send(Fail::IO(p2, err.kind()));
+                  let _ = abort.send(Fail::IO(p2, err.kind()));
                 }
               }
             },
@@ -108,7 +108,7 @@ fn run_fzf(abort: &Abort, cmd: SubprocessCommand, stream: Receiver<String>) -> J
                 },
                 _ => {
                   if let Err(err) = reset_term().await {
-                    let _ = abort.send(err)
+                    let _ = abort.send(err);
                   }
                 }
               }

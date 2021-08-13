@@ -1,4 +1,4 @@
-use regex::RegexError;
+use regex::Error as RegexError;
 use std::{
   clone::Clone,
   error::Error,

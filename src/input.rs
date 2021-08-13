@@ -25,7 +25,7 @@ pub enum Payload {
 
 struct DiffLine(PathBuf, DiffRange);
 
-fn p_line(line: String) -> Result<Self, Fail> {
+fn p_line(line: String) -> Result<DiffLine, Fail> {
   let f = Fail::ArgumentError(String::new());
   let preg = "\n\n\n\n@@ -(\\d+),(\\d+) \\+(\\d+),(\\d+) @@$";
   let re = Regex::new(preg).map_err(|e| Fail::RegexError(e))?;
@@ -73,9 +73,14 @@ async fn read_patches(path: &PathBuf) -> Result<HashMap<PathBuf, HashSet<DiffRan
 
   loop {
     let mut buf = Vec::new();
-    match reader.read_until(b'\0', &mut buf).await {
-      Ok(0) => break,
-      Ok(_) => {
+    let n = reader
+      .read_until(b'\0', &mut buf)
+      .await
+      .map_err(|e| Fail::IO(path.clone(), e.kind()))?;
+
+    match n {
+      0 => break,
+      _ => {
         buf.pop();
         let line =
           String::from_utf8(buf).map_err(|_| Fail::IO(path.clone(), ErrorKind::InvalidData))?;
@@ -91,10 +96,6 @@ async fn read_patches(path: &PathBuf) -> Result<HashMap<PathBuf, HashSet<DiffRan
           }
         }
       }
-      Err(err) => {
-        let _ = abort.send(Fail::IO(path.clone(), err.kind()));
-        break;
-      }
     }
   }
 
@@ -102,7 +103,9 @@ async fn read_patches(path: &PathBuf) -> Result<HashMap<PathBuf, HashSet<DiffRan
 }
 
 fn stream_patch(abort: &Abort, patch: PathBuf) -> (JoinHandle<()>, Receiver<Payload>) {
+  let abort = abort.clone();
   let (tx, rx) = bounded::<Payload>(1);
+
   let handle = spawn(async move {
     match read_patches(&patch).await {
       Ok(patches) => {
@@ -114,7 +117,7 @@ fn stream_patch(abort: &Abort, patch: PathBuf) -> (JoinHandle<()>, Receiver<Payl
         }
       }
       Err(err) => {
-        let _ = abort.send(fail);
+        let _ = abort.send(err);
       }
     }
   });
@@ -133,6 +136,7 @@ fn stream_stdin(abort: &Abort, use_nul: bool) -> (JoinHandle<()>, Receiver<Paylo
       let mut on_abort = abort.subscribe();
       let mut reader = BufReader::new(io::stdin());
       let mut seen = HashSet::new();
+
       loop {
         let mut buf = Vec::new();
         select! {
@@ -142,7 +146,7 @@ fn stream_stdin(abort: &Abort, use_nul: bool) -> (JoinHandle<()>, Receiver<Paylo
               Ok(0) => break,
               Ok(_) => {
                 buf.pop();
-                let path = PathBuf::from(OsString::from_vec(name));
+                let path = PathBuf::from(OsString::from_vec(buf));
                 if let Ok(canonical) = canonicalize(&path).await {
                   if seen.insert(canonical.clone()) {
                     if let Err(err) = tx.send(Payload::Entire(canonical)).await {

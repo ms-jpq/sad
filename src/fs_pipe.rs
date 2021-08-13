@@ -1,10 +1,10 @@
 use super::types::Fail;
-use std::{env::temp_dir, ffi::OsString, fs::Metadata, io::ErrorKind, path::PathBuf};
+use std::{ffi::OsString, fs::Metadata, io::ErrorKind, path::PathBuf};
 use tokio::{
-  fs::{File, OpenOptions},
+  fs::{File, OpenOptions, rename},
   io::{AsyncReadExt, AsyncWriteExt},
 };
-use uuid::Uuid::new_v4;
+use uuid::Uuid;
 
 pub struct Slurpee {
   pub meta: Metadata,
@@ -36,7 +36,7 @@ pub async fn slurp(path: &PathBuf) -> Result<Slurpee, Fail> {
 }
 
 pub async fn spit(canonical: &PathBuf, meta: &Metadata, text: &str) -> Result<(), Fail> {
-  let uuid = new_v4().to_simple().to_string();
+  let uuid = Uuid::new_v4().to_simple().to_string();
   let mut file_name = canonical
     .file_name()
     .map(|n| n.to_owned())
@@ -45,16 +45,16 @@ pub async fn spit(canonical: &PathBuf, meta: &Metadata, text: &str) -> Result<()
   file_name.push(uuid);
   let tmp = canonical.with_file_name(file_name);
 
-  let fd = OpenOptions::new()
+  let mut fd = OpenOptions::new()
     .create_new(true)
     .write(true)
     .open(&tmp)
     .await
-    .map_err(|e| Fail::IO(tmp, e.kind()))?;
+    .map_err(|e| Fail::IO(tmp.clone(), e.kind()))?;
 
   fd.set_permissions(meta.permissions())
     .await
-    .map_err(|e| Fail::IO(tmp, e.kind()))?;
+    .map_err(|e| Fail::IO(tmp.clone(), e.kind()))?;
   fd.write_all(text.as_bytes());
 
   rename(&tmp, &canonical)
