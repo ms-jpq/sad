@@ -23,7 +23,7 @@ fn stream_stdout(abort: &Abort, mut stream: Receiver<String>) -> JoinHandle<()> 
           match print {
             Some(val) => {
               if let Err(err) = stdout.write(val.as_bytes()).await {
-                let _ = abort.send(Fail::IO(PathBuf::from("/dev/stdout") ,err.kind()));
+                abort.send(Fail::IO(PathBuf::from("/dev/stdout") ,err.kind())).expect("<ABORT CH OPEN>");
                 break;
               }
             },
@@ -33,7 +33,7 @@ fn stream_stdout(abort: &Abort, mut stream: Receiver<String>) -> JoinHandle<()> 
       }
     }
     if let Err(err) = stdout.flush().await {
-      let _ = abort.send(Fail::IO(PathBuf::from("/dev/stdout"), err.kind()));
+      abort.send(Fail::IO(PathBuf::from("/dev/stdout"), err.kind())).expect("<ABORT CH OPEN>");
     }
   })
 }

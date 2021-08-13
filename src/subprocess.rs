@@ -33,7 +33,7 @@ pub fn stream_subprocess(
 
     match subprocess {
       Err(err) => {
-        let _ = abort.send(Fail::IO(cmd.prog, err.kind()));
+        abort.send(Fail::IO(cmd.prog, err.kind())).expect("<ABORT CH OPEN>");
       }
       Ok(mut child) => {
         let mut stdin = child.stdin.take().map(BufWriter::new).expect("nil stdin");
@@ -72,7 +72,7 @@ pub fn stream_subprocess(
         });
 
         if let Err(err) = try_join(handle_child, handle_in).await {
-          let _ = abort.send(err.into());
+          abort.send(err.into()).expect("<ABORT CH OPEN>");
         }
       }
     }

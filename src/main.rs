@@ -58,7 +58,7 @@ fn stream_trans(
                       }
                     },
                     Err(err) => {
-                      let _ = abort.send(err);
+                      abort.send(err).expect("<ABORT CH OPEN>");
                     }
                   }
                 },
@@ -74,7 +74,7 @@ fn stream_trans(
   let abort = abort.clone();
   let handle = spawn(async move {
     if let Err(err) = try_join_all(handles).await {
-      let _ = abort.send(err.into());
+      abort.send(err.into()).expect("<ABORT CH OPEN>");
     }
   });
   (handle, rx)

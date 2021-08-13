@@ -117,7 +117,7 @@ fn stream_patch(abort: &Abort, patch: &Path) -> (JoinHandle<()>, Receiver<Payloa
         }
       }
       Err(err) => {
-        let _ = abort.send(err);
+        abort.send(err).expect("<ABORT CH OPEN>");
       }
     }
   });
@@ -130,9 +130,9 @@ fn stream_stdin(abort: &Abort, use_nul: bool) -> (JoinHandle<()>, Receiver<Paylo
   let abort = abort.clone();
   let handle = spawn(async move {
     if atty::is(atty::Stream::Stdin) {
-      let _ = abort.send(Fail::ArgumentError(
+      abort.send(Fail::ArgumentError(
         "/dev/stdin connected to tty".to_owned(),
-      ));
+      )).expect("<ABORT CH OPEN>");
     } else {
       let delim = if use_nul { b'\0' } else { b'\n' };
       let mut on_abort = abort.subscribe();
@@ -158,13 +158,13 @@ fn stream_stdin(abort: &Abort, use_nul: bool) -> (JoinHandle<()>, Receiver<Paylo
                   },
                   Err(err) if err.kind() == ErrorKind::NotFound => (),
                   Err(err) => {
-                    let _ = abort.send(Fail::IO(path, err.kind()));
+                    abort.send(Fail::IO(path, err.kind())).expect("<ABORT CH OPEN>");
                     break;
                   }
                 }
               }
               Err(err) => {
-                let _ = abort.send(Fail::IO(PathBuf::from("/dev/stdin"), err.kind()));
+                abort.send(Fail::IO(PathBuf::from("/dev/stdin"), err.kind())).expect("<ABORT CH OPEN>");
                 break;
               }
             }
