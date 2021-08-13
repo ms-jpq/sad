@@ -19,7 +19,6 @@ use types::{Abort, Fail};
 
 mod argparse;
 mod displace;
-mod errors;
 mod fs_pipe;
 mod fzf;
 mod input;
