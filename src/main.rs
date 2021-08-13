@@ -10,7 +10,7 @@ use tokio::{
   runtime::Builder,
   select,
   sync::{
-    broadcast::{self, error::RecvError, Receiver as BReceiver},
+    broadcast::{self, error::RecvError},
     mpsc::{self, Receiver},
   },
   task::{spawn, JoinHandle},
@@ -75,9 +75,7 @@ fn stream_trans(
   let abort = abort.clone();
   let handle = spawn(async move {
     if let Err(err) = try_join_all(handles).await {
-      if !err.is_cancelled() {
-        let _ = abort.send(Fail::Join);
-      }
+      let _ = abort.send(err.into());
     }
   });
   (handle, rx)
@@ -89,17 +87,8 @@ async fn run(abort: &Abort, cpus: usize) -> Result<(), Fail> {
   let opts = parse_opts(args)?;
   let (h_2, trans_stream) = stream_trans(abort, cpus, &opts, input_stream);
   let h_3 = stream_output(abort, &opts, trans_stream);
-  Ok(try_join3(h_1, h_2, h_3).await.map(|_| ())?)
-}
-
-async fn poll(mut rx: BReceiver<Fail>) -> Fail {
-  loop {
-    match rx.recv().await {
-      Ok(err) => return err,
-      Err(RecvError::Lagged(_)) => (),
-      Err(e) => panic!("{:#?}", e),
-    }
-  }
+  try_join3(h_1, h_2, h_3).await?;
+  Ok(())
 }
 
 fn main() {
@@ -110,24 +99,43 @@ fn main() {
     .build()
     .expect("runtime failure");
 
-  let status = rt.block_on(async {
+  let errors = rt.block_on(async {
     let (abort, rx) = broadcast::channel::<Fail>(1);
-    select! {
-      err = poll(rx) => Some(err),
-      maybe = run(&abort ,cpus) => match maybe {
-        Ok(_) => None,
-        Err(err) => Some(err)
+
+    let s1 = spawn(async move {
+      let mut errors = Vec::new();
+      loop {
+        match rx.recv().await {
+          Ok(err) => errors.push(err),
+          Err(RecvError::Lagged(_)) => (),
+          Err(RecvError::Closed) => break,
+        }
       }
+      errors
+    });
+
+    let s2 = spawn(async move {
+      if let Err(err) = run(&abort, cpus).await {
+        vec![err]
+      } else {
+        Vec::new()
+      }
+    });
+
+    match try_join_all(vec![s1, s2]).await {
+      Ok(errs) => errs.into_iter().flatten().collect(),
+      Err(err) => vec![err.into()],
     }
   });
-  drop(rt);
 
-  match status {
-    Some(Fail::Interrupt) => exit(130),
-    Some(err) => {
-      eprintln!("{}", Colour::Red.paint(format!("{}", err)));
+  match errors[..] {
+    [] => exit(0),
+    [Fail::Interrupt] => exit(130),
+    errs => {
+      for err in errs.into_iter() {
+        eprintln!("{}", Colour::Red.paint(format!("{}", err)));
+      }
       exit(1)
     }
-    None => exit(0),
   }
 }

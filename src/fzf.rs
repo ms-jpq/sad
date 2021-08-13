@@ -124,9 +124,7 @@ fn run_fzf(abort: &Abort, cmd: SubprocessCommand, mut stream: Receiver<String>) 
         });
 
         if let Err(err) = try_join(handle_child, handle_in).await {
-          if !err.is_cancelled() {
-            let _ = abort.send(Fail::Join);
-          }
+          let _ = abort.send(err.into());
         }
       }
     }
