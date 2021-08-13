@@ -1,7 +1,10 @@
+use regex::RegexError;
 use std::{
   clone::Clone,
   error::Error,
   fmt::{self, Display, Formatter},
+  io::ErrorKind,
+  path::PathBuf,
 };
 use tokio::sync::broadcast::Sender;
 
@@ -9,7 +12,8 @@ use tokio::sync::broadcast::Sender;
 pub enum Fail {
   Interrupt,
   ArgumentError(String),
-  RegexError(String),
+  RegexError(RegexError),
+  IO(PathBuf, ErrorKind),
 }
 
 impl Fail {

@@ -1,7 +1,7 @@
 use super::argparse::{Action, Engine, Options};
-use super::types::Fail;
 use super::fs_pipe::{slurp, spit};
 use super::input::Payload;
+use super::types::Fail;
 use super::udiff::{udiff, DiffRanges, Diffs, Patchable, Picker};
 use ansi_term::Colour;
 use pathdiff::diff_paths;

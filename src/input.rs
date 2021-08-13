@@ -70,9 +70,7 @@ impl TryFrom<&str> for DiffLine {
   }
 }
 
-async fn read_patches(
-  path: &PathBuf,
-) -> Result<HashMap<PathBuf, HashSet<DiffRange>>, Fail> {
+async fn read_patches(path: &PathBuf) -> Result<HashMap<PathBuf, HashSet<DiffRange>>, Fail> {
   let fd = File::open(path).await?;
   let mut reader = BufReader::new(fd);
   let mut acc = HashMap::new();

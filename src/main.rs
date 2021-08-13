@@ -1,20 +1,20 @@
+use ansi_term::Colour;
 use argparse::{parse_args, parse_opts, Options};
 use async_channel::Receiver as MPMCR;
 use displace::displace;
 use futures::future::{try_join3, try_join_all};
 use input::{stream_input, Payload};
 use output::stream_output;
-use std::{sync::Arc, time::Duration, process::exit, error::Error};
+use std::{error::Error, process::exit, sync::Arc, time::Duration};
 use tokio::{
   runtime::Builder,
   select,
   sync::{
-    broadcast::{self, RecvError},
+    broadcast,
     mpsc::{self, Receiver},
   },
   task::{spawn, JoinHandle},
 };
-use ansi_term::Colour;
 use types::{Abort, Fail};
 
 mod argparse;
@@ -83,7 +83,7 @@ async fn run(abort: &Abort) -> Option<Fail> {
   let h_3 = stream_output(abort, opts, trans_stream);
   match try_join3(h_1, h_2, h_3).await {
     Err(err) => Some(err),
-    _ => None
+    _ => None,
   }
 }
 

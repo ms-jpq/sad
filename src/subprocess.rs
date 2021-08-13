@@ -1,4 +1,4 @@
-use super::types::Abort;
+use super::types::{Abort, Fail};
 use futures::future::try_join;
 use std::{collections::HashMap, path::PathBuf, process::Stdio};
 use tokio::{
@@ -11,8 +11,8 @@ use tokio::{
 
 #[derive(Clone, Debug)]
 pub struct SubprocessCommand {
-  pub program: PathBuf,
-  pub arguments: Vec<String>,
+  pub prog: PathBuf,
+  pub args: Vec<String>,
   pub env: HashMap<String, String>,
 }
 
@@ -21,9 +21,9 @@ pub fn stream_subprocess(
   cmd: &SubprocessCommand,
   stream: Receiver<String>,
 ) -> JoinHandle<()> {
-  let subprocess = Command::new(&cmd.program)
+  let subprocess = Command::new(&cmd.prog)
     .kill_on_drop(true)
-    .args(&cmd.arguments)
+    .args(&cmd.args)
     .envs(&cmd.env)
     .stdin(Stdio::piped())
     .spawn();
@@ -31,7 +31,7 @@ pub fn stream_subprocess(
   spawn(async move {
     match subprocess {
       Err(err) => {
-        let _ = abort.send(Box::new(err));
+        let _ = abort.send(Fail::IO(cmd.prog, err.kind()));
       }
       Ok(child) => {
         let mut stdin = child.stdin.take().map(BufWriter::new).expect("nil stdin");
@@ -45,7 +45,7 @@ pub fn stream_subprocess(
                 match print {
                   Some(val) => {
                     if let Err(err) = stdin.write(val.as_bytes()).await {
-                      let _ = abort.send(Box::new(err));
+                      let _ = abort.send(Fail::IO(cmd.prog, err.kind()));
                       break;
                     }
                   }
@@ -55,18 +55,18 @@ pub fn stream_subprocess(
             }
           }
           if let Err(err) = stdin.shutdown().await {
-            let _ = abort.send(Box::new(err));
+            let _ = abort.send(Fail::IO(cmd.prog, err.kind()));
           }
         });
 
         let handle_child = spawn(async move {
           if let Err(err) = child.wait().await {
-            let _ = abort.send(Box::new(err));
+            let _ = abort.send(Fail::IO(cmd.prog, err.kind()));
           }
         });
 
         if let Err(err) = try_join(handle_child, handle_in).await {
-          let _ = abort.send(Box::new(err));
+          let _ = abort.send(Fail::IO(cmd.prog, err.kind()));
         }
       }
     }

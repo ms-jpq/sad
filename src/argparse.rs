@@ -1,8 +1,8 @@
-use super::types::Fail;
 use super::subprocess::SubprocessCommand;
+use super::types::Fail;
 use aho_corasick::{AhoCorasick, AhoCorasickBuilder};
 use regex::{Regex, RegexBuilder};
-use std::{collections::HashMap, env, error::Error, path::PathBuf};
+use std::{collections::HashMap, env, path::PathBuf};
 use structopt::StructOpt;
 use which::which;
 
@@ -156,7 +156,7 @@ fn p_regex(pattern: &str, flags: Vec<String>) -> Result<Regex, Fail> {
       _ => return Err(Fail::ArgumentError(format!("Invaild regex flag -{}", flag))),
     };
   }
-  re.build()
+  re.build().map_err(|e| Fail::RegexError(e))
 }
 
 fn p_fzf(fzf: Option<String>) -> Option<(PathBuf, Vec<String>)> {
@@ -190,8 +190,8 @@ fn p_pager(pager: &Option<String>) -> Option<SubprocessCommand> {
   };
 
   prog.map(|program| SubprocessCommand {
-    arguments,
-    program,
+    args: arguments,
+    prog: program,
     env: HashMap::new(),
   })
 }

@@ -1,13 +1,7 @@
 use super::subprocess::SubprocessCommand;
 use super::types::{Abort, Fail};
 use futures::future::try_join;
-use std::{
-  collections::HashMap,
-  env,
-  error::Error,
-  path::PathBuf,
-  process:: Stdio,
-};
+use std::{collections::HashMap, env, error::Error, path::PathBuf, process::Stdio};
 use tokio::{
   io::{self, AsyncWriteExt, BufWriter},
   process::Command,
@@ -18,7 +12,9 @@ use tokio::{
 use which::which;
 
 async fn reset_term() -> Result<(), dyn Error> {
-  try_join(io::stdout().flush(), io::stderr().flush()).map(|_| ()).await?;
+  try_join(io::stdout().flush(), io::stderr().flush())
+    .map(|_| ())
+    .await?;
   if let Ok(path) = which("tput") {
     Command::new("tput").arg("reset").status().await?
   } else if let Ok(path) = which("reset") {
@@ -29,13 +25,13 @@ async fn reset_term() -> Result<(), dyn Error> {
 }
 
 fn run_fzf(abort: &Abort, cmd: &SubprocessCommand, stream: Receiver<String>) -> JoinHandle<()> {
-  let subprocess = Command::new(&cmd.program)
+  let subprocess = Command::new(&cmd.prog)
     .kill_on_drop(true)
     .args(&cmd.arguments)
     .envs(&cmd.env)
     .stdin(Stdio::piped())
     .spawn();
-
+args
   spawn(async move {
     match subprocess {
       Err(err) => {
@@ -149,9 +145,9 @@ pub fn stream_fzf(
   let mut env = HashMap::new();
   env.insert("SHELL".to_owned(), sad);
   let cmd = SubprocessCommand {
-    program: bin,
+    prog: bin,
     arguments,
     env,
   };
   run_fzf(abort, &cmd, stream)
-}
+}args: 
