@@ -2,7 +2,7 @@ use super::argparse::{Action, Engine, Options};
 use super::fs_pipe::{slurp, spit};
 use super::input::Payload;
 use super::types::Fail;
-use super::udiff::{udiff, Diffs, Patchable, Picker};
+use super::udiff::{apply_patches, patches, pure_diffs, udiff};
 use ansi_term::Colour;
 use pathdiff::diff_paths;
 use std::path::PathBuf;
@@ -33,7 +33,7 @@ pub async fn displace(opts: &Options, payload: Payload) -> Result<String, Fail> 
     .as_ref()
     .and_then(|cwd| diff_paths(&path, cwd))
     .map(|p| p)
-    .unwrap_or(path);
+    .unwrap_or_else(|| path.clone());
 
   let name = rel_path.display();
   let (meta, before) = (slurped.meta, slurped.content);
@@ -52,13 +52,13 @@ pub async fn displace(opts: &Options, payload: Payload) -> Result<String, Fail> 
         format!("{}\n", name)
       }
       (Action::Commit, Payload::Piecewise(_, ranges)) => {
-        let diffs: Diffs = Patchable::new(opts.unified, &before, &after);
-        let after = diffs.patch(&ranges, &before);
+        let patches = patches(opts.unified, &before, &after);
+        let after = apply_patches(patches, ranges, &before);
         spit(&path, &meta, &after).await?;
         format!("{}\n", name)
       }
       (Action::Fzf(_, _), _) => {
-        let ranges = Picker::new(opts.unified, &before, &after);
+        let ranges = pure_diffs(opts.unified, &before, &after);
         let mut fzf_lines = String::new();
         for range in ranges {
           let repr = Colour::Red.paint(format!("{}", range));

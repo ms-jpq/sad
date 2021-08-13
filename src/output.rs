@@ -2,13 +2,13 @@ use super::argparse::{Action, Options, Printer};
 use super::fzf::stream_fzf;
 use super::subprocess::stream_subprocess;
 use super::types::{Abort, Fail};
+use std::path::PathBuf;
 use tokio::{
   io::{self, AsyncWriteExt, BufWriter},
   select,
   sync::mpsc::Receiver,
   task::{spawn, JoinHandle},
 };
-use std::path::PathBuf;
 
 fn stream_stdout(abort: &Abort, stream: Receiver<String>) -> JoinHandle<()> {
   let abort = abort.clone();

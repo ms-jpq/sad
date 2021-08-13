@@ -1,7 +1,7 @@
 use super::types::Fail;
 use std::{ffi::OsString, fs::Metadata, io::ErrorKind, path::PathBuf};
 use tokio::{
-  fs::{File, OpenOptions, rename},
+  fs::{rename, File, OpenOptions},
   io::{AsyncReadExt, AsyncWriteExt},
 };
 use uuid::Uuid;
