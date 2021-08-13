@@ -138,7 +138,7 @@ fn p_aho_corasick(pattern: &str, flags: Vec<String>) -> Result<AhoCorasick, Fail
   Ok(ac.build(&[pattern]))
 }
 
-fn p_regex(pattern: &str, flags: Vec<String>) -> Result<Regex, Fail> {
+fn p_regex(pattern: &str, mut flags: Vec<String>) -> Result<Regex, Fail> {
   flags.push("m".to_owned());
   let mut re = RegexBuilder::new(pattern);
   for flag in flags {
@@ -196,19 +196,19 @@ fn p_pager(pager: &Option<String>) -> Option<SubprocessCommand> {
   })
 }
 
-pub fn parse_opts(args: &Arguments) -> Result<Options, Fail> {
+pub fn parse_opts(args: Arguments) -> Result<Options, Fail> {
   let mut flagset = p_auto_flags(&args.pattern);
   flagset.extend(
     args
       .flags
-      .unwrap_or_default()
+      .unwrap_or("".to_owned())
       .split_terminator("")
       .skip(1)
       .map(String::from),
   );
 
   let engine = {
-    let replace = args.replace.unwrap_or_default();
+    let replace = args.replace.unwrap_or("".to_owned());
     if args.exact {
       Engine::AhoCorasick(p_aho_corasick(&args.pattern, flagset)?, replace)
     } else {
