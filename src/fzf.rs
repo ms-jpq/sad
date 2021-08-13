@@ -80,7 +80,7 @@ fn run_fzf(abort: &Abort, cmd: &SubprocessCommand, stream: Receiver<String>) -> 
                     }
                     Some(c) => {
                       abort.send(Box::new(Failure::Sucks(format!("Error exit - {}", c))));
-                      if let Error(err) = reset_term().await {
+                      if let Err(err) = reset_term().await {
                         abort.send(err)
                       }
                     }
@@ -97,7 +97,7 @@ fn run_fzf(abort: &Abort, cmd: &SubprocessCommand, stream: Receiver<String>) -> 
                   abort.send(err);
                 },
                 _ => {
-                  if let Error(err) = reset_term().await {
+                  if let Err(err) = reset_term().await {
                     abort.send(err)
                   }
                 }
