@@ -1,6 +1,5 @@
 use super::argparse::Arguments;
-use super::errors::Failure;
-use super::types::{Abort, Task};
+use super::types::{Abort, Failure};
 use super::udiff::DiffRange;
 use async_channel::{bounded, Receiver};
 use regex::Regex;
@@ -11,12 +10,12 @@ use std::{
   ffi::OsString,
   os::unix::ffi::OsStringExt,
   path::PathBuf,
-  sync::Arc,
 };
 use tokio::{
   fs::{canonicalize, File},
   io::{self, AsyncBufReadExt, BufReader},
-  select, task,
+  select,
+  task::{spawn, JoinHandle},
 };
 
 #[derive(Debug)]
@@ -74,9 +73,9 @@ impl TryFrom<&str> for DiffLine {
 async fn read_patches(
   path: &PathBuf,
 ) -> Result<HashMap<PathBuf, HashSet<DiffRange>>, Box<dyn Error>> {
-  let mut acc: HashMap<PathBuf, HashSet<DiffRange>> = HashMap::new();
   let fd = File::open(path).await?;
   let mut reader = BufReader::new(fd);
+  let mut acc = HashMap::new::<PathBuf, HashSet<DiffRange>>();
 
   loop {
     let mut buf = Vec::new();
@@ -104,59 +103,61 @@ async fn read_patches(
   Ok(acc)
 }
 
-fn stream_patch(abort: &Arc<Abort>, patch: PathBuf) -> (Task, Receiver<Payload>) {
+fn stream_patch(abort: &Abort, patch: PathBuf) -> (JoinHandle<()>, Receiver<Payload>) {
   let (tx, rx) = bounded::<Payload>(1);
-  let handle = task::spawn(async move {
+  let handle = spawn(async move {
     match read_patches(&patch).await {
       Ok(patches) => {
         for patch in patches {
-          tx.send(Payload::Piecewise(patch.0, patch.1))
-            .await
-            .expect("<CHAN>")
+          match tx.send(Payload::Piecewise(patch.0, patch.1)).await {
+            Err(err) => {
+              abort.send(Box::new(err));
+              break;
+            }
+            _ => (),
+          }
         }
       }
-      Err(err) => abort.tx.send(err).expect("<CHAN>"),
+      Err(err) => abort.send(Box::new(err)),
     }
   });
   (handle, rx)
 }
 
-fn stream_stdin(abort: &Arc<Abort>, use_nul: bool) -> (Task, Receiver<Payload>) {
+fn stream_stdin(abort: &Abort, use_nul: bool) -> (JoinHandle<()>, Receiver<Payload>) {
   let (tx, rx) = bounded::<Payload>(1);
-  let handle = task::spawn(async move {
-    let delim = if use_nul { b'\0' } else { b'\n' };
-    let mut reader = BufReader::new(io::stdin());
+
+  let handle = spawn(async move {
     if atty::is(atty::Stream::Stdin) {
-      abort
-        .tx
-        .send(Box::new(Failure::Sucks(String::new())))
-        .expect("<CHAN>")
+      abort.send(Box::new(Failure::Sucks(String::new())));
     } else {
+      let delim = if use_nul { b'\0' } else { b'\n' };
+      let mut on_abort = abort.subscribe();
+      let mut reader = BufReader::new(io::stdin());
       let mut seen = HashSet::new();
       loop {
         let mut buf = Vec::new();
         select! {
-          _ = abort.rx.changed() => break,
+          _ = on_abort.recv() => break,
           n = reader.read_until(delim, &mut buf) => {
-
-        match n {
-          Ok(0) => break,
-          Ok(_) => {
-            buf.pop();
-            let path = p_path(buf);
-            if let Ok(canonical) = canonicalize(&path).await {
-              if seen.insert(canonical.clone()) {
-                tx.send(Payload::Entire(canonical))
-                  .await
-                  .expect("<CHAN>")
+            match n {
+              Ok(0) => break,
+              Ok(_) => {
+                buf.pop();
+                let path = p_path(buf);
+                if let Ok(canonical) = canonicalize(&path).await {
+                  if seen.insert(canonical.clone()) {
+                    tx.send(Payload::Entire(canonical))
+                      .await
+                      .expect("<CHAN>")
+                  }
+                }
+              }
+              Err(err) => {
+                abort.send(Box::new(err));
+                break;
               }
             }
-          }
-          Err(err) => {
-            abort.tx.send(Box::new(err)).expect("<CHAN>");
-            break;
-          }
-        }
           }
         }
       }
@@ -165,14 +166,12 @@ fn stream_stdin(abort: &Arc<Abort>, use_nul: bool) -> (Task, Receiver<Payload>) 
   (handle, rx)
 }
 
-impl Arguments {
-  pub fn stream(&self, abort: Arc<Abort>) -> (Task, Receiver<Payload>) {
-    if let Some(preview) = &self.internal_preview {
-      stream_patch(abort, preview.clone())
-    } else if let Some(patch) = &self.internal_patch {
-      stream_patch(abort, patch.clone())
-    } else {
-      stream_stdin(abort, self.nul_delim)
-    }
+pub fn stream_input(abort: &Abort, args: &Arguments) -> (JoinHandle<()>, Receiver<Payload>) {
+  if let Some(preview) = &args.internal_preview {
+    stream_patch(abort, preview.clone())
+  } else if let Some(patch) = &args.internal_patch {
+    stream_patch(abort, patch.clone())
+  } else {
+    stream_stdin(abort, self.nul_delim)
   }
 }

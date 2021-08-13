@@ -1,13 +1,21 @@
-use argparse::{Arguments, Options};
-use async_channel::{bounded, Receiver, Sender};
+use argparse::{parse_args, parse_opts};
+use async_channel::Receiver as MPMCR;
 use displace::displace;
-use errors::Failure;
-use futures::future::{try_join3, try_join_all, TryJoinAll};
-use input::Payload;
+use futures::future::{try_join3, try_join_all};
+use input::{stream_input, Payload};
 use output::stream_output;
 use std::{sync::Arc, time::Duration};
-use tokio::{runtime::Builder, select, sync::watch, task};
-use types::{Abort, Task};
+use tokio::{
+  runtime::Builder,
+  select,
+  sync::{
+    broadcast,
+    mpsc::{self, Receiver},
+  },
+  task::{spawn, JoinHandle},
+};
+use types::Abort;
+use types::Failure;
 
 mod argparse;
 mod displace;
@@ -20,30 +28,32 @@ mod subprocess;
 mod types;
 mod udiff;
 
-fn stream_process(
-  abort: &Arc<Abort>,
-  opts: Options,
-  stream: Receiver<Payload>,
-) -> (TryJoinAll<Task>, Receiver<String>) {
-  let oo = Arc::new(opts);
-  let (tx, rx) = bounded::<String>(1);
+fn stream_trans(
+  abort: &Abort,
+  opts: &Options,
+  stream: MPMCR<Payload>,
+) -> (JoinHandle<()>, Receiver<String>) {
+  let a_opts = Arc::new(opts.clone());
+  let (tx, rx) = mpsc::channel::<String>(1);
 
   let handles = (1..=num_cpus::get() * 2)
     .map(|_| {
-      let stream = Receiver::clone(&stream);
-      let opts = Arc::clone(&oo);
-      let sender = Sender::clone(&tx);
+      let mut on_abort = abort.subscribe();
+      let stream = stream.clone();
+      let opts = a_opts.clone();
+      let tx = tx.clone();
 
-      task::spawn(async move {
+      spawn(async move {
         loop {
           select! {
-            _ = abort.rx.changed() => break,
+            _ = on_abort.recv() => break,
             payload = stream.recv() => {
               match payload {
                 Ok(p) => {
-
-                let displaced = displace(&opts, payload).await;
-                sender.send(displaced).await.expect("<CHANNEL>")
+                  let displaced = displace(&opts, payload).await;
+                  if let Err(err) = tx.send(displaced).await {
+                    abort.send(Box::new(err));
+                  }
                 },
                 _ => break
               }
@@ -53,19 +63,27 @@ fn stream_process(
       })
     })
     .collect::<Vec<_>>();
-  let handle = try_join_all(handles);
+
+  let handle = spawn(async move {
+    match try_join_all(handles).await {
+      Err(err) => {
+        abort.send(Box::new(err));
+      }
+      _ => (),
+    }
+  });
   (handle, rx)
 }
 
-async fn run(abort: &Arc<Abort>) {
-  let abbr = Arc::clone(abort);
-  let args = Arguments::new()?;
-  let (reader, receiver) = args.stream(abort);
-  let opts = Options::new(args)?;
-  let (steps, rx) = stream_process(abort, opts.clone(), receiver);
-  let writer = stream_output(abort, opts, rx);
-  if let Err(err) = try_join3(reader, steps, writer).await {
-    abbr.tx.send(Box::new(err)).await.expect("<CHANNEL>")
+async fn run(abort: &Abort) -> Result<(), Box<dyn Error>> {
+  let args = parse_args()?;
+  let opts = parse_opts(args)?;
+  let (h_1, input_stream) = stream_input(abort, &args);
+  let (h_2, trans_stream) = stream_trans(abort, &opts, input_stream);
+  let h_3 = stream_output(abort, opts, trans_stream);
+  match try_join3(h_1, h_2, h_3).await {
+    Err(err) => err,
+    _ => Ok(()),
   }
 }
 
@@ -74,17 +92,21 @@ fn main() {
     .enable_io()
     .build()
     .expect("runtime failure");
-  rt.block_on(async {
-    let (tx, rx) = watch::channel(Box::new(Failure::Gucci));
-    let abort = Arc::new(Abort { tx, rx });
-    let exiting = select! {
-      maybe = rx.changed() => maybe,
-      handle = run(abort) => handle
-    };
-    //if let Some(msg) = err.exit_message() {
-    //  eprintln!("{}", Colour::Red.paint(msg));
-    //}
+  let status = rt.block_on(async {
+    let (abort, mut rx) = broadcast::channel::<Box<dyn Error>>(1);
+    select! {
+      maybe = rx.recv() => match maybe {
+        Ok(err) => Some(err),
+        _ => None
+      },
+      handle = run(&abort) => None
+    }
   });
-  rt.shutdown_timeout(Duration::MAX)
-  //exit(err.exit_code())
+  rt.shutdown_timeout(Duration::MAX);
+  if let Some(err) = status {
+    eprintln!("{}", Colour::Red.paint(format!("{}", err)));
+    exit(1)
+  } else {
+    exit(0)
+  }
 }

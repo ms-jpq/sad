@@ -66,21 +66,19 @@ pub struct Arguments {
   pub internal_patch: Option<PathBuf>,
 }
 
-impl Arguments {
-  pub fn new() -> Result<Arguments, Box<dyn Error>> {
-    let args = env::args().collect::<Vec<_>>();
-    match (args.get(1), args.get(2)) {
-      (Some(lhs), Some(rhs)) if lhs == "-c" => {
-        if rhs.contains('\x04') {
-          Ok(Arguments::from_iter(rhs.split('\x04')))
-        } else {
-          Err(Failure::Sucks(
-            "`-c` is a reserved flag, use --k, or --commit".to_owned(),
-          ))
-        }
+pub fn parse_args() -> Result<Arguments, Box<dyn Error>> {
+  let args = env::args().collect::<Vec<_>>();
+  match (args.get(1), args.get(2)) {
+    (Some(lhs), Some(rhs)) if lhs == "-c" => {
+      if rhs.contains('\x04') {
+        Ok(Arguments::from_iter(rhs.split('\x04')))
+      } else {
+        Err(Failure::Sucks(
+          "`-c` is a reserved flag, use --k, or --commit".to_owned(),
+        ))
       }
-      _ => Ok(Arguments::from_args()),
     }
+    _ => Ok(Arguments::from_args()),
   }
 }
 
@@ -197,48 +195,46 @@ fn p_pager(pager: &Option<String>) -> Option<SubprocessCommand> {
   })
 }
 
-impl Options {
-  pub fn new(args: Arguments) -> Result<Options, Box<dyn Error>> {
-    let mut flagset = p_auto_flags(&args.pattern);
-    flagset.extend(
-      args
-        .flags
-        .unwrap_or_default()
-        .split_terminator("")
-        .skip(1)
-        .map(String::from),
-    );
+pub fn parse_opts(args: Arguments) -> Result<Options, Box<dyn Error>> {
+  let mut flagset = p_auto_flags(&args.pattern);
+  flagset.extend(
+    args
+      .flags
+      .unwrap_or_default()
+      .split_terminator("")
+      .skip(1)
+      .map(String::from),
+  );
 
-    let engine = {
-      let replace = args.replace.unwrap_or_default();
-      if args.exact {
-        Engine::AhoCorasick(p_aho_corasick(&args.pattern, &flagset)?, replace)
-      } else {
-        Engine::Regex(p_regex(&args.pattern, &flagset)?, replace)
-      }
-    };
-
-    let action = if args.commit || args.internal_patch != None {
-      Action::Commit
+  let engine = {
+    let replace = args.replace.unwrap_or_default();
+    if args.exact {
+      Engine::AhoCorasick(p_aho_corasick(&args.pattern, &flagset)?, replace)
     } else {
-      match (args.internal_preview, p_fzf(args.fzf)) {
-        (Some(_), _) => Action::Preview,
-        (_, None) => Action::Preview,
-        (_, Some((bin, args))) => Action::Fzf(bin, args),
-      }
-    };
+      Engine::Regex(p_regex(&args.pattern, &flagset)?, replace)
+    }
+  };
 
-    let printer = match p_pager(&args.pager) {
-      Some(cmd) => Printer::Pager(cmd),
-      None => Printer::Stdout,
-    };
+  let action = if args.commit || args.internal_patch != None {
+    Action::Commit
+  } else {
+    match (args.internal_preview, p_fzf(args.fzf)) {
+      (Some(_), _) => Action::Preview,
+      (_, None) => Action::Preview,
+      (_, Some((bin, args))) => Action::Fzf(bin, args),
+    }
+  };
 
-    Ok(Options {
-      cwd: env::current_dir().ok(),
-      action,
-      engine,
-      printer,
-      unified: args.unified.unwrap_or(3),
-    })
-  }
+  let printer = match p_pager(&args.pager) {
+    Some(cmd) => Printer::Pager(cmd),
+    None => Printer::Stdout,
+  };
+
+  Ok(Options {
+    cwd: env::current_dir().ok(),
+    action,
+    engine,
+    printer,
+    unified: args.unified.unwrap_or(3),
+  })
 }
