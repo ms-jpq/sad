@@ -102,8 +102,9 @@ async fn read_patches(path: &Path) -> Result<HashMap<PathBuf, HashSet<DiffRange>
   Ok(acc)
 }
 
-fn stream_patch(abort: &Abort, patch: PathBuf) -> (JoinHandle<()>, Receiver<Payload>) {
+fn stream_patch(abort: &Abort, patch: &Path) -> (JoinHandle<()>, Receiver<Payload>) {
   let abort = abort.clone();
+  let patch = patch.to_owned();
   let (tx, rx) = bounded::<Payload>(1);
 
   let handle = spawn(async move {
@@ -172,9 +173,9 @@ fn stream_stdin(abort: &Abort, use_nul: bool) -> (JoinHandle<()>, Receiver<Paylo
 
 pub fn stream_input(abort: &Abort, args: &Arguments) -> (JoinHandle<()>, Receiver<Payload>) {
   if let Some(preview) = &args.internal_preview {
-    stream_patch(abort, preview.clone())
+    stream_patch(abort, preview)
   } else if let Some(patch) = &args.internal_patch {
-    stream_patch(abort, patch.clone())
+    stream_patch(abort, patch)
   } else {
     stream_stdin(abort, args.nul_delim)
   }
