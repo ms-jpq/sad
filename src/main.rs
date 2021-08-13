@@ -10,7 +10,7 @@ use tokio::{
   runtime::Builder,
   select,
   sync::{
-    broadcast::{self, error::RecvError},
+    broadcast::{self, error::RecvError, Receiver as BReceiver},
     mpsc::{self, Receiver},
   },
   task::{spawn, JoinHandle},
@@ -92,6 +92,16 @@ async fn run(abort: &Abort, cpus: usize) -> Result<(), Fail> {
   Ok(try_join3(h_1, h_2, h_3).await.map(|_| ())?)
 }
 
+async fn poll(mut rx: BReceiver<Fail>) -> Fail {
+  loop {
+    match rx.recv().await {
+      Ok(err) => return err,
+      Err(RecvError::Lagged(_)) => (),
+      Err(e) => panic!("{:#?}", e),
+    }
+  }
+}
+
 fn main() {
   let cpus = num_cpus::get();
   let rt = Builder::new_multi_thread()
@@ -101,13 +111,9 @@ fn main() {
     .expect("runtime failure");
 
   let status = rt.block_on(async {
-    let (abort, mut rx) = broadcast::channel::<Fail>(1);
+    let (abort, rx) = broadcast::channel::<Fail>(1);
     select! {
-      maybe = rx.recv() => match maybe {
-        Ok(err) => Some(err),
-        Err(RecvError::Lagged(_)) => None,
-        _ => None
-      },
+      err = poll(rx) => Some(err),
       maybe = run(&abort ,cpus) => match maybe {
         Ok(_) => None,
         Err(err) => Some(err)
