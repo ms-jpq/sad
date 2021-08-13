@@ -43,7 +43,7 @@ fn stream_trans(
       spawn(async move {
         loop {
           select! {
-            _ = abort.rx.notified() => break,
+            _ = abort.notified() => break,
             payload = stream.recv() => {
               match payload {
                 Ok(p) => {
@@ -95,7 +95,7 @@ fn main() {
     .expect("runtime failure");
 
   let errors = rt.block_on(async {
-    let abort = Arc::new(Abort::new());
+    let abort = Abort::new();
     if let Err(err) = run(&abort, cpus).await {
       let mut errs = abort.fin().await;
       errs.push(err);

@@ -144,7 +144,7 @@ fn stream_stdin(abort: &Arc<Abort>, use_nul: bool) -> (JoinHandle<()>, Receiver<
       loop {
         let mut buf = Vec::new();
         select! {
-          _ = abort.rx.notified() => break,
+          _ = abort.notified() => break,
           n = reader.read_until(delim, &mut buf) => {
             match n {
               Ok(0) => break,

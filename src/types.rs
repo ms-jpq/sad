@@ -5,6 +5,7 @@ use std::{
   fmt::{self, Display, Formatter},
   io::ErrorKind,
   path::PathBuf,
+  sync::Arc,
 };
 use tokio::{
   sync::{Mutex, Notify},
@@ -47,15 +48,15 @@ impl From<RegexError> for Fail {
 
 pub struct Abort {
   errors: Mutex<Vec<Fail>>,
-  pub rx: Notify,
+  rx: Notify,
 }
 
 impl Abort {
-  pub fn new() -> Self {
-    Abort {
+  pub fn new() -> Arc<Self> {
+    Arc::new(Abort {
       errors: Mutex::new(Vec::new()),
       rx: Notify::new(),
-    }
+    })
   }
 
   pub async fn fin(self: &Self) -> Vec<Fail> {
@@ -66,5 +67,14 @@ impl Abort {
     let mut errors = self.errors.lock().await;
     errors.push(fail);
     self.rx.notify_waiters()
+  }
+
+  pub async fn notified(self: &Self) {
+    let errors = self.errors.lock().await;
+    if errors.len() > 0 {
+      ()
+    } else {
+      self.rx.notified().await
+    }
   }
 }

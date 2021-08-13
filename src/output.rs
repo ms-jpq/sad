@@ -17,7 +17,7 @@ fn stream_stdout(abort: &Arc<Abort>, mut stream: Receiver<String>) -> JoinHandle
   spawn(async move {
     loop {
       select! {
-        _ = abort.rx.notified() => break ,
+        _ = abort.notified() => break ,
         print = stream.recv() => {
           match print {
             Some(val) => {

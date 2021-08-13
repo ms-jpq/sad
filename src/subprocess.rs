@@ -41,7 +41,7 @@ pub fn stream_subprocess(
         let handle_in = spawn(async move {
           loop {
             select! {
-              _ = abort_1.rx.notified() => break,
+              _ = abort_1.notified() => break,
               print = stream.recv() => {
                 match print {
                   Some(val) => {

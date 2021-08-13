@@ -66,7 +66,7 @@ fn run_fzf(
         let handle_in = spawn(async move {
           loop {
             select! {
-              _ = abort_1.rx.notified() => break,
+              _ = abort_1.notified() => break,
               print = stream.recv() => {
                 match print {
                   Some(val) => {
@@ -110,7 +110,7 @@ fn run_fzf(
                 }
               }
             },
-            _ = abort_2.rx.notified() => {
+            _ = abort_2.notified() => {
               match child.kill().await {
                 Err(err) => {
                   abort_2.send(Fail::IO(p2, err.kind())).await;
