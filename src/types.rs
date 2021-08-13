@@ -6,7 +6,10 @@ use std::{
   io::ErrorKind,
   path::PathBuf,
 };
-use tokio::{sync::broadcast::Sender, task::JoinError};
+use tokio::{
+  sync::{Mutex, Notify},
+  task::JoinError,
+};
 
 #[derive(Clone, Debug)]
 pub enum Fail {
@@ -26,8 +29,6 @@ impl Display for Fail {
   }
 }
 
-pub type Abort = Sender<Fail>;
-
 impl From<JoinError> for Fail {
   fn from(e: JoinError) -> Self {
     if e.is_cancelled() {
@@ -41,5 +42,29 @@ impl From<JoinError> for Fail {
 impl From<RegexError> for Fail {
   fn from(e: RegexError) -> Self {
     Fail::RegexError(e)
+  }
+}
+
+pub struct Abort {
+  errors: Mutex<Vec<Fail>>,
+  pub rx: Notify,
+}
+
+impl Abort {
+  pub fn new() -> Self {
+    Abort {
+      errors: Mutex::new(Vec::new()),
+      rx: Notify::new(),
+    }
+  }
+
+  pub fn fin(self: Self) -> Vec<Fail> {
+    self.errors.into_inner()
+  }
+
+  pub async fn send(self: &Self, fail: Fail) {
+    let mut errors = self.errors.lock().await;
+    errors.push(fail);
+    self.rx.notify_waiters()
   }
 }

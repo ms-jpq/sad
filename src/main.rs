@@ -9,10 +9,7 @@ use std::{process::exit, sync::Arc};
 use tokio::{
   runtime::Builder,
   select,
-  sync::{
-    broadcast::{self, error::RecvError},
-    mpsc::{self, Receiver},
-  },
+  sync::mpsc::{self, Receiver},
   task::{spawn, JoinHandle},
 };
 use types::{Abort, Fail};
@@ -28,7 +25,7 @@ mod types;
 mod udiff;
 
 fn stream_trans(
-  abort: &Abort,
+  abort: &Arc<Abort>,
   cpus: usize,
   opts: &Options,
   stream: MPMCR<Payload>,
@@ -39,7 +36,6 @@ fn stream_trans(
   let handles = (1..=cpus * 2)
     .map(|_| {
       let abort = abort.clone();
-      let mut on_abort = abort.subscribe();
       let stream = stream.clone();
       let opts = a_opts.clone();
       let tx = tx.clone();
@@ -47,7 +43,7 @@ fn stream_trans(
       spawn(async move {
         loop {
           select! {
-            _ = on_abort.recv() => break,
+            _ = abort.rx.notified() => break,
             payload = stream.recv() => {
               match payload {
                 Ok(p) => {
@@ -58,7 +54,7 @@ fn stream_trans(
                       }
                     },
                     Err(err) => {
-                      abort.send(err).expect("<ABORT CH OPEN>");
+                      abort.send(err).await;
                     }
                   }
                 },
@@ -74,18 +70,18 @@ fn stream_trans(
   let abort = abort.clone();
   let handle = spawn(async move {
     if let Err(err) = try_join_all(handles).await {
-      abort.send(err.into()).expect("<ABORT CH OPEN>");
+      abort.send(err.into()).await;
     }
   });
   (handle, rx)
 }
 
-async fn run(abort: Abort, cpus: usize) -> Result<(), Fail> {
+async fn run(abort: &Arc<Abort>, cpus: usize) -> Result<(), Fail> {
   let args = parse_args()?;
-  let (h_1, input_stream) = stream_input(&abort, &args);
+  let (h_1, input_stream) = stream_input(abort, &args);
   let opts = parse_opts(args)?;
-  let (h_2, trans_stream) = stream_trans(&abort, cpus, &opts, input_stream);
-  let h_3 = stream_output(&abort, &opts, trans_stream);
+  let (h_2, trans_stream) = stream_trans(abort, cpus, &opts, input_stream);
+  let h_3 = stream_output(abort, &opts, trans_stream);
   try_join3(h_1, h_2, h_3).await?;
   Ok(())
 }
@@ -99,31 +95,13 @@ fn main() {
     .expect("runtime failure");
 
   let errors = rt.block_on(async {
-    let (abort, mut rx) = broadcast::channel::<Fail>(1);
-
-    let s1 = spawn(async move {
-      let mut errors = Vec::new();
-      loop {
-        match rx.recv().await {
-          Ok(err) => errors.push(err),
-          Err(RecvError::Lagged(_)) => (),
-          Err(RecvError::Closed) => break,
-        }
-      }
-      errors
-    });
-
-    let s2 = spawn(async move {
-      if let Err(err) = run(abort, cpus).await {
-        vec![err]
-      } else {
-        Vec::new()
-      }
-    });
-
-    match try_join_all(vec![s1, s2]).await {
-      Ok(errs) => errs.into_iter().flatten().collect(),
-      Err(err) => vec![err.into()],
+    let abort = Arc::new( Abort::new());
+    if let Err(err) = run(&abort, cpus).await {
+      let mut errs = abort.fin();
+      errs.push(err);
+      errs
+    } else {
+      abort.fin()
     }
   });
 

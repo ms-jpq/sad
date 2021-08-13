@@ -1,6 +1,6 @@
 use super::types::{Abort, Fail};
 use futures::future::try_join;
-use std::{collections::HashMap, path::PathBuf, process::Stdio};
+use std::{collections::HashMap, path::PathBuf, process::Stdio, sync::Arc};
 use tokio::{
   io::{AsyncWriteExt, BufWriter},
   process::Command,
@@ -17,11 +17,11 @@ pub struct SubprocessCommand {
 }
 
 pub fn stream_subprocess(
-  abort: &Abort,
+  abort: &Arc<Abort>,
   cmd: SubprocessCommand,
   mut stream: Receiver<String>,
 ) -> JoinHandle<()> {
-  let abort = abort.clone();
+  let abort= abort.clone();
 
   spawn(async move {
     let subprocess = Command::new(&cmd.prog)
@@ -32,24 +32,21 @@ pub fn stream_subprocess(
       .spawn();
 
     match subprocess {
-      Err(err) => {
-        abort.send(Fail::IO(cmd.prog, err.kind())).expect("<ABORT CH OPEN>");
-      }
+      Err(err) => abort.send(Fail::IO(cmd.prog, err.kind())).await,
       Ok(mut child) => {
         let mut stdin = child.stdin.take().map(BufWriter::new).expect("nil stdin");
 
         let abort_1 = abort.clone();
         let p1 = cmd.prog.clone();
         let handle_in = spawn(async move {
-          let mut on_abort = abort_1.subscribe();
           loop {
             select! {
-              _ = on_abort.recv() => break,
+              _ = abort_1.rx.notified() => break,
               print = stream.recv() => {
                 match print {
                   Some(val) => {
                     if let Err(err) = stdin.write(val.as_bytes()).await {
-                      let _ = abort_1.send(Fail::IO(p1.clone(), err.kind()));
+                      abort_1.send(Fail::IO(p1.clone(), err.kind())).await;
                       break;
                     }
                   }
@@ -59,20 +56,20 @@ pub fn stream_subprocess(
             }
           }
           if let Err(err) = stdin.shutdown().await {
-            let _ = abort_1.send(Fail::IO(p1, err.kind()));
+            abort_1.send(Fail::IO(p1, err.kind())).await;
           }
         });
 
-        let p2 = cmd.prog.clone();
         let abort_2 = abort.clone();
+        let p2 = cmd.prog.clone();
         let handle_child = spawn(async move {
           if let Err(err) = child.wait().await {
-            let _ = abort_2.send(Fail::IO(p2, err.kind()));
+            abort_2.send(Fail::IO(p2, err.kind())).await;
           }
         });
 
         if let Err(err) = try_join(handle_child, handle_in).await {
-          abort.send(err.into()).expect("<ABORT CH OPEN>");
+          abort.send(err.into()).await
         }
       }
     }

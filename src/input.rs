@@ -6,6 +6,7 @@ use regex::Regex;
 use std::{
   collections::{HashMap, HashSet},
   ffi::OsString,
+  sync::Arc,
   io::ErrorKind,
   os::unix::ffi::OsStringExt,
   path::{Path, PathBuf},
@@ -102,7 +103,7 @@ async fn read_patches(path: &Path) -> Result<HashMap<PathBuf, HashSet<DiffRange>
   Ok(acc)
 }
 
-fn stream_patch(abort: &Abort, patch: &Path) -> (JoinHandle<()>, Receiver<Payload>) {
+fn stream_patch(abort: &Arc<Abort>, patch: &Path) -> (JoinHandle<()>, Receiver<Payload>) {
   let abort = abort.clone();
   let patch = patch.to_owned();
   let (tx, rx) = bounded::<Payload>(1);
@@ -117,32 +118,33 @@ fn stream_patch(abort: &Abort, patch: &Path) -> (JoinHandle<()>, Receiver<Payloa
         }
       }
       Err(err) => {
-        abort.send(err).expect("<ABORT CH OPEN>");
+        abort.send(err).await;
       }
     }
   });
   (handle, rx)
 }
 
-fn stream_stdin(abort: &Abort, use_nul: bool) -> (JoinHandle<()>, Receiver<Payload>) {
+fn stream_stdin(abort: &Arc<Abort>, use_nul: bool) -> (JoinHandle<()>, Receiver<Payload>) {
   let (tx, rx) = bounded::<Payload>(1);
 
   let abort = abort.clone();
   let handle = spawn(async move {
     if atty::is(atty::Stream::Stdin) {
-      abort.send(Fail::ArgumentError(
-        "/dev/stdin connected to tty".to_owned(),
-      )).expect("<ABORT CH OPEN>");
+      abort
+        .send(Fail::ArgumentError(
+          "/dev/stdin connected to tty".to_owned(),
+        ))
+        .await;
     } else {
       let delim = if use_nul { b'\0' } else { b'\n' };
-      let mut on_abort = abort.subscribe();
       let mut reader = BufReader::new(io::stdin());
       let mut seen = HashSet::new();
 
       loop {
         let mut buf = Vec::new();
         select! {
-          _ = on_abort.recv() => break,
+          _ = abort.rx.notified() => break,
           n = reader.read_until(delim, &mut buf) => {
             match n {
               Ok(0) => break,
@@ -158,13 +160,15 @@ fn stream_stdin(abort: &Abort, use_nul: bool) -> (JoinHandle<()>, Receiver<Paylo
                   },
                   Err(err) if err.kind() == ErrorKind::NotFound => (),
                   Err(err) => {
-                    abort.send(Fail::IO(path, err.kind())).expect("<ABORT CH OPEN>");
+                    abort.send(Fail::IO(path, err.kind())).await;
                     break;
                   }
                 }
               }
               Err(err) => {
-                abort.send(Fail::IO(PathBuf::from("/dev/stdin"), err.kind())).expect("<ABORT CH OPEN>");
+                abort
+                  .send(Fail::IO(PathBuf::from("/dev/stdin"), err.kind()))
+                  .await;
                 break;
               }
             }
@@ -176,7 +180,7 @@ fn stream_stdin(abort: &Abort, use_nul: bool) -> (JoinHandle<()>, Receiver<Paylo
   (handle, rx)
 }
 
-pub fn stream_input(abort: &Abort, args: &Arguments) -> (JoinHandle<()>, Receiver<Payload>) {
+pub fn stream_input(abort: &Arc<Abort>, args: &Arguments) -> (JoinHandle<()>, Receiver<Payload>) {
   if let Some(preview) = &args.internal_preview {
     stream_patch(abort, preview)
   } else if let Some(patch) = &args.internal_patch {
