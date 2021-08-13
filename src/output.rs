@@ -21,12 +21,11 @@ fn stream_stdout(abort: &Abort, mut stream: Receiver<String>) -> JoinHandle<()> 
         _ = on_abort.recv() => break ,
         print = stream.recv() => {
           match print {
-            Some(val) => match stdout.write(val.as_bytes()).await {
-              Err(err) => {
+            Some(val) => {
+              if let Err(err) = stdout.write(val.as_bytes()).await {
                 let _ = abort.send(Fail::IO(PathBuf::from("/dev/stdout") ,err.kind()));
                 break;
               }
-              _ => ()
             },
             _ => break
           }

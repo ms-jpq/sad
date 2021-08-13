@@ -110,7 +110,7 @@ fn stream_patch(abort: &Abort, patch: PathBuf) -> (JoinHandle<()>, Receiver<Payl
     match read_patches(&patch).await {
       Ok(patches) => {
         for patch in patches {
-          if let Err(_) = tx.send(Payload::Piecewise(patch.0, patch.1)).await {
+          if tx.send(Payload::Piecewise(patch.0, patch.1)).await.is_err() {
             let _ = abort.send(Fail::Join);
             break;
           }
@@ -149,7 +149,7 @@ fn stream_stdin(abort: &Abort, use_nul: bool) -> (JoinHandle<()>, Receiver<Paylo
                 let path = PathBuf::from(OsString::from_vec(buf));
                 if let Ok(canonical) = canonicalize(&path).await {
                   if seen.insert(canonical.clone()) {
-                    if let Err(_) = tx.send(Payload::Entire(canonical)).await {
+                    if tx.send(Payload::Entire(canonical)).await.is_err() {
                       let _ = abort.send(Fail::Join);
                       break
                     }
