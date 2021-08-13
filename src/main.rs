@@ -29,13 +29,14 @@ mod udiff;
 
 fn stream_trans(
   abort: &Abort,
+  cpus: usize,
   opts: &Options,
   stream: MPMCR<Payload>,
 ) -> (JoinHandle<()>, Receiver<String>) {
   let a_opts = Arc::new(opts.clone());
   let (tx, rx) = mpsc::channel::<String>(1);
 
-  let handles = (1..=num_cpus::get() * 2)
+  let handles = (1..=cpus * 2)
     .map(|_| {
       let abort = abort.clone();
       let mut on_abort = abort.subscribe();
@@ -82,18 +83,20 @@ fn stream_trans(
   (handle, rx)
 }
 
-async fn run(abort: &Abort) -> Result<(), Fail> {
+async fn run(abort: &Abort, cpus: usize) -> Result<(), Fail> {
   let args = parse_args()?;
   let (h_1, input_stream) = stream_input(abort, &args);
   let opts = parse_opts(args)?;
-  let (h_2, trans_stream) = stream_trans(abort, &opts, input_stream);
+  let (h_2, trans_stream) = stream_trans(abort, cpus, &opts, input_stream);
   let h_3 = stream_output(abort, opts, trans_stream);
   Ok(try_join3(h_1, h_2, h_3).await.map(|_| ())?)
 }
 
 fn main() {
+  let cpus = num_cpus::get();
   let rt = Builder::new_multi_thread()
     .enable_io()
+    .max_blocking_threads(cpus)
     .build()
     .expect("runtime failure");
 
@@ -105,7 +108,7 @@ fn main() {
         Err(RecvError::Lagged(_)) => None,
         _ => None
       },
-      maybe = run(&abort) => match maybe {
+      maybe = run(&abort ,cpus) => match maybe {
         Ok(_) => None,
         Err(err) => Some(err)
       }
