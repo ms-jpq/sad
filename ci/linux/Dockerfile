@@ -3,9 +3,9 @@ FROM rust:latest
 
 # SET UP
 WORKDIR /WORK
-RUN mkdir -p artifacts && \
+RUN mkdir --parents -- artifacts && \
     apt update && \
-    apt install -y zip
+    apt install --yes -- zip
 
 
 # COPY
@@ -14,5 +14,5 @@ COPY . .
 
 # BUILD
 RUN cargo test
-RUN cargo build --release --target=x86_64-unknown-linux-gnu
+RUN cargo build --release --locked --target=x86_64-unknown-linux-gnu
 RUN zip -j artifacts/sad.zip target/x86_64-unknown-linux-gnu/release/sad
