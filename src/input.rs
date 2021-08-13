@@ -35,25 +35,25 @@ fn p_line(line: String) -> Result<DiffLine, Fail> {
     .get(1)
     .ok_or_else(|| f)?
     .as_str()
-    .parse()
+    .parse::<usize>()
     .map_err(|_| f)?;
   let before_inc = captures
     .get(2)
     .ok_or_else(|| f)?
     .as_str()
-    .parse()
+    .parse::<usize>()
     .map_err(|_| f)?;
   let after_start = captures
     .get(3)
     .ok_or_else(|| f)?
     .as_str()
-    .parse()
+    .parse::<usize>()
     .map_err(|_| f)?;
   let after_inc = captures
     .get(4)
     .ok_or_else(|| f)?
     .as_str()
-    .parse()
+    .parse::<usize>()
     .map_err(|_| f)?;
 
   let range = DiffRange {
@@ -69,7 +69,7 @@ async fn read_patches(path: &PathBuf) -> Result<HashMap<PathBuf, HashSet<DiffRan
     .await
     .map_err(|e| Fail::IO(path.clone(), e.kind()))?;
   let mut reader = BufReader::new(fd);
-  let mut acc = HashMap::new();
+  let mut acc = HashMap::<PathBuf, HashSet<DiffRange>>::new();
 
   loop {
     let mut buf = Vec::new();
