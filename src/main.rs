@@ -2,13 +2,15 @@ use ansi_term::Colour;
 use argparse::{parse_args, parse_opts, Options};
 use async_channel::Receiver as MPMCR;
 use displace::displace;
-use futures::future::{try_join3, try_join_all};
+use futures::{
+  future::{select, try_join3, try_join_all, Either},
+  pin_mut,
+};
 use input::{stream_input, Payload};
 use output::stream_output;
 use std::{process::exit, sync::Arc};
 use tokio::{
   runtime::Builder,
-  select,
   sync::mpsc::{self, Receiver},
   task::{spawn, JoinHandle},
 };
@@ -42,25 +44,25 @@ fn stream_trans(
 
       spawn(async move {
         loop {
-          select! {
-            _ = abort.notified() => break,
-            payload = stream.recv() => {
-              match payload {
-                Ok(p) => {
-                  match displace(&opts, p).await {
-                    Ok(displaced) => {
-                      if tx.send(displaced).await.is_err() {
-                        break;
-                      }
-                    },
-                    Err(err) => {
-                      abort.send(err).await;
-                    }
-                  }
-                },
-                _ => break
+          let f1 = abort.notified();
+          let f2 = stream.recv();
+          pin_mut!(f1);
+          pin_mut!(f2);
+
+          match select(f1, f2).await {
+            Either::Left(_) => break,
+            Either::Right((Err(_), _)) => break,
+            Either::Right((Ok(payload), _)) => match displace(&opts, payload).await {
+              Ok(displaced) => {
+                if tx.send(displaced).await.is_err() {
+                  break;
+                }
               }
-            }
+              Err(err) => {
+                abort.send(err).await;
+                break;
+              }
+            },
           }
         }
       })
@@ -116,3 +118,4 @@ fn main() {
     }
   }
 }
+
