@@ -11,6 +11,10 @@ use tokio::{
   task::{spawn, JoinHandle},
 };
 use which::which;
+use futures::{
+  future::{select, try_join3, try_join_all, Either},
+  pin_mut,
+};
 
 async fn reset_term() -> Result<(), Fail> {
   if let Ok(path) = which("tput") {
@@ -71,8 +75,20 @@ fn run_fzf(abort: &Arc<Abort>, cmd: SubprocessCommand, stream: Receiver<String>)
         let p2 = cmd.prog.clone();
         let handle_child = spawn(async move {
           select! {
-            lhs = child.wait() => {
-              match lhs {
+            _ = abort_2.notified() => {
+              match child.kill().await {
+                Err(err) => {
+                  abort_2.send(Fail::IO(p2, err.kind())).await;
+                },
+                _ => {
+                  if let Err(err) = reset_term().await {
+                    abort_2.send(err).await;
+                  }
+                }
+              }
+            },
+            rhs = child.wait() => {
+              match rhs {
                 Ok(status) => {
                   match status.code() {
                     Some(0) | Some(1) | None => (),
@@ -89,18 +105,6 @@ fn run_fzf(abort: &Arc<Abort>, cmd: SubprocessCommand, stream: Receiver<String>)
                 }
                 Err(err) => {
                   abort_2.send(Fail::IO(p2, err.kind())).await;
-                }
-              }
-            },
-            _ = abort_2.notified() => {
-              match child.kill().await {
-                Err(err) => {
-                  abort_2.send(Fail::IO(p2, err.kind())).await;
-                },
-                _ => {
-                  if let Err(err) = reset_term().await {
-                    abort_2.send(err).await;
-                  }
                 }
               }
             }
