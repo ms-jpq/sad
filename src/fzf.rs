@@ -148,7 +148,7 @@ pub fn stream_fzf(
   let mut env = HashMap::new();
   env.insert("SHELL".to_owned(), sad);
   // WARN -- versions of FZF only work with C locale.
-  env.insert("LC_ALL".to_owned(), "C");
+  env.insert("LC_ALL".to_owned(), "C".to_owned());
   let cmd = SubprocessCommand {
     prog: bin,
     args: arguments,
