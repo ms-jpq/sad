@@ -11,10 +11,6 @@ use tokio::{
   task::{spawn, JoinHandle},
 };
 use which::which;
-use futures::{
-  future::{select, try_join3, try_join_all, Either},
-  pin_mut,
-};
 
 async fn reset_term() -> Result<(), Fail> {
   if let Ok(path) = which("tput") {
