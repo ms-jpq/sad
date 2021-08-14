@@ -1,50 +1,66 @@
-use super::errors::{Failure, SadResult, SadnessFrom};
-use std::{fs::Metadata, io::ErrorKind, path::PathBuf};
-use tokio::fs::{metadata, read_to_string, remove_file, rename, set_permissions, write};
+use super::types::Fail;
+use std::{ffi::OsString, fs::Metadata, io::ErrorKind, path::Path};
+use tokio::{
+  fs::{rename, File, OpenOptions},
+  io::{AsyncReadExt, AsyncWriteExt},
+};
 use uuid::Uuid;
 
 pub struct Slurpee {
-  pub path: PathBuf,
   pub meta: Metadata,
   pub content: String,
 }
 
-pub async fn slurp(path: &PathBuf) -> SadResult<Slurpee> {
-  let meta = metadata(&path).await.into_sadness()?;
+pub async fn slurp(path: &Path) -> Result<Slurpee, Fail> {
+  let mut fd = File::open(path)
+    .await
+    .map_err(|e| Fail::IO(path.to_owned(), e.kind()))?;
+
+  let meta = fd
+    .metadata()
+    .await
+    .map_err(|e| Fail::IO(path.to_owned(), e.kind()))?;
+
   let content = if meta.is_file() {
-    match read_to_string(&path).await {
-      Ok(text) => text,
-      Err(err) if err.kind() == ErrorKind::InvalidData => String::new(),
-      Err(err) => Err(err).into_sadness()?,
+    let mut s = String::new();
+    match fd.read_to_string(&mut s).await {
+      Ok(_) => s,
+      Err(err) if err.kind() == ErrorKind::InvalidData => s,
+      Err(err) => return Err(Fail::IO(path.to_owned(), err.kind())),
     }
   } else {
     String::new()
   };
-  let slurpee = Slurpee {
-    path: path.clone(),
-    meta,
-    content,
-  };
-  Ok(slurpee)
+
+  Ok(Slurpee { meta, content })
 }
 
-pub async fn spit(canonical: &PathBuf, meta: &Metadata, text: &str) -> SadResult<()> {
+pub async fn spit(canonical: &Path, meta: &Metadata, text: &str) -> Result<(), Fail> {
   let uuid = Uuid::new_v4().to_simple().to_string();
   let mut file_name = canonical
     .file_name()
-    .and_then(|s| s.to_str())
-    .map(String::from)
-    .ok_or_else(|| Failure::Simple(format!("Bad file name - {}", canonical.display())))?;
-  file_name.push_str("___");
-  file_name.push_str(&uuid);
+    .map(|n| n.to_owned())
+    .unwrap_or_else(|| OsString::from(""));
+  file_name.push("___");
+  file_name.push(uuid);
+  let tmp = canonical.with_file_name(file_name);
 
-  let backup = canonical.with_file_name(file_name);
-  rename(&canonical, &backup).await.into_sadness()?;
-  write(&canonical, text).await.into_sadness()?;
-  set_permissions(&canonical, meta.permissions())
+  let mut fd = OpenOptions::new()
+    .create_new(true)
+    .write(true)
+    .open(&tmp)
     .await
-    .into_sadness()?;
-  remove_file(&backup).await.into_sadness()?;
+    .map_err(|e| Fail::IO(tmp.clone(), e.kind()))?;
+  fd.set_permissions(meta.permissions())
+    .await
+    .map_err(|e| Fail::IO(tmp.clone(), e.kind()))?;
+  fd.write_all(text.as_bytes())
+    .await
+    .map_err(|e| Fail::IO(tmp.clone(), e.kind()))?;
+
+  rename(&tmp, &canonical)
+    .await
+    .map_err(|e| Fail::IO(canonical.to_owned(), e.kind()))?;
 
   Ok(())
 }

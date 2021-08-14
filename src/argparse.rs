@@ -1,5 +1,5 @@
-use super::errors::{Failure, SadResult, SadnessFrom};
 use super::subprocess::SubprocessCommand;
+use super::types::Fail;
 use aho_corasick::{AhoCorasick, AhoCorasickBuilder};
 use regex::{Regex, RegexBuilder};
 use std::{collections::HashMap, env, path::PathBuf};
@@ -66,21 +66,19 @@ pub struct Arguments {
   pub internal_patch: Option<PathBuf>,
 }
 
-impl Arguments {
-  pub fn new() -> SadResult<Arguments> {
-    let args = env::args().collect::<Vec<_>>();
-    match (args.get(1), args.get(2)) {
-      (Some(lhs), Some(rhs)) if lhs == "-c" => {
-        if rhs.contains('\x04') {
-          Ok(Arguments::from_iter(rhs.split('\x04')))
-        } else {
-          Err(Failure::Simple(
-            "`-c` is a reserved flag, use --k, or --commit".to_owned(),
-          ))
-        }
+pub fn parse_args() -> Result<Arguments, Fail> {
+  let args = env::args().collect::<Vec<_>>();
+  match (args.get(1), args.get(2)) {
+    (Some(lhs), Some(rhs)) if lhs == "-c" => {
+      if rhs.contains('\x04') {
+        Ok(Arguments::from_iter(rhs.split('\x04')))
+      } else {
+        Err(Fail::ArgumentError(
+          "`-c` is a reserved flag, use --k, or --commit".to_owned(),
+        ))
       }
-      _ => Ok(Arguments::from_args()),
     }
+    _ => Ok(Arguments::from_args()),
   }
 }
 
@@ -112,72 +110,29 @@ pub struct Options {
   pub unified: usize,
 }
 
-impl Options {
-  pub fn new(args: Arguments) -> SadResult<Options> {
-    let mut flagset = p_auto_flags(&args.pattern);
-    flagset.extend(
-      args
-        .flags
-        .unwrap_or_default()
-        .split_terminator("")
-        .skip(1)
-        .map(String::from),
-    );
-
-    let engine = {
-      let replace = args.replace.unwrap_or_default();
-      if args.exact {
-        Engine::AhoCorasick(p_aho_corasick(&args.pattern, &flagset)?, replace)
-      } else {
-        Engine::Regex(p_regex(&args.pattern, &flagset)?, replace)
-      }
-    };
-
-    let action = if args.commit || args.internal_patch != None {
-      Action::Commit
-    } else {
-      match (args.internal_preview, p_fzf(args.fzf)) {
-        (Some(_), _) => Action::Preview,
-        (_, None) => Action::Preview,
-        (_, Some((bin, args))) => Action::Fzf(bin, args),
-      }
-    };
-
-    let printer = match p_pager(&args.pager) {
-      Some(cmd) => Printer::Pager(cmd),
-      None => Printer::Stdout,
-    };
-
-    Ok(Options {
-      cwd: env::current_dir().ok(),
-      action,
-      engine,
-      printer,
-      unified: args.unified.unwrap_or(3),
-    })
+fn p_auto_flags(exact: bool, pattern: &str) -> Vec<String> {
+  let mut flags = vec!["i".to_owned()];
+  if !exact {
+    flags.push("m".to_owned())
   }
-}
-
-fn p_auto_flags(pattern: &str) -> Vec<String> {
-  let mut flags = vec!["m".into(), "i".into()];
   for c in pattern.chars() {
     if c.is_uppercase() {
-      flags.push("I".into());
+      flags.push("I".to_owned());
       break;
     }
   }
   flags
 }
 
-fn p_aho_corasick(pattern: &str, flags: &[String]) -> SadResult<AhoCorasick> {
+fn p_aho_corasick(pattern: &str, flags: Vec<String>) -> Result<AhoCorasick, Fail> {
   let mut ac = AhoCorasickBuilder::new();
   for flag in flags {
     match flag.as_str() {
       "i" => ac.ascii_case_insensitive(true),
       "I" => ac.ascii_case_insensitive(false),
       _ => {
-        return Err(Failure::Simple(format!(
-          "Invaild regex flag for exact matches -{}",
+        return Err(Fail::ArgumentError(format!(
+          "Invaild regex flag, see `--help` :: {}",
           flag
         )))
       }
@@ -186,7 +141,7 @@ fn p_aho_corasick(pattern: &str, flags: &[String]) -> SadResult<AhoCorasick> {
   Ok(ac.build(&[pattern]))
 }
 
-fn p_regex(pattern: &str, flags: &[String]) -> SadResult<Regex> {
+fn p_regex(pattern: &str, flags: Vec<String>) -> Result<Regex, Fail> {
   let mut re = RegexBuilder::new(pattern);
   for flag in flags {
     match flag.as_str() {
@@ -200,10 +155,15 @@ fn p_regex(pattern: &str, flags: &[String]) -> SadResult<Regex> {
       "U" => re.swap_greed(false),
       "x" => re.ignore_whitespace(true),
       "X" => re.ignore_whitespace(false),
-      _ => return Err(Failure::Simple(format!("Invaild regex flag -{}", flag))),
+      _ => {
+        return Err(Fail::ArgumentError(format!(
+          "Invaild regex flag, see `--help` :: {}",
+          flag
+        )))
+      }
     };
   }
-  re.build().into_sadness()
+  Ok(re.build()?)
 }
 
 fn p_fzf(fzf: Option<String>) -> Option<(PathBuf, Vec<String>)> {
@@ -237,8 +197,52 @@ fn p_pager(pager: &Option<String>) -> Option<SubprocessCommand> {
   };
 
   prog.map(|program| SubprocessCommand {
-    arguments,
-    program,
+    args: arguments,
+    prog: program,
     env: HashMap::new(),
+  })
+}
+
+pub fn parse_opts(args: Arguments) -> Result<Options, Fail> {
+  let mut flagset = p_auto_flags(args.exact, &args.pattern);
+  flagset.extend(
+    args
+      .flags
+      .unwrap_or_default()
+      .split_terminator("")
+      .skip(1)
+      .map(String::from),
+  );
+
+  let engine = {
+    let replace = args.replace.unwrap_or_default();
+    if args.exact {
+      Engine::AhoCorasick(p_aho_corasick(&args.pattern, flagset)?, replace)
+    } else {
+      Engine::Regex(p_regex(&args.pattern, flagset)?, replace)
+    }
+  };
+
+  let action = if args.commit || args.internal_patch != None {
+    Action::Commit
+  } else {
+    match (args.internal_preview, p_fzf(args.fzf)) {
+      (Some(_), _) => Action::Preview,
+      (_, None) => Action::Preview,
+      (_, Some((bin, args))) => Action::Fzf(bin, args),
+    }
+  };
+
+  let printer = match p_pager(&args.pager) {
+    Some(cmd) => Printer::Pager(cmd),
+    None => Printer::Stdout,
+  };
+
+  Ok(Options {
+    cwd: env::current_dir().ok(),
+    action,
+    engine,
+    printer,
+    unified: args.unified.unwrap_or(3),
   })
 }

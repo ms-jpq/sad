@@ -1,18 +1,23 @@
-use argparse::{Arguments, Options};
-use async_channel::{bounded, Receiver, Sender};
-use errors::{SadResult, SadnessFrom};
-use futures::future::{try_join3, try_join_all, TryJoinAll};
-use input::Payload;
-use std::sync::{
-  atomic::{AtomicBool, Ordering},
-  Arc,
+use ansi_term::Colour;
+use argparse::{parse_args, parse_opts, Options};
+use async_channel::Receiver as MPMCR;
+use displace::displace;
+use futures::{
+  future::{select, try_join3, try_join_all, Either},
+  pin_mut,
 };
-use tokio::{runtime::Builder, task};
-use types::Task;
+use input::{stream_input, Payload};
+use output::stream_output;
+use std::{process::exit, sync::Arc};
+use tokio::{
+  runtime::Builder,
+  sync::mpsc::{self, Receiver},
+  task::{spawn, JoinHandle},
+};
+use types::{Abort, Fail};
 
 mod argparse;
 mod displace;
-mod errors;
 mod fs_pipe;
 mod fzf;
 mod input;
@@ -21,66 +26,95 @@ mod subprocess;
 mod types;
 mod udiff;
 
-fn stream_process(
-  opts: Options,
-  stream: Receiver<SadResult<Payload>>,
-) -> (TryJoinAll<Task>, Receiver<SadResult<String>>) {
-  let oo = Arc::new(opts);
-  let (tx, rx) = bounded::<SadResult<String>>(1);
-  let stop = Arc::new(AtomicBool::new(false));
+fn stream_trans(
+  abort: &Arc<Abort>,
+  cpus: usize,
+  opts: &Options,
+  stream: MPMCR<Payload>,
+) -> (JoinHandle<()>, Receiver<String>) {
+  let a_opts = Arc::new(opts.clone());
+  let (tx, rx) = mpsc::channel::<String>(1);
 
-  let handles = (1..=num_cpus::get() * 2)
+  let handles = (1..=cpus * 2)
     .map(|_| {
-      let stp = Arc::clone(&stop);
-      let stream = Receiver::clone(&stream);
-      let opts = Arc::clone(&oo);
-      let sender = Sender::clone(&tx);
+      let abort = abort.clone();
+      let stream = stream.clone();
+      let opts = a_opts.clone();
+      let tx = tx.clone();
 
-      task::spawn(async move {
-        while let Ok(path) = stream.recv().await {
-          if stp.load(Ordering::Relaxed) {
-            break;
-          } else {
-            match path {
-              Ok(val) => {
-                let displaced = displace::displace(&opts, val).await;
-                sender.send(displaced).await.expect("<CHANNEL>")
+      spawn(async move {
+        loop {
+          let f1 = abort.notified();
+          let f2 = stream.recv();
+          pin_mut!(f1);
+          pin_mut!(f2);
+
+          match select(f1, f2).await {
+            Either::Left(_) => break,
+            Either::Right((Err(_), _)) => break,
+            Either::Right((Ok(payload), _)) => match displace(&opts, payload).await {
+              Ok(displaced) => {
+                if tx.send(displaced).await.is_err() {
+                  break;
+                }
               }
               Err(err) => {
-                sender.send(Err(err)).await.expect("<CHANNEL>");
-                stp.store(true, Ordering::Relaxed);
+                abort.send(err).await;
                 break;
               }
-            }
+            },
           }
         }
       })
     })
     .collect::<Vec<_>>();
-  let handle = try_join_all(handles);
+
+  let abort = abort.clone();
+  let handle = spawn(async move {
+    if let Err(err) = try_join_all(handles).await {
+      abort.send(err.into()).await;
+    }
+  });
   (handle, rx)
 }
 
-async fn run() -> SadResult<()> {
-  let args = Arguments::new()?;
-  let (reader, receiver) = args.stream();
-  let opts = Options::new(args)?;
-  let (steps, rx) = stream_process(opts.clone(), receiver);
-  let writer = output::stream_output(opts, rx);
-  try_join3(reader, steps, writer)
-    .await
-    .map(|_| ())
-    .into_sadness()
+async fn run(abort: &Arc<Abort>, cpus: usize) -> Result<(), Fail> {
+  let args = parse_args()?;
+  let (h_1, input_stream) = stream_input(abort, &args);
+  let opts = parse_opts(args)?;
+  let (h_2, trans_stream) = stream_trans(abort, cpus, &opts, input_stream);
+  let h_3 = stream_output(abort, &opts, trans_stream);
+  try_join3(h_1, h_2, h_3).await?;
+  Ok(())
 }
 
 fn main() {
+  let cpus = num_cpus::get();
   let rt = Builder::new_multi_thread()
     .enable_io()
+    .max_blocking_threads(cpus)
     .build()
     .expect("runtime failure");
-  rt.block_on(async {
-    if let Err(err) = run().await {
-      output::err_exit(err).await
+
+  let errors = rt.block_on(async {
+    let abort = Abort::new();
+    if let Err(err) = run(&abort, cpus).await {
+      let mut errs = abort.fin().await;
+      errs.push(err);
+      errs
+    } else {
+      abort.fin().await
     }
-  })
+  });
+
+  match errors[..] {
+    [] => exit(0),
+    [Fail::Interrupt] => exit(130),
+    _ => {
+      for err in errors {
+        eprintln!("{}", Colour::Red.paint(format!("{}", err)));
+      }
+      exit(1)
+    }
+  }
 }

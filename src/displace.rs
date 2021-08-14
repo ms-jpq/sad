@@ -1,17 +1,18 @@
 use super::argparse::{Action, Engine, Options};
-use super::errors::{Failure, SadResult};
 use super::fs_pipe::{slurp, spit};
 use super::input::Payload;
-use super::udiff::{udiff, DiffRanges, Diffs, Patchable, Picker};
+use super::types::Fail;
+use super::udiff::{apply_patches, patches, pure_diffs, udiff};
 use ansi_term::Colour;
 use pathdiff::diff_paths;
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Arc};
+use tokio::task::spawn_blocking;
 
 impl Engine {
   fn replace(&self, before: &str) -> String {
     match self {
-      Engine::AhoCorasick(ac, replace) => ac.replace_all(&before, &[replace.as_str()]),
-      Engine::Regex(re, replace) => re.replace_all(&before, replace.as_str()).into(),
+      Engine::AhoCorasick(ac, replace) => ac.replace_all(before, &[replace.as_str()]),
+      Engine::Regex(re, replace) => re.replace_all(before, replace.as_str()).into(),
     }
   }
 }
@@ -25,56 +26,61 @@ impl Payload {
   }
 }
 
-async fn displace_impl(opts: &Options, payload: &Payload) -> SadResult<String> {
+pub async fn displace(opts: &Arc<Options>, payload: Payload) -> Result<String, Fail> {
   let path = payload.path().clone();
-  let slurped = slurp(&path).await?;
   let rel_path = opts
     .cwd
     .as_ref()
     .and_then(|cwd| diff_paths(&path, cwd))
-    .map(|p| p)
-    .unwrap_or(path);
+    .unwrap_or_else(|| path.clone());
+  let name = format!("{}", rel_path.display());
 
-  let name = rel_path.display();
-  let (canonical, meta, before) = (slurped.path, slurped.meta, slurped.content);
-  let after = opts.engine.replace(&before);
+  let slurped = slurp(&path).await?;
+  let before = Arc::new(slurped.content);
 
-  if before == after {
+  let o = opts.clone();
+  let o2 = opts.clone();
+  let b = before.clone();
+  let after = spawn_blocking(move || o.engine.replace(&b)).await?;
+
+  if *before == after {
     Ok(String::new())
   } else {
-    let print = match (&opts.action, &payload) {
-      (Action::Preview, Payload::Entire(_)) => udiff(None, opts.unified, &name, &before, &after),
+    let print = match (&opts.action, payload) {
+      (Action::Preview, Payload::Entire(_)) => {
+        spawn_blocking(move || udiff(None, o2.unified, &name, &before, &after)).await?
+      }
       (Action::Preview, Payload::Piecewise(_, ranges)) => {
-        udiff(Some(ranges), opts.unified, &name, &before, &after)
+        spawn_blocking(move || udiff(Some(&ranges), o2.unified, &name, &before, &after)).await?
       }
       (Action::Commit, Payload::Entire(_)) => {
-        spit(&canonical, &meta, &after).await?;
+        spit(&path, &slurped.meta, &after).await?;
         format!("{}\n", name)
       }
       (Action::Commit, Payload::Piecewise(_, ranges)) => {
-        let diffs: Diffs = Patchable::new(opts.unified, &before, &after);
-        let after = diffs.patch(&ranges, &before);
-        spit(&canonical, &meta, &after).await?;
+        let after = spawn_blocking(move || {
+          let patches = patches(o2.unified, &before, &after);
+          apply_patches(patches, &ranges, &before)
+        })
+        .await?;
+
+        spit(&path, &slurped.meta, &after).await?;
         format!("{}\n", name)
       }
       (Action::Fzf(_, _), _) => {
-        let ranges: DiffRanges = Picker::new(opts.unified, &before, &after);
-        let mut fzf_lines = String::new();
-        for range in ranges {
-          let repr = Colour::Red.paint(format!("{}", range));
-          let line = format!("{}\n\n\n\n{}\0", &name, repr);
-          fzf_lines.push_str(&line);
-        }
-        fzf_lines
+        spawn_blocking(move || {
+          let ranges = pure_diffs(o2.unified, &before, &after);
+          let mut fzf_lines = String::new();
+          for range in ranges {
+            let repr = Colour::Red.paint(format!("{}", range));
+            let line = format!("{}\n\n\n\n{}\0", name, repr);
+            fzf_lines.push_str(&line);
+          }
+          fzf_lines
+        })
+        .await?
       }
     };
     Ok(print)
-  }
-}
-
-pub async fn displace(opts: &Options, payload: Payload) -> SadResult<String> {
-  match displace_impl(opts, &payload).await {
-    Ok(ret) => Ok(ret),
-    Err(err) => Err(Failure::Displace(format!("{:#?}", payload), Box::new(err))),
   }
 }

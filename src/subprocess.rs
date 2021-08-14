@@ -1,76 +1,89 @@
-use super::errors::{SadResult, SadnessFrom};
-use super::types::Task;
-use async_channel::{bounded, Receiver, Sender};
+use super::types::{Abort, Fail};
 use futures::future::try_join;
-use std::{collections::HashMap, path::PathBuf, process::Stdio};
+use futures::{
+  future::{select, Either},
+  pin_mut,
+};
+use std::{collections::HashMap, path::PathBuf, process::Stdio, sync::Arc};
 use tokio::{
-  io::{AsyncWriteExt, BufWriter},
+  io::{AsyncWrite, AsyncWriteExt, BufWriter},
   process::Command,
-  task,
+  sync::mpsc::Receiver,
+  task::{spawn, JoinHandle},
 };
 
 #[derive(Clone, Debug)]
 pub struct SubprocessCommand {
-  pub program: PathBuf,
-  pub arguments: Vec<String>,
+  pub prog: PathBuf,
+  pub args: Vec<String>,
   pub env: HashMap<String, String>,
 }
 
-impl SubprocessCommand {
-  pub fn stream(&self, stream: Receiver<SadResult<String>>) -> (Task, Receiver<SadResult<String>>) {
-    let (tx, rx) = bounded::<SadResult<String>>(1);
-    let tt = Sender::clone(&tx);
-    let ta = Sender::clone(&tx);
+pub async fn stream_into(
+  abort: &Arc<Abort>,
+  path: PathBuf,
+  writer: &mut BufWriter<impl AsyncWrite + Unpin>,
+  mut stream: Receiver<String>,
+) {
+  loop {
+    let f1 = abort.notified();
+    let f2 = stream.recv();
+    pin_mut!(f1);
+    pin_mut!(f2);
+    match select(f1, f2).await {
+      Either::Left(_) => break,
+      Either::Right((Some(print), _)) => {
+        if let Err(err) = writer.write(print.as_bytes()).await {
+          abort.send(Fail::IO(path, err.kind())).await;
+          break;
+        }
+      }
+      _ => break,
+    }
+  }
+}
 
-    let subprocess = Command::new(&self.program)
+pub fn stream_subprocess(
+  abort: &Arc<Abort>,
+  cmd: SubprocessCommand,
+  stream: Receiver<String>,
+) -> JoinHandle<()> {
+  let abort = abort.clone();
+
+  spawn(async move {
+    let subprocess = Command::new(&cmd.prog)
       .kill_on_drop(true)
-      .args(&self.arguments)
-      .envs(&self.env)
+      .args(&cmd.args)
+      .envs(&cmd.env)
       .stdin(Stdio::piped())
       .spawn();
 
-    let mut child = match subprocess.into_sadness() {
-      Ok(child) => child,
-      Err(err) => {
-        let handle = task::spawn(async move { tx.send(Err(err)).await.expect("<CHAN>") });
-        return (handle, rx);
-      }
-    };
+    match subprocess {
+      Err(err) => abort.send(Fail::IO(cmd.prog, err.kind())).await,
+      Ok(mut child) => {
+        let mut stdin = child.stdin.take().map(BufWriter::new).expect("nil stdin");
 
-    let mut stdin = child.stdin.take().map(BufWriter::new).expect("nil stdin");
+        let abort_1 = abort.clone();
+        let p1 = cmd.prog.clone();
+        let handle_in = spawn(async move {
+          stream_into(&abort_1, p1.clone(), &mut stdin, stream).await;
+          if let Err(err) = stdin.shutdown().await {
+            abort_1.send(Fail::IO(p1, err.kind())).await;
+          }
+        });
 
-    let handle_in = task::spawn(async move {
-      while let Ok(print) = stream.recv().await {
-        match print {
-          Ok(val) => {
-            if let Err(err) = stdin.write(val.as_bytes()).await.into_sadness() {
-              tx.send(Err(err)).await.expect("<CHAN>");
-              break;
-            }
+        let abort_2 = abort.clone();
+        let p2 = cmd.prog.clone();
+        let handle_child = spawn(async move {
+          if let Err(err) = child.wait().await {
+            abort_2.send(Fail::IO(p2, err.kind())).await;
           }
-          Err(err) => {
-            tx.send(Err(err)).await.expect("<CHAN>");
-            break;
-          }
+        });
+
+        if let Err(err) = try_join(handle_child, handle_in).await {
+          abort.send(err.into()).await
         }
       }
-      if let Err(err) = stdin.shutdown().await {
-        tx.send(Err(err.into())).await.expect("<CHAN>")
-      }
-    });
-
-    let handle_child = task::spawn(async move {
-      if let Err(err) = child.wait().await {
-        tt.send(Err(err.into())).await.expect("<CHAN>")
-      }
-    });
-
-    let handle = task::spawn(async move {
-      if let Err(err) = try_join(handle_child, handle_in).await {
-        ta.send(Err(err.into())).await.expect("<CHAN>")
-      }
-    });
-
-    (handle, rx)
-  }
+    }
+  })
 }

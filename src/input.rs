@@ -1,20 +1,24 @@
 use super::argparse::Arguments;
-use super::errors::{Failure, SadResult, SadnessFrom};
-use super::types::Task;
+use super::types::{Abort, Fail};
 use super::udiff::DiffRange;
 use async_channel::{bounded, Receiver};
+use futures::{
+  future::{select, Either},
+  pin_mut,
+};
 use regex::Regex;
-use std::os::unix::ffi::OsStringExt;
 use std::{
   collections::{HashMap, HashSet},
-  convert::TryFrom,
   ffi::OsString,
-  path::PathBuf,
+  io::ErrorKind,
+  os::unix::ffi::OsStringExt,
+  path::{Path, PathBuf},
+  sync::Arc,
 };
 use tokio::{
   fs::{canonicalize, File},
   io::{self, AsyncBufReadExt, BufReader},
-  task,
+  task::{spawn, JoinHandle},
 };
 
 #[derive(Debug)]
@@ -23,82 +27,68 @@ pub enum Payload {
   Piecewise(PathBuf, HashSet<DiffRange>),
 }
 
-impl Arguments {
-  pub fn stream(&self) -> (Task, Receiver<SadResult<Payload>>) {
-    if let Some(preview) = &self.internal_preview {
-      stream_patch(preview.clone())
-    } else if let Some(patch) = &self.internal_patch {
-      stream_patch(patch.clone())
-    } else {
-      stream_stdin(self.nul_delim)
-    }
-  }
-}
-
-fn p_path(name: Vec<u8>) -> PathBuf {
-  PathBuf::from(OsString::from_vec(name))
-}
-
 struct DiffLine(PathBuf, DiffRange);
 
-impl TryFrom<&str> for DiffLine {
-  type Error = Failure;
+fn p_line(line: String) -> Result<DiffLine, Fail> {
+  let f = Fail::ArgumentError(String::new());
+  let preg = "\n\n\n\n@@ -(\\d+),(\\d+) \\+(\\d+),(\\d+) @@$";
+  let re = Regex::new(preg).map_err(Fail::RegexError)?;
+  let captures = re.captures(&line).ok_or_else(|| f.clone())?;
 
-  fn try_from(candidate: &str) -> SadResult<Self> {
-    let preg = "\n\n\n\n@@ -(\\d+),(\\d+) \\+(\\d+),(\\d+) @@$";
-    let re = Regex::new(preg).into_sadness()?;
-    let captures = re
-      .captures(candidate)
-      .ok_or_else(|| Failure::Parse(candidate.into()))?;
-    let before_start = captures
-      .get(1)
-      .ok_or_else(|| Failure::Parse(candidate.into()))?
-      .as_str()
-      .parse::<usize>()
-      .into_sadness()?;
-    let before_inc = captures
-      .get(2)
-      .ok_or_else(|| Failure::Parse(candidate.into()))?
-      .as_str()
-      .parse::<usize>()
-      .into_sadness()?;
-    let after_start = captures
-      .get(3)
-      .ok_or_else(|| Failure::Parse(candidate.into()))?
-      .as_str()
-      .parse::<usize>()
-      .into_sadness()?;
-    let after_inc = captures
-      .get(4)
-      .ok_or_else(|| Failure::Parse(candidate.into()))?
-      .as_str()
-      .parse::<usize>()
-      .into_sadness()?;
+  let before_start = captures
+    .get(1)
+    .ok_or_else(|| f.clone())?
+    .as_str()
+    .parse::<usize>()
+    .map_err(|_| f.clone())?;
+  let before_inc = captures
+    .get(2)
+    .ok_or_else(|| f.clone())?
+    .as_str()
+    .parse::<usize>()
+    .map_err(|_| f.clone())?;
+  let after_start = captures
+    .get(3)
+    .ok_or_else(|| f.clone())?
+    .as_str()
+    .parse::<usize>()
+    .map_err(|_| f.clone())?;
+  let after_inc = captures
+    .get(4)
+    .ok_or_else(|| f.clone())?
+    .as_str()
+    .parse::<usize>()
+    .map_err(|_| f.clone())?;
 
-    let range = DiffRange {
-      before: (before_start - 1, before_inc),
-      after: (after_start - 1, after_inc),
-    };
-    let name = re.replace(candidate, "").as_bytes().to_vec();
-    let buf = p_path(name);
-    Ok(DiffLine(buf, range))
-  }
+  let range = DiffRange {
+    before: (before_start - 1, before_inc),
+    after: (after_start - 1, after_inc),
+  };
+  let path = PathBuf::from(String::from(re.replace(&line, "")));
+  Ok(DiffLine(path, range))
 }
 
-async fn read_patches(path: &PathBuf) -> SadResult<HashMap<PathBuf, HashSet<DiffRange>>> {
-  let mut acc: HashMap<PathBuf, HashSet<DiffRange>> = HashMap::new();
-  let fd = File::open(path).await.into_sadness()?;
+async fn read_patches(path: &Path) -> Result<HashMap<PathBuf, HashSet<DiffRange>>, Fail> {
+  let fd = File::open(path)
+    .await
+    .map_err(|e| Fail::IO(path.to_owned(), e.kind()))?;
   let mut reader = BufReader::new(fd);
+  let mut acc = HashMap::<PathBuf, HashSet<DiffRange>>::new();
 
   loop {
     let mut buf = Vec::new();
-    let n = reader.read_until(b'\0', &mut buf).await.into_sadness()?;
+    let n = reader
+      .read_until(b'\0', &mut buf)
+      .await
+      .map_err(|e| Fail::IO(path.to_owned(), e.kind()))?;
+
     match n {
       0 => break,
       _ => {
         buf.pop();
-        let line = String::from_utf8(buf).into_sadness()?;
-        let patch = DiffLine::try_from(line.as_str()).into_sadness()?;
+        let line =
+          String::from_utf8(buf).map_err(|_| Fail::IO(path.to_owned(), ErrorKind::InvalidData))?;
+        let patch = p_line(line)?;
         match acc.get_mut(&patch.0) {
           Some(ranges) => {
             ranges.insert(patch.1);
@@ -116,54 +106,91 @@ async fn read_patches(path: &PathBuf) -> SadResult<HashMap<PathBuf, HashSet<Diff
   Ok(acc)
 }
 
-fn stream_patch(patch: PathBuf) -> (Task, Receiver<SadResult<Payload>>) {
-  let (tx, rx) = bounded::<SadResult<Payload>>(1);
-  let handle = task::spawn(async move {
+fn stream_patch(abort: &Arc<Abort>, patch: &Path) -> (JoinHandle<()>, Receiver<Payload>) {
+  let abort = abort.clone();
+  let patch = patch.to_owned();
+  let (tx, rx) = bounded::<Payload>(1);
+
+  let handle = spawn(async move {
     match read_patches(&patch).await {
       Ok(patches) => {
         for patch in patches {
-          tx.send(Ok(Payload::Piecewise(patch.0, patch.1)))
-            .await
-            .expect("<CHAN>")
+          if tx.send(Payload::Piecewise(patch.0, patch.1)).await.is_err() {
+            break;
+          }
         }
       }
-      Err(err) => tx.send(Err(err)).await.expect("<CHAN>"),
+      Err(err) => {
+        abort.send(err).await;
+      }
     }
   });
   (handle, rx)
 }
 
-fn stream_stdin(use_nul: bool) -> (Task, Receiver<SadResult<Payload>>) {
-  let (tx, rx) = bounded::<SadResult<Payload>>(1);
-  let handle = task::spawn(async move {
-    let delim = if use_nul { b'\0' } else { b'\n' };
-    let mut reader = BufReader::new(io::stdin());
+fn stream_stdin(abort: &Arc<Abort>, use_nul: bool) -> (JoinHandle<()>, Receiver<Payload>) {
+  let (tx, rx) = bounded::<Payload>(1);
+
+  let abort = abort.clone();
+  let handle = spawn(async move {
     if atty::is(atty::Stream::Stdin) {
-      tx.send(Err(Failure::NilStdin)).await.expect("<CHAN>")
-    }
-    let mut seen = HashSet::new();
-    loop {
-      let mut buf = Vec::new();
-      let n = reader.read_until(delim, &mut buf).await.into_sadness();
-      match n {
-        Ok(0) => break,
-        Ok(_) => {
-          buf.pop();
-          let path = p_path(buf);
-          if let Ok(canonical) = canonicalize(&path).await.into_sadness() {
-            if seen.insert(canonical.clone()) {
-              tx.send(Ok(Payload::Entire(canonical)))
-                .await
-                .expect("<CHAN>")
+      abort
+        .send(Fail::ArgumentError(
+          "/dev/stdin connected to tty".to_owned(),
+        ))
+        .await;
+    } else {
+      let delim = if use_nul { b'\0' } else { b'\n' };
+      let mut reader = BufReader::new(io::stdin());
+      let mut seen = HashSet::new();
+
+      loop {
+        let mut buf = Vec::new();
+        let f1 = abort.notified();
+        let f2 = reader.read_until(delim, &mut buf);
+
+        pin_mut!(f1);
+        pin_mut!(f2);
+        match select(f1, f2).await {
+          Either::Left(_) => break,
+          Either::Right((Err(err), _)) => {
+            abort
+              .send(Fail::IO(PathBuf::from("/dev/stdin"), err.kind()))
+              .await;
+            break;
+          }
+          Either::Right((Ok(0), _)) => break,
+          Either::Right((Ok(_), _)) => {
+            buf.pop();
+            let path = PathBuf::from(OsString::from_vec(buf));
+            match canonicalize(&path).await {
+              Ok(canonical) => {
+                if seen.insert(canonical.clone())
+                  && tx.send(Payload::Entire(canonical)).await.is_err()
+                {
+                  break;
+                }
+              }
+              Err(err) if err.kind() == ErrorKind::NotFound => (),
+              Err(err) => {
+                abort.send(Fail::IO(path, err.kind())).await;
+                break;
+              }
             }
           }
-        }
-        Err(err) => {
-          tx.send(Err(err)).await.expect("<CHAN>");
-          break;
         }
       }
     }
   });
   (handle, rx)
+}
+
+pub fn stream_input(abort: &Arc<Abort>, args: &Arguments) -> (JoinHandle<()>, Receiver<Payload>) {
+  if let Some(preview) = &args.internal_preview {
+    stream_patch(abort, preview)
+  } else if let Some(patch) = &args.internal_patch {
+    stream_patch(abort, patch)
+  } else {
+    stream_stdin(abort, args.nul_delim)
+  }
 }
