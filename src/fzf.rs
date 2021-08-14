@@ -1,3 +1,4 @@
+use super::subprocess::stream_into;
 use super::subprocess::SubprocessCommand;
 use super::types::{Abort, Fail};
 use futures::future::try_join;
@@ -42,7 +43,7 @@ async fn reset_term() -> Result<(), Fail> {
 fn run_fzf(
   abort: &Arc<Abort>,
   cmd: SubprocessCommand,
-  mut stream: Receiver<String>,
+  stream: Receiver<String>,
 ) -> JoinHandle<()> {
   let abort = abort.clone();
 
@@ -64,22 +65,7 @@ fn run_fzf(
         let abort_1 = abort.clone();
         let p1 = cmd.prog.clone();
         let handle_in = spawn(async move {
-          loop {
-            select! {
-              _ = abort_1.notified() => break,
-              print = stream.recv() => {
-                match print {
-                  Some(val) => {
-                    if let Err(err) = stdin.write(val.as_bytes()).await {
-                      abort_1.send(Fail::IO(p1.clone(),err.kind())).await;
-                      break;
-                    }
-                  }
-                  _ => break
-                }
-              }
-            }
-          }
+          stream_into(&abort_1, p1.clone(), &mut stdin, stream).await;
           if let Err(err) = stdin.shutdown().await {
             abort_1.send(Fail::IO(p1, err.kind())).await;
           }

@@ -1,38 +1,20 @@
 use super::argparse::{Action, Options, Printer};
 use super::fzf::stream_fzf;
-use super::subprocess::stream_subprocess;
+use super::subprocess::{stream_into, stream_subprocess};
 use super::types::{Abort, Fail};
 use std::{path::PathBuf, sync::Arc};
 use tokio::{
   io::{self, AsyncWriteExt, BufWriter},
-  select,
   sync::mpsc::Receiver,
   task::{spawn, JoinHandle},
 };
 
-fn stream_stdout(abort: &Arc<Abort>, mut stream: Receiver<String>) -> JoinHandle<()> {
+fn stream_stdout(abort: &Arc<Abort>, stream: Receiver<String>) -> JoinHandle<()> {
   let abort = abort.clone();
   let mut stdout = BufWriter::new(io::stdout());
 
   spawn(async move {
-    loop {
-      select! {
-        _ = abort.notified() => break ,
-        print = stream.recv() => {
-          match print {
-            Some(val) => {
-              if let Err(err) = stdout.write(val.as_bytes()).await {
-                abort
-                  .send(Fail::IO(PathBuf::from("/dev/stdout"),err.kind()))
-                  .await;
-                break;
-              }
-            },
-            _ => break
-          }
-        }
-      }
-    }
+    stream_into(&abort, PathBuf::from("/dev/stdout"), &mut stdout, stream).await;
     if let Err(err) = stdout.flush().await {
       abort
         .send(Fail::IO(PathBuf::from("/dev/stdout"), err.kind()))

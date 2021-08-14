@@ -2,7 +2,7 @@ use super::types::{Abort, Fail};
 use futures::future::try_join;
 use std::{collections::HashMap, path::PathBuf, process::Stdio, sync::Arc};
 use tokio::{
-  io::{AsyncWriteExt, BufWriter},
+  io::{AsyncWrite, AsyncWriteExt, BufWriter},
   process::Command,
   select,
   sync::mpsc::Receiver,
@@ -16,10 +16,34 @@ pub struct SubprocessCommand {
   pub env: HashMap<String, String>,
 }
 
+pub async fn stream_into(
+  abort: &Arc<Abort>,
+  path: PathBuf,
+  writer: &mut BufWriter<impl AsyncWrite + Unpin>,
+  mut stream: Receiver<String>,
+) {
+  loop {
+    select! {
+      _ = abort.notified() => break,
+      print = stream.recv() => {
+        match print {
+          Some(val) => {
+            if let Err(err) = writer.write(val.as_bytes()).await {
+              abort.send(Fail::IO(path.clone(), err.kind())).await;
+              break;
+            }
+          }
+          None => break
+        }
+      }
+    }
+  }
+}
+
 pub fn stream_subprocess(
   abort: &Arc<Abort>,
   cmd: SubprocessCommand,
-  mut stream: Receiver<String>,
+  stream: Receiver<String>,
 ) -> JoinHandle<()> {
   let abort = abort.clone();
 
@@ -39,22 +63,7 @@ pub fn stream_subprocess(
         let abort_1 = abort.clone();
         let p1 = cmd.prog.clone();
         let handle_in = spawn(async move {
-          loop {
-            select! {
-              _ = abort_1.notified() => break,
-              print = stream.recv() => {
-                match print {
-                  Some(val) => {
-                    if let Err(err) = stdin.write(val.as_bytes()).await {
-                      abort_1.send(Fail::IO(p1.clone(), err.kind())).await;
-                      break;
-                    }
-                  }
-                  None => break
-                }
-              }
-            }
-          }
+          stream_into(&abort_1, p1.clone(), &mut stdin, stream).await;
           if let Err(err) = stdin.shutdown().await {
             abort_1.send(Fail::IO(p1, err.kind())).await;
           }

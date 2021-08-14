@@ -59,20 +59,19 @@ impl Abort {
     })
   }
 
-  pub async fn fin(self: &Self) -> Vec<Fail> {
+  pub async fn fin(&self) -> Vec<Fail> {
     self.errors.lock().await.to_vec()
   }
 
-  pub async fn send(self: &Self, fail: Fail) {
+  pub async fn send(&self, fail: Fail) {
     let mut errors = self.errors.lock().await;
     errors.push(fail);
     self.rx.notify_waiters()
   }
 
-  pub async fn notified(self: &Self) {
+  pub async fn notified(&self) {
     let errors = self.errors.lock().await;
     if errors.len() > 0 {
-      ()
     } else {
       self.rx.notified().await
     }
