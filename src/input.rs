@@ -2,6 +2,10 @@ use super::argparse::Arguments;
 use super::types::{Abort, Fail};
 use super::udiff::DiffRange;
 use async_channel::{bounded, Receiver};
+use futures::{
+  future::{select, Either},
+  pin_mut,
+};
 use regex::Regex;
 use std::{
   collections::{HashMap, HashSet},
@@ -14,7 +18,6 @@ use std::{
 use tokio::{
   fs::{canonicalize, File},
   io::{self, AsyncBufReadExt, BufReader},
-  select,
   task::{spawn, JoinHandle},
 };
 
@@ -143,32 +146,34 @@ fn stream_stdin(abort: &Arc<Abort>, use_nul: bool) -> (JoinHandle<()>, Receiver<
 
       loop {
         let mut buf = Vec::new();
-        select! {
-          _ = abort.notified() => break,
-          n = reader.read_until(delim, &mut buf) => {
-            match n {
-              Ok(0) => break,
-              Ok(_) => {
-                buf.pop();
-                let path = PathBuf::from(OsString::from_vec(buf));
-                match canonicalize(&path).await {
-                  Ok(canonical) => {
-                    if seen.insert(canonical.clone()) &&
-                       tx.send(Payload::Entire(canonical)).await.is_err() {
-                      break
-                    }
-                  },
-                  Err(err) if err.kind() == ErrorKind::NotFound => (),
-                  Err(err) => {
-                    abort.send(Fail::IO(path, err.kind())).await;
-                    break;
-                  }
+        let f1 = abort.notified();
+        let f2 = reader.read_until(delim, &mut buf);
+
+        pin_mut!(f1);
+        pin_mut!(f2);
+        match select(f1, f2).await {
+          Either::Left(_) => break,
+          Either::Right((Err(err), _)) => {
+            abort
+              .send(Fail::IO(PathBuf::from("/dev/stdin"), err.kind()))
+              .await;
+            break;
+          }
+          Either::Right((Ok(0), _)) => break,
+          Either::Right((Ok(_), _)) => {
+            buf.pop();
+            let path = PathBuf::from(OsString::from_vec(buf));
+            match canonicalize(&path).await {
+              Ok(canonical) => {
+                if seen.insert(canonical.clone())
+                  && tx.send(Payload::Entire(canonical)).await.is_err()
+                {
+                  break;
                 }
               }
+              Err(err) if err.kind() == ErrorKind::NotFound => (),
               Err(err) => {
-                abort
-                  .send(Fail::IO(PathBuf::from("/dev/stdin"), err.kind()))
-                  .await;
+                abort.send(Fail::IO(path, err.kind())).await;
                 break;
               }
             }

@@ -1,10 +1,13 @@
 use super::types::{Abort, Fail};
 use futures::future::try_join;
+use futures::{
+  future::{select, Either},
+  pin_mut,
+};
 use std::{collections::HashMap, path::PathBuf, process::Stdio, sync::Arc};
 use tokio::{
   io::{AsyncWrite, AsyncWriteExt, BufWriter},
   process::Command,
-  select,
   sync::mpsc::Receiver,
   task::{spawn, JoinHandle},
 };
@@ -23,19 +26,19 @@ pub async fn stream_into(
   mut stream: Receiver<String>,
 ) {
   loop {
-    select! {
-      _ = abort.notified() => break,
-      print = stream.recv() => {
-        match print {
-          Some(val) => {
-            if let Err(err) = writer.write(val.as_bytes()).await {
-              abort.send(Fail::IO(path.clone(), err.kind())).await;
-              break;
-            }
-          }
-          None => break
+    let f1 = abort.notified();
+    let f2 = stream.recv();
+    pin_mut!(f1);
+    pin_mut!(f2);
+    match select(f1, f2).await {
+      Either::Left(_) => break,
+      Either::Right((Some(print), _)) => {
+        if let Err(err) = writer.write(print.as_bytes()).await {
+          abort.send(Fail::IO(path, err.kind())).await;
+          break;
         }
       }
+      _ => break,
     }
   }
 }
