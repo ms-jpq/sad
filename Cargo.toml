@@ -1,6 +1,6 @@
 [package]
 name = "sad"
-version = "0.4.13"
+version = "0.4.14"
 description = "Space Age seD | https://github.com/ms-jpq/sad"
 authors = ["git@bigly.dog"]
 edition = "2018"
@@ -15,6 +15,7 @@ futures = "0.3"
 num_cpus = "1"
 pathdiff = "0.2"
 regex = "1"
+shlex = "1"
 structopt = "0.3"
 tokio = { version = "1", features = ["full"] }
 uuid = { version = "0.8", features = ["v4"] }

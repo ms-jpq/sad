@@ -2,6 +2,7 @@ use super::subprocess::SubprocessCommand;
 use super::types::Fail;
 use aho_corasick::{AhoCorasick, AhoCorasickBuilder};
 use regex::{Regex, RegexBuilder};
+use shlex::split;
 use std::{collections::HashMap, env, path::PathBuf};
 use structopt::StructOpt;
 use which::which;
@@ -178,22 +179,31 @@ fn p_fzf(fzf: Option<String>) -> Option<(PathBuf, Vec<String>)> {
 }
 
 fn p_pager(pager: &Option<String>) -> Option<SubprocessCommand> {
+  let norm = || which("delta").or_else(|_| which("diff-so-fancy")).ok();
   let (prog, arguments) = match pager {
     Some(val) => match val as &str {
       "never" => (None, Vec::new()),
-      _ => (Some(PathBuf::from(val)), Vec::new()),
-    },
-    None => match env::var("GIT_PAGER") {
-      Ok(val) => {
-        let less_less = val.split('|').next().unwrap_or(&val).trim();
-        let mut commands = less_less.split_whitespace().map(String::from);
-        (commands.next().map(PathBuf::from), commands.collect())
+      _ => {
+        let mut sh = split(&val)
+          .unwrap_or_else(|| vec![val.to_owned()])
+          .into_iter();
+        (
+          sh.next().and_then(|p| which(p).ok()).or_else(norm),
+          sh.collect(),
+        )
       }
-      Err(_) => (
-        which("delta").or_else(|_| which("diff-so-fancy")).ok(),
-        Vec::new(),
-      ),
     },
+    None => {
+      let val = env::var("GIT_PAGER").unwrap_or_default();
+      let less_less = val.split('|').next().unwrap_or(&val).trim();
+      let mut sh = split(&less_less)
+        .unwrap_or_else(|| vec![less_less.to_owned()])
+        .into_iter();
+      (
+        sh.next().and_then(|p| which(p).ok()).or_else(norm),
+        sh.collect(),
+      )
+    }
   };
 
   prog.map(|program| SubprocessCommand {

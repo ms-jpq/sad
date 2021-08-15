@@ -463,7 +463,7 @@ checksum = "f497285884f3fcff424ffc933e56d7cbca511def0c9831a7f9b5f6153e3cc89b"
 
 [[package]]
 name = "sad"
-version = "0.4.13"
+version = "0.4.14"
 dependencies = [
  "aho-corasick",
  "ansi_term 0.12.1",
@@ -474,6 +474,7 @@ dependencies = [
  "num_cpus",
  "pathdiff",
  "regex",
+ "shlex",
  "structopt",
  "tokio",
  "uuid",
@@ -485,6 +486,12 @@ name = "scopeguard"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d29ab0c6d3fc0ee92fe66e2d99f700eab17a8d57d1c1d3b748380fb20baa78cd"
+
+[[package]]
+name = "shlex"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "42a568c8f2cd051a4d283bd6eb0343ac214c1b0f1ac19f93e1175b2dee38c73d"
 
 [[package]]
 name = "signal-hook-registry"
