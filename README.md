@@ -20,6 +20,8 @@ You can also choose the clustering factor for changes using `--unified=<n>`. (Sa
 
 ![preview1](https://github.com/ms-jpq/sad/raw/senpai/previews/preview1.gif)
 
+**If you have `delta` installed, try `--pager 'delta -s'` for side by side view**
+
 ## Preview (no fzf)
 
 Replace all`'"(\d+)"'` -> `'🌈$1🌈'` in the `chromium` repo.
