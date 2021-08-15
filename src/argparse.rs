@@ -47,14 +47,20 @@ pub struct Arguments {
   pub flags: Option<String>,
 
   /// Colourizing program, disable = never, default = $GIT_PAGER
+  ///
+  /// Uses bash shell syntax for splitting
   #[structopt(short, long)]
   pub pager: Option<String>,
 
   /// Additional Fzf options, disable = never
+  ///
+  /// Uses bash shell syntax for splitting
   #[structopt(long)]
   pub fzf: Option<String>,
 
-  /// Same as in GNU diff --unified={size}, affects hunk size
+  /// Same as in GNU diff --unified={size}, affects aggregate size
+  ///
+  /// ie. a higher {size} will leader to more changes grouped together
   #[structopt(short, long)]
   pub unified: Option<usize>,
 
@@ -170,8 +176,8 @@ fn p_regex(pattern: &str, flags: Vec<String>) -> Result<Regex, Fail> {
 fn p_fzf(fzf: Option<String>) -> Option<(PathBuf, Vec<String>)> {
   match (which("fzf"), atty::is(atty::Stream::Stdout)) {
     (Ok(p), true) => match fzf {
-      Some(v) if v == "never" => None,
-      Some(val) => Some((p, val.split_whitespace().map(String::from).collect())),
+      Some(val) if val == "never" => None,
+      Some(val) => Some((p, split(&val).unwrap_or_default())),
       None => Some((p, Vec::new())),
     },
     _ => None,
