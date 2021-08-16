@@ -177,15 +177,16 @@ To compile sad yourself you'll have to make sure you have
 To install cargo from source you can run the following commands:
 
 ```sh
-cargo install --locked --all-features --path .
-
+cargo install --locked --all-features \
+  --git https://github.com/ms-jpq/sad --branch senpai
 ```
 
 If you want to install it in a specific directory you can provide the `--root`
 flag, like so:
 
 ```sh
-cargo install --locked --all-features --root="/usr/bin/" --path .
+cargo install --locked --all-features --root="/usr/bin/" \
+  --git https://github.com/ms-jpq/sad --branch senpai
 ```
 
 ## What about stdin -> stdout
