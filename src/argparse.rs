@@ -190,7 +190,7 @@ fn p_pager(pager: &Option<String>) -> Option<SubprocessCommand> {
     Some(val) => match val as &str {
       "never" => (None, Vec::new()),
       _ => {
-        let mut sh = split(&val)
+        let mut sh = split(val)
           .unwrap_or_else(|| vec![val.to_owned()])
           .into_iter();
         (
@@ -202,7 +202,7 @@ fn p_pager(pager: &Option<String>) -> Option<SubprocessCommand> {
     None => {
       let val = env::var("GIT_PAGER").unwrap_or_default();
       let less_less = val.split('|').next().unwrap_or(&val).trim();
-      let mut sh = split(&less_less)
+      let mut sh = split(less_less)
         .unwrap_or_else(|| vec![less_less.to_owned()])
         .into_iter();
       (
