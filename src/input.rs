@@ -9,6 +9,7 @@ use futures::{
 use regex::Regex;
 use std::{
   collections::{HashMap, HashSet},
+  convert::TryInto,
   ffi::OsString,
   io::ErrorKind,
   path::{Path, PathBuf},
@@ -132,7 +133,7 @@ fn stream_patch(abort: &Arc<Abort>, patch: &Path) -> (JoinHandle<()>, Receiver<P
   (handle, rx)
 }
 
-fn u8_pathbuf(v8: Vec<u8>) -> PathBuf {
+fn u8_pathbuf(v8: &[u8]) -> PathBuf {
   #[cfg(target_family = "unix")]
   {
     PathBuf::from(OsString::from_vec(v8))
@@ -141,7 +142,8 @@ fn u8_pathbuf(v8: Vec<u8>) -> PathBuf {
   {
     let mut buf = Vec::new();
     for chunk in v8.chunks_exact(2) {
-      let b = u16::from_ne_bytes(chunk);
+      let c: [u8; 2] = chunk.try_into().expect("exact chunks");
+      let b = u16::from_ne_bytes(c);
       buf.push(b)
     }
     PathBuf::from(OsString::from_wide(&buf))
@@ -182,7 +184,7 @@ fn stream_stdin(abort: &Arc<Abort>, use_nul: bool) -> (JoinHandle<()>, Receiver<
           Either::Right((Ok(0), _)) => break,
           Either::Right((Ok(_), _)) => {
             buf.pop();
-            let path = u8_pathbuf(buf);
+            let path = u8_pathbuf(&buf);
             match canonicalize(&path).await {
               Ok(canonical) => {
                 if seen.insert(canonical.clone())
