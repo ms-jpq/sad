@@ -5,7 +5,8 @@ FROM rust:latest
 WORKDIR /WORK
 RUN mkdir --parents -- artifacts && \
     apt update && \
-    apt install --yes -- zip
+    apt install --yes -- zip && \
+    rustup target add x86_64-pc-windows-gnu
 
 
 # COPY
