@@ -11,15 +11,19 @@ use std::{
   collections::{HashMap, HashSet},
   ffi::OsString,
   io::ErrorKind,
-  os::unix::ffi::OsStringExt,
   path::{Path, PathBuf},
   sync::Arc,
 };
 use tokio::{
   fs::{canonicalize, File},
-  io::{self, AsyncBufReadExt, BufReader},
+  io::{stdin, AsyncBufReadExt, BufReader},
   task::{spawn, JoinHandle},
 };
+
+#[cfg(target_family = "unix")]
+use std::os::unix::ffi::OsStringExt;
+#[cfg(target_family = "windows")]
+use std::os::windows::ffi::OsStringExt;
 
 #[derive(Debug)]
 pub enum Payload {
@@ -128,6 +132,22 @@ fn stream_patch(abort: &Arc<Abort>, patch: &Path) -> (JoinHandle<()>, Receiver<P
   (handle, rx)
 }
 
+fn u8_pathbuf(v8: Vec<u8>) -> PathBuf {
+  #[cfg(target_family = "unix")]
+  {
+    PathBuf::from(OsString::from_vec(v8))
+  }
+  #[cfg(target_family = "windows")]
+  {
+    let mut buf = Vec::new();
+    for chunk in &v8.chunks_exact(2) {
+      let b = u16::from_ne_bytes(chunk);
+      bufs.push(b)
+    }
+    PathBuf::from(OsString::from_wide(buf))
+  }
+}
+
 fn stream_stdin(abort: &Arc<Abort>, use_nul: bool) -> (JoinHandle<()>, Receiver<Payload>) {
   let (tx, rx) = bounded::<Payload>(1);
 
@@ -141,7 +161,7 @@ fn stream_stdin(abort: &Arc<Abort>, use_nul: bool) -> (JoinHandle<()>, Receiver<
         .await;
     } else {
       let delim = if use_nul { b'\0' } else { b'\n' };
-      let mut reader = BufReader::new(io::stdin());
+      let mut reader = BufReader::new(stdin());
       let mut seen = HashSet::new();
 
       loop {
@@ -162,7 +182,7 @@ fn stream_stdin(abort: &Arc<Abort>, use_nul: bool) -> (JoinHandle<()>, Receiver<
           Either::Right((Ok(0), _)) => break,
           Either::Right((Ok(_), _)) => {
             buf.pop();
-            let path = PathBuf::from(OsString::from_vec(buf));
+            let path = u8_pathbuf(buf);
             match canonicalize(&path).await {
               Ok(canonical) => {
                 if seen.insert(canonical.clone())
