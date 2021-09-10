@@ -3,15 +3,11 @@
 from argparse import ArgumentParser, Namespace
 from datetime import datetime
 from json import dumps
-from os import chdir
-from os.path import abspath, dirname
+from pathlib import Path
 
 from toml import load
 
-
-def _cwd() -> None:
-    root = dirname(dirname(abspath(__file__)))
-    chdir(root)
+_TOP_LEVEL = Path(__file__).resolve().parent.parent
 
 
 def _read(name: str) -> str:
@@ -24,7 +20,8 @@ def _set_output(name: str, value: str) -> None:
 
 
 def _set_release_env() -> None:
-    cargo = load("Cargo.toml")
+    cargo = load(_TOP_LEVEL / "Cargo.toml")
+
     version = cargo["package"]["version"]
     time = datetime.now()
     tag_name = f"ci_{version}_{time.strftime('%Y-%m-%d_%H-%M')}"
@@ -47,7 +44,6 @@ def _parse_args() -> Namespace:
 
 
 def main() -> None:
-    _cwd()
     args = _parse_args()
     if args.release:
         _set_release_env()
