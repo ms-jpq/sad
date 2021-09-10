@@ -142,9 +142,9 @@ fn u8_pathbuf(v8: Vec<u8>) -> PathBuf {
     let mut buf = Vec::new();
     for chunk in &v8.chunks_exact(2) {
       let b = u16::from_ne_bytes(chunk);
-      bufs.push(b)
+      buf.push(b)
     }
-    PathBuf::from(OsString::from_wide(buf))
+    PathBuf::from(OsString::from_wide(&buf))
   }
 }
 
