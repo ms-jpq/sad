@@ -140,7 +140,7 @@ fn u8_pathbuf(v8: Vec<u8>) -> PathBuf {
   #[cfg(target_family = "windows")]
   {
     let mut buf = Vec::new();
-    for chunk in &v8.chunks_exact(2) {
+    for chunk in v8.chunks_exact(2) {
       let b = u16::from_ne_bytes(chunk);
       buf.push(b)
     }
