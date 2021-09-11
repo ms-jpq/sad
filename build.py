@@ -31,6 +31,10 @@ _TOOL_CHAINS = {
     "x86_64-unknown-linux-musl",
 }
 
+_DPKG_ARCH = {
+    "x86_64": "amd64",
+}
+
 UNAME = uname()
 
 
@@ -72,10 +76,9 @@ def _deb(triple: str) -> None:
 
     release = _bin_path(triple)
     tmp = _TOP_LEVEL / "temp" / triple
-    deb_src = tmp / "DEBIAN"
 
-    sad = deb_src / "usr" / "local" / "bin" / "sad"
-    control = deb_src / "control"
+    sad = tmp / "usr" / "local" / "bin" / "sad"
+    control = tmp / "DEBIAN" / "control"
     deb = (_ARTS / triple).with_suffix(".deb")
 
     j2 = Environment(
@@ -86,10 +89,7 @@ def _deb(triple: str) -> None:
         loader=FileSystemLoader(templates),
     )
 
-    env = {
-        **loads(cargo.read_text())["package"],
-        "arch": arch.replace("_", "-"),
-    }
+    env = {**loads(cargo.read_text())["package"], "arch": _DPKG_ARCH[arch]}
     ctrl = j2.get_template("control").render(env)
 
     with suppress(FileNotFoundError):
