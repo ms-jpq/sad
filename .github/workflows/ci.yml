@@ -46,13 +46,13 @@ jobs:
         run: ./build.py deps
 
       - name: Build
-        run: ./build.py buildr -- ${{ triple }}
+        run: ./build.py buildr -- ${{ matrix.triple }}
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v2
         with:
-          name: ${{ triple }}
-          path: artifacts/${{ triple }}.zip
+          name: ${{ matrix.triple }}
+          path: artifacts/${{ matrix.triple }}.zip
 
   build_ubuntu:
     runs-on: ubuntu-latest
@@ -71,13 +71,13 @@ jobs:
         run: ./build.py deps
 
       - name: Build
-        run: ./build.py buildr -- ${{ triple }}
+        run: ./build.py buildr -- ${{ matrix.triple }}
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v2
         with:
-          name: ${{ triple }}
-          path: artifacts/${{ triple }}.zip
+          name: ${{ matrix.triple }}
+          path: artifacts/${{ matrix.triple }}.zip
 
   build_debs:
     runs-on: ubuntu-latest
