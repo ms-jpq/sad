@@ -91,7 +91,7 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: artifacts/${{ matrix.triple }}.${{ matrix.filetype.ext }}
-          path: artifacts
+          path: ${{ matrix.triple }}.${{ matrix.filetype.ext }}
 
   install_macos:
     runs-on: macos-latest
