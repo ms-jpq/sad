@@ -27,9 +27,11 @@ _TOOL_CHAINS = {
     "x86_64-unknown-linux-musl",
 }
 
+UNAME = uname()
+
 
 def _deps() -> None:
-    if which("apt"):
+    if UNAME.system == "Linux" and which("apt"):
         check_call(("sudo", "apt", "update"), cwd=_TOP_LEVEL)
         check_call(
             ("sudo", "apt", "install", "--yes", "--", "gcc-mingw-w64"), cwd=_TOP_LEVEL
@@ -56,11 +58,10 @@ def _archive(triple: str) -> None:
 
 
 def _parse_args() -> Namespace:
-    un = uname()
     arch_choices = {"x86_64", "aarch64"}
     os_choices = {os for (os, _) in _DEFAULTS.values()}
     compiler_choices = {"musl", "gnu", "darwin"}
-    os, compiler = _DEFAULTS.get(un.system) or (None, None)
+    os, compiler = _DEFAULTS.get(UNAME.system) or (None, None)
 
     parser = ArgumentParser()
     sub_parser = parser.add_subparsers(dest="action", required=True)
@@ -78,7 +79,7 @@ def _parse_args() -> Namespace:
         p.add_argument(
             "--arch",
             choices=sorted(arch_choices, key=strxfrm),
-            default=un.machine,
+            default=UNAME.machine,
         )
         p.add_argument(
             "--os",
