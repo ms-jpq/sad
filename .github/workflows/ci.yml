@@ -67,7 +67,7 @@ jobs:
         uses: actions/upload-artifact@v2
         if:  contains(${{ matrix.jobs.triple }}, "linux")
         with:
-          name: ${{ matrix.jobs.triple }}
+          name: ${{ matrix.jobs.triple }}.deb
           path: artifacts/${{ matrix.jobs.triple }}.deb
 
   install_macos:
