@@ -28,8 +28,9 @@ _TOOL_CHAINS = {
 
 
 def _deps() -> None:
-    check_call(("apt", "update"), cwd=_TOP_LEVEL)
-    check_call(("apt", "install", "--yes", "--", "gcc-mingw-w64"), cwd=_TOP_LEVEL)
+    if which("apt"):
+        check_call(("apt", "update"), cwd=_TOP_LEVEL)
+        check_call(("apt", "install", "--yes", "--", "gcc-mingw-w64"), cwd=_TOP_LEVEL)
     for toolchain in sorted(_TOOL_CHAINS, key=strxfrm):
         check_call(("rustup", "target", "add", "--", toolchain), cwd=_TOP_LEVEL)
 
