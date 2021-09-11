@@ -1,11 +1,7 @@
 ## Good news
 
-v0.4.13
+v0.4.15
 
-- imperceptibly faster
-
-- rewrote error paths
-
-- cut down on runtime
+- Added windows
 
 **Released by CI**
