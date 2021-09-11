@@ -24,12 +24,22 @@ jobs:
       - name: Lint
         run: mypy -- .
 
-  build_macos:
-    runs-on: macos-latest
+  build:
+    runs-on: ${{ matrix.runner }}
     strategy:
       matrix:
-        triple:
-          - x86_64-apple-darwin
+        jobs:
+          - runner: ubuntu-latest
+            triple: x86_64-pc-windows-gnu
+
+          - runner: ubuntu-latest
+            triple: x86_64-unknown-linux-gnu
+
+          - runner: ubuntu-latest
+            triple: x86_64-unknown-linux-musl
+
+          - runner: macos-latest
+            triple: x86_64-apple-darwin
 
     steps:
       - name: Checkout
@@ -39,38 +49,13 @@ jobs:
         run: ./build.py deps
 
       - name: Build
-        run: ./build.py buildr -- ${{ matrix.triple }}
+        run: ./build.py buildr -- ${{ matrix.job.triple }}
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v2
         with:
-          name: ${{ matrix.triple }}
-          path: artifacts/${{ matrix.triple }}.zip
-
-  build_ubuntu:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        triple:
-          - x86_64-pc-windows-gnu
-          - x86_64-unknown-linux-gnu
-          - x86_64-unknown-linux-musl
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Deps
-        run: ./build.py deps
-
-      - name: Build
-        run: ./build.py buildr -- ${{ matrix.triple }}
-
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v2
-        with:
-          name: ${{ matrix.triple }}
-          path: artifacts/${{ matrix.triple }}.zip
+          name: ${{ matrix.job.triple }}
+          path: artifacts/${{ matrix.job.triple }}.zip
 
   build_debs:
     runs-on: ubuntu-latest
@@ -86,52 +71,6 @@ jobs:
         with:
           name: sad-deb
           path: artifacts/sad.deb
-
-  release:
-    needs:
-      - build_macos
-      - build_ubuntu
-      - build_debs
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Download Artifacts macos
-        uses: actions/download-artifact@v2
-        with:
-          name: x86_64-apple-darwin.zip
-          path: artifacts
-
-      - name: Download Artifacts ubuntu
-        uses: actions/download-artifact@v2
-        with:
-          name: x86_64-pc-windows-gnu
-          path: artifacts
-
-      - name: Download Artifacts ubuntu
-        uses: actions/download-artifact@v2
-        with:
-          name: x86_64-unknown-linux-gnu
-          path: artifacts
-
-      - name: Download Artifacts ubuntu
-        uses: actions/download-artifact@v2
-        with:
-          name: x86_64-unknown-linux-musl
-          path: artifacts
-
-      - name: Download Artifacts debian deb
-        uses: actions/download-artifact@v2
-        with:
-          name: sad-deb
-          path: artifacts
-
-      - name: Confirm Download
-        run: |-
-          cd artifacts || exit 1
-          ls -l
 
   install_macos:
     runs-on: macos-latest
