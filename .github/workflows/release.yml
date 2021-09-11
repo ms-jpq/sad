@@ -88,6 +88,11 @@ jobs:
       - release
     strategy:
       matrix:
+        filetype:
+          - ext: "zip"
+            mime: "application/zip"
+          - ext: "deb"
+            mime: "application/octet-stream"
         triple:
           - x86_64-pc-windows-gnu
           - x86_64-unknown-linux-gnu
@@ -96,27 +101,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Download Artifacts Zip
+      - name: Download Artifacts
         uses: actions/download-artifact@v2
         with:
-          name: ${{ matrix.triple }}.zip
+          name: ${{ matrix.triple }}.${{ matrix.filetype.ext }}
           path: artifacts
 
-      - name: Download Artifacts Deb
-        uses: actions/download-artifact@v2
-        with:
-          name: ${{ matrix.triple }}.deb
-          path: artifacts
-
-      - name: Upload Asset Zip
+      - name: Upload Asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.new_release.outputs.upload_url }}
-          asset_content_type: application/zip
-          asset_path: artifacts/${{ matrix.triple }}.zip
-          asset_name: x86_64-apple-darwin.zip
+          upload_url: ${{ release.steps.new_release.outputs.upload_url }}
+          asset_content_type: ${{ matrix.filetype.mime }}
+          asset_path: artifacts/${{ matrix.triple }}.${{ matrix.filetype.ext }}
+          asset_name: ${{ matrix.triple }}.${{ matrix.filetype.ext }}
 
   fin:
     needs:
