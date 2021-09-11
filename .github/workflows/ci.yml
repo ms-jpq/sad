@@ -3,13 +3,6 @@ name: CI
 
 on:
   push:
-    paths:
-      - ".github/**"
-      - "ci/**"
-      - "Cargo.toml"
-      - "Cargo.lock"
-      - "src/**"
-      - "tests/**"
   pull_request:
   schedule:
     - cron: "0 0 * * *" # daily
