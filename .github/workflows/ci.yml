@@ -108,13 +108,25 @@ jobs:
       - name: Download Artifacts macos
         uses: actions/download-artifact@v2
         with:
-          name: sad-macos
+          name: x86_64-apple-darwin.zip
           path: artifacts
 
       - name: Download Artifacts ubuntu
         uses: actions/download-artifact@v2
         with:
-          name: sad-linux
+          name: x86_64-pc-windows-gnu
+          path: artifacts
+
+      - name: Download Artifacts ubuntu
+        uses: actions/download-artifact@v2
+        with:
+          name: x86_64-unknown-linux-gnu
+          path: artifacts
+
+      - name: Download Artifacts ubuntu
+        uses: actions/download-artifact@v2
+        with:
+          name: x86_64-unknown-linux-musl
           path: artifacts
 
       - name: Download Artifacts debian deb
