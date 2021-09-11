@@ -94,7 +94,7 @@ jobs:
         uses: actions/setup-python@v2
 
       - name: Pip Packages
-        run: ./ci/pip.sh
+        run: pip install --requirement ./ci/requirements.txt
 
       - name: Set ENV
         id: set_env
