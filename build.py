@@ -36,6 +36,7 @@ def _deps() -> None:
 
 
 def _build(triple: str, release: bool) -> None:
+    check_call(("cargo", "test"), cwd=_TOP_LEVEL)
     check_call(
         (
             "cargo",
