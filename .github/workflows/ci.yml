@@ -69,6 +69,31 @@ jobs:
           name: ${{ matrix.jobs.triple }}.deb
           path: artifacts/${{ matrix.jobs.triple }}.deb
 
+  arts:
+    needs:
+      - build
+    strategy:
+      matrix:
+        triples:
+          - x86_64-pc-windows-gnu
+          - x86_64-unknown-linux-gnu
+          - x86_64-unknown-linux-musl
+          - x86_64-apple-darwin
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download Artifacts Zip
+        uses: actions/download-artifact@v2
+        with:
+          name: ${{ matrix.triple }}.zip
+          path: artifacts
+
+      - name: Download Artifacts Deb
+        uses: actions/download-artifact@v2
+        with:
+          name: ${{ matrix.triple }}.deb
+          path: artifacts
+
   install_macos:
     runs-on: macos-latest
 
