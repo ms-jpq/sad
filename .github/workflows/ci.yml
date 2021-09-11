@@ -74,7 +74,7 @@ jobs:
       - build
     strategy:
       matrix:
-        triples:
+        triple:
           - x86_64-pc-windows-gnu
           - x86_64-unknown-linux-gnu
           - x86_64-unknown-linux-musl

@@ -1,5 +1,4 @@
 ---
-
 name: Release
 
 on:
@@ -62,24 +61,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Download Artifacts macos
-        uses: actions/download-artifact@v2
-        with:
-          name: sad-macos
-          path: artifacts
-
-      - name: Download Artifacts ubuntu
-        uses: actions/download-artifact@v2
-        with:
-          name: sad-linux
-          path: artifacts
-
-      - name: Download Artifacts debian deb
-        uses: actions/download-artifact@v2
-        with:
-          name: sad-deb
-          path: artifacts
-
       - name: Setup Python
         uses: actions/setup-python@v2
 
@@ -102,39 +83,47 @@ jobs:
           draft: false
           prerelease: false
 
-      - name: Upload Asset - Macos
-        id: asset_macos
+  arts:
+    needs:
+      - release
+    strategy:
+      matrix:
+        triple:
+          - x86_64-pc-windows-gnu
+          - x86_64-unknown-linux-gnu
+          - x86_64-unknown-linux-musl
+          - x86_64-apple-darwin
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download Artifacts Zip
+        uses: actions/download-artifact@v2
+        with:
+          name: ${{ matrix.triple }}.zip
+          path: artifacts
+
+      - name: Download Artifacts Deb
+        uses: actions/download-artifact@v2
+        with:
+          name: ${{ matrix.triple }}.deb
+          path: artifacts
+
+      - name: Upload Asset Zip
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.new_release.outputs.upload_url }}
           asset_content_type: application/zip
-          asset_path: artifacts/sad-macos.zip
+          asset_path: artifacts/${{ matrix.triple }}.zip
           asset_name: x86_64-apple-darwin.zip
 
-      - name: Upload Asset - Ubuntu
-        id: asset_ubuntu
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.new_release.outputs.upload_url }}
-          asset_content_type: application/zip
-          asset_path: artifacts/sad-linux.zip
-          asset_name: x86_64-unknown-linux-gnu.zip
+  fin:
+    needs:
+      - build
+    runs-on: ubuntu-latest
 
-      - name: Upload Asset - Debian deb
-        id: asset_debian
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.new_release.outputs.upload_url }}
-          asset_content_type: application/vnd.debian.binary-package
-          asset_path: artifacts/sad.deb
-          asset_name: x86_64-unknown-linux-gnu.deb
-
+    steps:
       - name: Homebrew
         env:
           CI_TOKEN: ${{ secrets.CI_TOKEN }}
@@ -149,4 +138,3 @@ jobs:
         run: >-
           ./ci/release.py
           --snapcraft
-
