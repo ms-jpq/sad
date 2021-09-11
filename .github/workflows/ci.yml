@@ -39,7 +39,7 @@ jobs:
 
           - runner: macos-latest
             triple: x86_64-apple-darwin
-    runs-on: ${{ matrix.runner }}
+    runs-on: ${{ matrix.job.runner }}
 
     steps:
       - name: Checkout
