@@ -7,6 +7,7 @@ from pathlib import Path
 from platform import uname
 from shutil import which
 from subprocess import check_call
+from zipfile import ZipFile
 
 _TOP_LEVEL = Path(__file__).resolve().parent
 
@@ -35,18 +36,21 @@ def _deps() -> None:
         check_call(("rustup", "target", "add", "--", toolchain), cwd=_TOP_LEVEL)
 
 
-def _build(triple: str, release: bool) -> None:
+def _build(triple: str) -> None:
     check_call(("cargo", "test"), cwd=_TOP_LEVEL)
     check_call(
-        (
-            "cargo",
-            "build",
-            "--target",
-            triple,
-            *(("--release",) if release else ()),
-        ),
+        ("cargo", "build", "--locked", "--release", "--target", triple),
         cwd=_TOP_LEVEL,
     )
+
+
+def _archive(triple: str) -> None:
+    suffix = ".exe" if "windows" in triple else ""
+    raw = _TOP_LEVEL / "target" / triple / "release" / "sad"
+    release = raw.with_suffix(suffix)
+    archive = (_TOP_LEVEL / "artifacts" / triple).with_suffix(".zip")
+    with ZipFile(archive, mode="w") as fd:
+        fd.write(release)
 
 
 def _parse_args() -> Namespace:
@@ -87,6 +91,9 @@ def _parse_args() -> Namespace:
             default=compiler,
         )
 
+    with nullcontext(sub_parser.add_parser("buildr")) as p:
+        p.add_argument("triple", choices=sorted(_TOOL_CHAINS, key=strxfrm))
+
     return parser.parse_args()
 
 
@@ -98,7 +105,12 @@ def main() -> None:
     elif args.action == "build":
         triple = "-".join((args.arch, args.os, args.compiler))
         assert triple in _TOOL_CHAINS
-        _build(triple, release=args.release)
+        _build(triple)
+        _archive(triple)
+
+    elif args.action == "buildr":
+        _build(args.triple)
+        _archive(args.triple)
 
     else:
         assert False
