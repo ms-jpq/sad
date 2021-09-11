@@ -57,26 +57,18 @@ jobs:
       - name: Build
         run: ./build.py buildr -- ${{ matrix.jobs.triple }}
 
-      - name: Upload Artifacts
+      - name: Upload Bin
         uses: actions/upload-artifact@v2
         with:
           name: ${{ matrix.jobs.triple }}
           path: artifacts/${{ matrix.jobs.triple }}.zip
 
-  build_debs:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Build
-        run: ./ci/docker.py deb
-
-      - name: Upload Artifacts
+      - name: Upload Deb
         uses: actions/upload-artifact@v2
+        if:  contains(${{ matrix.jobs.triple }}, "linux")
         with:
-          name: sad-deb
-          path: artifacts/sad.deb
+          name: ${{ matrix.jobs.triple }}
+          path: artifacts/${{ matrix.jobs.triple }}.deb
 
   install_macos:
     runs-on: macos-latest
