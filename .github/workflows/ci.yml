@@ -1,5 +1,4 @@
 ---
-
 name: CI
 
 on:
@@ -34,41 +33,51 @@ jobs:
 
   build_macos:
     runs-on: macos-latest
+    strategy:
+      matrix:
+        triple:
+          - x86_64-apple-darwin
 
     steps:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Test
-        run: cargo test --locked
+      - name: Deps
+        run: ./build.py deps
 
       - name: Build
-        run: cargo build --locked --release --target=x86_64-apple-darwin
-
-      - name: Package Artifacts
-        run: |-
-          zip -j artifacts/sad-macos.zip target/x86_64-apple-darwin/release/sad
+        run: ./build.py buildr -- ${{ triple }}
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v2
         with:
-          name: sad-macos
-          path: artifacts/sad-macos.zip
+          name: ${{ triple }}
+          path: artifacts/${{ triple }}.zip
 
   build_ubuntu:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        triple:
+          - x86_64-pc-windows-gnu
+          - x86_64-unknown-linux-gnu
+          - x86_64-unknown-linux-musl
+
     steps:
       - name: Checkout
         uses: actions/checkout@v2
 
+      - name: Deps
+        run: ./build.py deps
+
       - name: Build
-        run: ./ci/docker.py linux
+        run: ./build.py buildr -- ${{ triple }}
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v2
         with:
-          name: sad-linux
-          path: artifacts/sad-linux.zip
+          name: ${{ triple }}
+          path: artifacts/${{ triple }}.zip
 
   build_debs:
     runs-on: ubuntu-latest
