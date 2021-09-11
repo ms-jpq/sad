@@ -119,7 +119,7 @@ jobs:
 
   fin:
     needs:
-      - build
+      - arts
     runs-on: ubuntu-latest
 
     steps:
