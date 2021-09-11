@@ -39,23 +39,29 @@ jobs:
 
           - runner: macos-latest
             triple: x86_64-apple-darwin
-    runs-on: ${{ matrix.job.runner }}
+    runs-on: ${{ matrix.jobs.runner }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v2
 
+      - name: Setup Python
+        uses: actions/setup-python@v2
+
+      - name: Pip Packages
+        run: pip install --requirement ./requirements.txt
+
       - name: Deps
         run: ./build.py deps
 
       - name: Build
-        run: ./build.py buildr -- ${{ matrix.job.triple }}
+        run: ./build.py buildr -- ${{ matrix.jobs.triple }}
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v2
         with:
-          name: ${{ matrix.job.triple }}
-          path: artifacts/${{ matrix.job.triple }}.zip
+          name: ${{ matrix.jobs.triple }}
+          path: artifacts/${{ matrix.jobs.triple }}.zip
 
   build_debs:
     runs-on: ubuntu-latest

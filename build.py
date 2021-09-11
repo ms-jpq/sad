@@ -3,11 +3,14 @@
 from argparse import ArgumentParser, Namespace
 from contextlib import nullcontext
 from locale import strxfrm
-from pathlib import Path
+from pathlib import Path, PurePath
 from platform import uname
 from shutil import which
 from subprocess import check_call
 from zipfile import ZipFile
+
+from jinja2 import Environment, FileSystemLoader, StrictUndefined
+from toml import loads
 
 _TOP_LEVEL = Path(__file__).resolve().parent
 
@@ -28,6 +31,17 @@ _TOOL_CHAINS = {
 }
 
 UNAME = uname()
+
+
+def _j2(src: PurePath) -> Environment:
+    j2 = Environment(
+        enable_async=True,
+        trim_blocks=True,
+        lstrip_blocks=True,
+        undefined=StrictUndefined,
+        loader=FileSystemLoader(src),
+    )
+    return j2
 
 
 def _deps() -> None:
