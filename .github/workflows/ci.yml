@@ -25,7 +25,6 @@ jobs:
         run: mypy -- .
 
   build:
-    runs-on: ${{ matrix.runner }}
     strategy:
       matrix:
         jobs:
@@ -40,6 +39,7 @@ jobs:
 
           - runner: macos-latest
             triple: x86_64-apple-darwin
+    runs-on: ${{ matrix.runner }}
 
     steps:
       - name: Checkout
