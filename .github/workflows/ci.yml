@@ -90,7 +90,7 @@ jobs:
       - name: Download Artifacts
         uses: actions/download-artifact@v2
         with:
-          name: ${{ matrix.triple }}.${{ matrix.filetype.ext }}
+          name: artifacts/${{ matrix.triple }}.${{ matrix.filetype.ext }}
           path: artifacts
 
   install_macos:
