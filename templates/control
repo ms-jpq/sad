@@ -1,0 +1,6 @@
+Package: {{ name }}
+Version: {{ version }}
+Architecture: {{ arch }}
+Maintainer: {{ authors | join(" ") }}
+Description: {{ description }}
+

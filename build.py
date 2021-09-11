@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
 from argparse import ArgumentParser, Namespace
-from contextlib import nullcontext
+from contextlib import nullcontext, suppress
 from locale import strxfrm
-from pathlib import Path, PurePath
+from pathlib import Path
 from platform import uname
-from shutil import which
+from shutil import copy2, rmtree, which
 from subprocess import check_call
 from zipfile import ZipFile
 
@@ -13,6 +13,7 @@ from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from toml import loads
 
 _TOP_LEVEL = Path(__file__).resolve().parent
+_ARTS = _TOP_LEVEL / "artifacts"
 
 _DEFAULTS = {
     "Linux": ("unknown-linux", "musl" if which("apk") else "gnu"),
@@ -33,17 +34,6 @@ _TOOL_CHAINS = {
 UNAME = uname()
 
 
-def _j2(src: PurePath) -> Environment:
-    j2 = Environment(
-        enable_async=True,
-        trim_blocks=True,
-        lstrip_blocks=True,
-        undefined=StrictUndefined,
-        loader=FileSystemLoader(src),
-    )
-    return j2
-
-
 def _deps() -> None:
     if UNAME.system == "Linux" and which("apt"):
         check_call(("sudo", "apt", "update"), cwd=_TOP_LEVEL)
@@ -54,21 +44,73 @@ def _deps() -> None:
         check_call(("rustup", "target", "add", "--", toolchain), cwd=_TOP_LEVEL)
 
 
-def _build(triple: str) -> None:
-    check_call(("cargo", "test"), cwd=_TOP_LEVEL)
+def _compile(triple: str) -> None:
+    check_call(("cargo", "test", "--locked"), cwd=_TOP_LEVEL)
     check_call(
         ("cargo", "build", "--locked", "--release", "--target", triple),
         cwd=_TOP_LEVEL,
     )
 
 
-def _archive(triple: str) -> None:
+def _bin_path(triple: str) -> Path:
     suffix = ".exe" if "windows" in triple else ""
-    raw = _TOP_LEVEL / "target" / triple / "release" / "sad"
-    release = raw.with_suffix(suffix)
-    archive = (_TOP_LEVEL / "artifacts" / triple).with_suffix(".zip")
+    release = _TOP_LEVEL / "target" / triple / "release" / "sad"
+    return release.with_suffix(suffix)
+
+
+def _archive(triple: str) -> None:
+    release = _bin_path(triple)
+    archive = (_ARTS / triple).with_suffix(".zip")
     with ZipFile(archive, mode="w") as fd:
         fd.write(release)
+
+
+def _deb(triple: str) -> None:
+    arch, _, _ = triple.partition("-")
+    cargo = _TOP_LEVEL / "Cargo.toml"
+    templates = _TOP_LEVEL / "templates"
+
+    release = _bin_path(triple)
+    tmp = _TOP_LEVEL / "temp" / triple
+    deb_src = tmp / "DEBIAN"
+
+    sad = deb_src / "usr" / "local" / "bin" / "sad"
+    control = deb_src / "control"
+    deb = (_ARTS / triple).with_suffix(".deb")
+
+    j2 = Environment(
+        enable_async=True,
+        trim_blocks=True,
+        lstrip_blocks=True,
+        undefined=StrictUndefined,
+        loader=FileSystemLoader(templates),
+    )
+
+    env = {
+        **loads(cargo.read_text())["package"],
+        "arch": arch.replace("_", "-"),
+    }
+    ctrl = j2.get_template("control").render(env)
+
+    with suppress(FileNotFoundError):
+        rmtree(tmp)
+    for path in (sad, control):
+        path.parent.mkdir(parents=True, exist_ok=True)
+    control.write_text(ctrl)
+    copy2(release, sad)
+
+    if which("dpkg-deb"):
+        check_call(
+            ("dpkg-deb", "--root-owner-group", "--build", tmp, deb),
+            cwd=_TOP_LEVEL,
+        )
+
+
+def _build(triple: str) -> None:
+    assert triple in _TOOL_CHAINS
+    _compile(triple)
+    _archive(triple)
+    _deb(triple)
 
 
 def _parse_args() -> Namespace:
@@ -121,13 +163,10 @@ def main() -> None:
 
     elif args.action == "build":
         triple = "-".join((args.arch, args.os, args.compiler))
-        assert triple in _TOOL_CHAINS
         _build(triple)
-        _archive(triple)
 
     elif args.action == "buildr":
         _build(args.triple)
-        _archive(args.triple)
 
     else:
         assert False
