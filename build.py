@@ -60,6 +60,12 @@ def _parse_args() -> Namespace:
 
     with nullcontext(sub_parser.add_parser("build")) as p:
         p.add_argument(
+            "-r",
+            "--release",
+            action="store_true",
+        )
+
+        p.add_argument(
             "--arch",
             choices=sorted(arch_choices, key=strxfrm),
             default=un.machine,
@@ -88,7 +94,7 @@ def main() -> None:
     elif args.action == "build":
         triple = "-".join((args.arch, args.os, args.compiler))
         assert triple in _TOOL_CHAINS
-        _build(triple, release=True)
+        _build(triple, release=args.release)
 
     else:
         assert False
