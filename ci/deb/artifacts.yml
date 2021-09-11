@@ -1,4 +1,0 @@
----
-targets:
-  - src: /WORK/target/debian/debian.deb
-    dest: sad.deb

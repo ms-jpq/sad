@@ -1,4 +1,0 @@
----
-targets:
-  - src: /WORK/artifacts/sad.zip
-    dest: sad-linux.zip

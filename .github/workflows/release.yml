@@ -8,64 +8,55 @@ on:
       - "*"
 
 jobs:
-  build_macos:
-    runs-on: macos-latest
+  build:
+    strategy:
+      matrix:
+        jobs:
+          - runner: ubuntu-latest
+            triple: x86_64-pc-windows-gnu
+
+          - runner: ubuntu-latest
+            triple: x86_64-unknown-linux-gnu
+
+          - runner: ubuntu-latest
+            triple: x86_64-unknown-linux-musl
+
+          - runner: macos-latest
+            triple: x86_64-apple-darwin
+    runs-on: ${{ matrix.jobs.runner }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Test
-        run: cargo test
-      - name: Build
+      - name: Setup Python
+        uses: actions/setup-python@v2
 
-        run: cargo build --release --locked --target=x86_64-apple-darwin
+      - name: Pip Packages
+        run: pip install --requirement ./requirements.txt
 
-      - name: Package Artifacts
-        run: |-
-          zip -j artifacts/sad-macos.zip target/x86_64-apple-darwin/release/sad
-
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v2
-        with:
-          name: sad-macos
-          path: artifacts/sad-macos.zip
-
-  build_ubuntu:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+      - name: Deps
+        run: ./build.py deps
 
       - name: Build
-        run: ./ci/docker.py linux
+        run: ./build.py buildr -- ${{ matrix.jobs.triple }}
 
-      - name: Upload Artifacts
+      - name: Upload Bin
         uses: actions/upload-artifact@v2
         with:
-          name: sad-linux
-          path: artifacts/sad-linux.zip
+          name: ${{ matrix.jobs.triple }}
+          path: artifacts/${{ matrix.jobs.triple }}.zip
 
-  build_debs:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Build
-        run: ./ci/docker.py deb
-
-      - name: Upload Artifacts
+      - name: Upload Deb
         uses: actions/upload-artifact@v2
+        if:  contains(${{ matrix.jobs.triple }}, "linux")
         with:
-          name: sad-deb
-          path: artifacts/sad.deb
+          name: ${{ matrix.jobs.triple }}
+          path: artifacts/${{ matrix.jobs.triple }}.deb
 
   release:
     needs:
-      - build_macos
-      - build_ubuntu
-      - build_debs
+      - build
     runs-on: ubuntu-latest
 
     steps:
@@ -150,8 +141,8 @@ jobs:
           CI_TOKEN: ${{ secrets.CI_TOKEN }}
         run: >-
           ./ci/release.py
-          --brew-artifact=sad-macos.zip
-          --brew-uri=${{ steps.asset_macos.outputs.browser_download_url }}
+          --brew-artifact sad-macos.zip
+          --brew-uri ${{ steps.asset_macos.outputs.browser_download_url }}
 
       - name: Snapcraft
         env:
