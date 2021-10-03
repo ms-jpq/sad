@@ -115,12 +115,12 @@ def _git_ops() -> Iterator[Path]:
 def _template(project: _Project) -> None:
     opener = build_opener()
     brew_uri = f"{project.repo}/releases/download/{project.tag}/x86_64-apple-darwin.zip"
-    for _ in range(3):
+    for _ in range(9):
         try:
             with opener.open(brew_uri) as resp:
                 brew_artifact = resp.read()
         except HTTPError as e:
-            print(e, file=stderr)
+            print(brew_uri, e, sep=linesep, file=stderr)
             sleep(9)
         else:
             break
