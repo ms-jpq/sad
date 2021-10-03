@@ -43,8 +43,8 @@ jobs:
           - runner: ubuntu-latest
             triple: x86_64-unknown-linux-musl
 
-          # - runner: macos-latest
-          #   triple: aarch64-apple-darwin
+          - runner: macos-11
+            triple: aarch64-apple-darwin
 
           - runner: macos-latest
             triple: x86_64-apple-darwin
