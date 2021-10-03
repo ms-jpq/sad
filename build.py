@@ -2,6 +2,7 @@
 
 from argparse import ArgumentParser, Namespace
 from contextlib import nullcontext, suppress
+from fnmatch import fnmatch
 from locale import strxfrm
 from pathlib import Path
 from platform import uname
@@ -124,7 +125,8 @@ def _build(triple: str) -> None:
     assert triple in _TOOL_CHAINS
     _compile(triple)
     _archive(triple)
-    _deb(triple)
+    if fnmatch(triple, "*-linux-*"):
+        _deb(triple)
 
 
 def _parse_args() -> Namespace:
