@@ -9,6 +9,7 @@ from os import environ, linesep, scandir
 from os.path import normcase
 from pathlib import Path
 from subprocess import check_call
+from time import sleep
 from typing import Iterator
 from urllib.request import build_opener
 
@@ -128,6 +129,7 @@ def _template(project: _Project) -> None:
 def main() -> None:
     project = _load_values()
     _release(project)
+    sleep(30)
     _template(project)
 
 
