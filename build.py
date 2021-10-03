@@ -50,6 +50,9 @@ def _deps() -> None:
                 "--yes",
                 "--",
                 "gcc-mingw-w64",  # windows
+                "gcc-aarch64-linux-gnu",  # aarch64
+                "libc6-arm64-cross",  # aarch64
+                "libc6-dev-arm64-cross",  # aarch64
             ),
             cwd=_TOP_LEVEL,
         )
