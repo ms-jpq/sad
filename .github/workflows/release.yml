@@ -51,6 +51,9 @@ jobs:
           - runner: windows-latest
             triple: aarch64-pc-windows-msvc
 
+          - runner: windows-latest
+            triple: x86_64-pc-windows-msvc
+
     runs-on: ${{ matrix.jobs.runner }}
 
     steps:
