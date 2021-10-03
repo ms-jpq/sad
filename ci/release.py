@@ -111,24 +111,30 @@ def _git_ops() -> Iterator[Path]:
     check_call(("git", "push", "--force"), cwd=pkgs)
 
 
-def _template(project: _Project) -> None:
+def _sha(uri: str) -> str:
     opener = build_opener()
-    brew_uri = f"{project.repo}/releases/download/{project.tag}/x86_64-apple-darwin.zip"
     for _ in range(9):
         try:
-            with opener.open(brew_uri) as resp:
-                brew_artifact = resp.read()
+            with opener.open(uri) as resp:
+                body = resp.read()
         except HTTPError as e:
-            print(brew_uri, e, sep=linesep, file=stderr)
+            print(uri, e, sep=linesep, file=stderr)
             sleep(9)
         else:
-            break
+            return sha256(body).hexdigest()
     else:
         raise TimeoutError()
 
+
+def _template(project: _Project) -> None:
+    prefix = f"{project.repo}/releases/download/{project.tag}"
+    x86_uri = f"{prefix}/x86_64-apple-darwin.zip"
+    # aarch64_uri = f"{prefix}/aarch64-apple-darwin"
+    x86_sha = _sha(x86_uri)
+    # aarch64_sha = _sha(aarch64_uri)
+
     j2 = _build_j2()
-    sha = sha256(brew_artifact).hexdigest()
-    vals = {**asdict(project), "sha256": sha, "release_uri": brew_uri}
+    vals = {**asdict(project), "x86_sha": x86_sha, "x86_uri": x86_uri}
     brew_rend = j2.get_template("homebrew.rb.j2").render(**vals)
     snap_rend = j2.get_template("snapcraft.yml.j2").render(**vals)
 
