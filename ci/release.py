@@ -113,7 +113,7 @@ def _git_ops() -> Iterator[Path]:
 
 
 def _template(release_uri: str, project: _Project) -> None:
-    brew_uri = release_uri + "/x86_64-apple-darwin"
+    brew_uri = release_uri + "/x86_64-apple-darwin.zip"
     with build_opener().open(brew_uri) as resp:
         brew_artifact = resp.read()
 
