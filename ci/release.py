@@ -43,9 +43,8 @@ def _walk(path: Path) -> Iterator[Path]:
 
 def _load_values() -> _Project:
     tag = environ["GITHUB_REF"].removeprefix("refs/tags/")
-    user = environ["GITHUB_ACTOR"]
     repo = environ["GITHUB_REPOSITORY"]
-    repo_uri = f"https://github.com/{user}/{repo}"
+    repo_uri = f"https://github.com/{repo}"
     cargo = load_toml(_TOP_LEVEL / "Cargo.toml")
     vals = safe_load((_TOP_LEVEL / "ci" / "vars.yml").read_text())
     project = _Project(
