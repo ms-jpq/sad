@@ -72,26 +72,17 @@ jobs:
   arts:
     needs:
       - build
-    strategy:
-      matrix:
-        filetype:
-          - ext: ""
-            mime: "application/zip"
-          - ext: "deb"
-            mime: "application/octet-stream"
-        triple:
-          # - x86_64-pc-windows-gnu
-          - x86_64-unknown-linux-gnu
-          - x86_64-unknown-linux-musl
-          # - x86_64-apple-darwin
     runs-on: ubuntu-latest
 
     steps:
       - name: Download Artifacts
         uses: actions/download-artifact@v2
         with:
-          name: artifacts/${{ matrix.triple }}.${{ matrix.filetype.ext }}
-          path: ${{ matrix.triple }}.${{ matrix.filetype.ext }}
+          path: /arts/
+      - name: ls
+        run: |-
+          cd /arts/
+          ls -l
 
   install_macos:
     runs-on: macos-latest
