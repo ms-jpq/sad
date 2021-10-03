@@ -4,8 +4,9 @@ from argparse import ArgumentParser, Namespace
 from contextlib import nullcontext, suppress
 from fnmatch import fnmatch
 from locale import strxfrm
-from pathlib import Path
+from pathlib import Path, PurePath
 from platform import uname
+from posixpath import normcase
 from shutil import copy2, rmtree, which
 from subprocess import check_call
 from zipfile import ZipFile
@@ -87,7 +88,8 @@ def _archive(triple: str) -> None:
 def _deb(triple: str) -> None:
     arch, _, _ = triple.partition("-")
     cargo = _TOP_LEVEL / "Cargo.toml"
-    templates = _TOP_LEVEL / "templates"
+    templates = _TOP_LEVEL / "ci" / "templates"
+    ctrl = PurePath() / "DEBIAN" / "control"
 
     release = _bin_path(triple)
     tmp = _TOP_LEVEL / "temp" / triple
@@ -105,7 +107,7 @@ def _deb(triple: str) -> None:
     )
 
     env = {**loads(cargo.read_text())["package"], "arch": _DPKG_ARCH[arch]}
-    ctrl = j2.get_template("control").render(env)
+    ctrl = j2.get_template(normcase(ctrl)).render(env)
 
     with suppress(FileNotFoundError):
         rmtree(tmp)
