@@ -133,8 +133,12 @@ def _template(project: _Project) -> None:
     x86_sha = _sha(x86_uri)
     # aarch64_sha = _sha(aarch64_uri)
 
+    vals = {
+        **asdict(project),
+        "x86_sha": x86_sha,
+        "x86_uri": x86_uri,
+    }
     j2 = _build_j2()
-    vals = {**asdict(project), "x86_sha": x86_sha, "x86_uri": x86_uri}
     brew_rend = j2.get_template("homebrew.rb.j2").render(**vals)
     snap_rend = j2.get_template("snapcraft.yml.j2").render(**vals)
 
