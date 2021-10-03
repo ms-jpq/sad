@@ -8,7 +8,7 @@ from itertools import chain, repeat
 from os import environ, linesep, scandir
 from os.path import normcase
 from pathlib import Path
-from subprocess import check_call, check_output
+from subprocess import check_call
 from typing import Iterator
 from urllib.request import build_opener
 
@@ -40,19 +40,29 @@ def _walk(path: Path) -> Iterator[Path]:
 
 def _load_values() -> _Project:
     tag = environ["GITHUB_REF"].removeprefix("refs/tags/")
+    user = environ["GITHUB_ACTOR"]
+    repo = environ["GITHUB_REPOSITORY"]
+    repo_uri = f"https://github.com/{user}/{repo}"
     cargo = load_toml(_TOP_LEVEL / "Cargo.toml")
     vals = safe_load((_TOP_LEVEL / "ci" / "vars.yml").read_text())
-    project = _Project(**{**vals, "version": cargo["package"]["version"], "tag": tag})
+    project = _Project(
+        **{
+            **vals,
+            "repo": repo_uri,
+            "version": cargo["package"]["version"],
+            "tag": tag,
+        }
+    )
     return project
 
 
-def _release(project: _Project) -> str:
+def _release(project: _Project) -> None:
     time = datetime.now().strftime("%Y-%m-%d_%H-%M")
     title = f"ci_{project.version}_{time}"
     body = (_TOP_LEVEL / "RELEASE_NOTES.md").read_text()
-    message = f"{title}{linesep}{body}"
+    message = f"{title}{linesep}{linesep}{body}"
 
-    arts = (f"{normcase(p)}#{p.name}" for p in _walk(_TOP_LEVEL / "arts"))
+    arts = (normcase(p) for p in _walk(_TOP_LEVEL / "arts"))
     attachments = chain.from_iterable(zip(repeat("--attach"), arts))
 
     check_call(
@@ -67,19 +77,6 @@ def _release(project: _Project) -> str:
             project.tag,
         )
     )
-    uri = check_output(
-        (
-            "hub",
-            "release",
-            "show",
-            "--format",
-            "%U",
-            "--",
-            project.tag,
-        ),
-        text=True,
-    )
-    return uri.strip()
 
 
 def _build_j2() -> Environment:
@@ -112,15 +109,14 @@ def _git_ops() -> Iterator[Path]:
     check_call(("git", "push", "--force"), cwd=pkgs)
 
 
-def _template(release_uri: str, project: _Project) -> None:
-    brew_uri = release_uri + "/x86_64-apple-darwin.zip"
-    print(brew_uri)
+def _template(project: _Project) -> None:
+    brew_uri = f"{project.repo}/releases/download/{project.tag}/x86_64-apple-darwin.zip"
     with build_opener().open(brew_uri) as resp:
         brew_artifact = resp.read()
 
     j2 = _build_j2()
     sha = sha256(brew_artifact).hexdigest()
-    vals = {**asdict(project), "sha256": sha, "release_uri": release_uri}
+    vals = {**asdict(project), "sha256": sha, "release_uri": brew_uri}
     brew_rend = j2.get_template("homebrew.rb.j2").render(**vals)
     snap_rend = j2.get_template("snapcraft.yml.j2").render(**vals)
 
@@ -131,8 +127,8 @@ def _template(release_uri: str, project: _Project) -> None:
 
 def main() -> None:
     project = _load_values()
-    uri = _release(project)
-    _template(uri, project=project)
+    _release(project)
+    _template(project)
 
 
 main()
