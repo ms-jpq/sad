@@ -75,7 +75,7 @@ jobs:
     strategy:
       matrix:
         filetype:
-          - ext: "zip"
+          - ext: ""
             mime: "application/zip"
           - ext: "deb"
             mime: "application/octet-stream"
