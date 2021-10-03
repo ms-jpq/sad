@@ -43,7 +43,7 @@ def _release(project: _Project) -> str:
     body = (_TOP_LEVEL / "RELEASE_NOTES.md").read_text()
     message = f"{title}{linesep}{body}"
 
-    arts = (normcase(p) for p in (_TOP_LEVEL / "arts").iterdir())
+    arts = (f"{normcase(p)}#{p.name}" for p in (_TOP_LEVEL / "arts").iterdir())
     attachments = chain.from_iterable(zip(repeat("--attach"), arts))
 
     check_call(
