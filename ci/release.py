@@ -21,6 +21,7 @@ from yaml import safe_load
 class _Project:
     repo: str
     version: str
+    tag: str
     desc: str
     long_desc: str
 
@@ -38,15 +39,14 @@ def _walk(path: Path) -> Iterator[Path]:
 
 
 def _load_values() -> _Project:
+    tag = environ["GITHUB_REF"].removeprefix("refs/tags/")
     cargo = load_toml(_TOP_LEVEL / "Cargo.toml")
     vals = safe_load((_TOP_LEVEL / "ci" / "vars.yml").read_text())
-    project = _Project(**{**vals, "version": cargo["package"]["version"]})
+    project = _Project(**{**vals, "version": cargo["package"]["version"], "tag": tag})
     return project
 
 
 def _release(project: _Project) -> str:
-    tag = environ["GITHUB_REF"].removeprefix("refs/tags/")
-
     time = datetime.now().strftime("%Y-%m-%d_%H-%M")
     title = f"ci_{project.version}_{time}"
     body = (_TOP_LEVEL / "RELEASE_NOTES.md").read_text()
@@ -56,12 +56,30 @@ def _release(project: _Project) -> str:
     attachments = chain.from_iterable(zip(repeat("--attach"), arts))
 
     check_call(
-        ("hub", "release", "create", "--message", message, *attachments, "--", tag)
+        (
+            "hub",
+            "release",
+            "create",
+            "--message",
+            message,
+            *attachments,
+            "--",
+            project.tag,
+        )
     )
-    uris = check_output(
-        ("hub", "release", "show", "--format", "%as", "--", tag), text=True
+    uri = check_output(
+        (
+            "hub",
+            "release",
+            "show",
+            "--format",
+            "%U",
+            "--",
+            project.tag,
+        ),
+        text=True,
     )
-    return uris
+    return uri.strip()
 
 
 def _build_j2() -> Environment:
@@ -94,13 +112,14 @@ def _git_ops() -> Iterator[Path]:
     check_call(("git", "push", "--force"), cwd=pkgs)
 
 
-def _template(brew_uri: str, project: _Project) -> None:
-    j2 = _build_j2()
+def _template(release_uri: str, project: _Project) -> None:
+    brew_uri = release_uri + "/x86_64-apple-darwin"
     with build_opener().open(brew_uri) as resp:
         brew_artifact = resp.read()
 
+    j2 = _build_j2()
     sha = sha256(brew_artifact).hexdigest()
-    vals = {**asdict(project), "sha256": sha, "release_uri": brew_uri}
+    vals = {**asdict(project), "sha256": sha, "release_uri": release_uri}
     brew_rend = j2.get_template("homebrew.rb.j2").render(**vals)
     snap_rend = j2.get_template("snapcraft.yml.j2").render(**vals)
 
@@ -111,9 +130,8 @@ def _template(brew_uri: str, project: _Project) -> None:
 
 def main() -> None:
     project = _load_values()
-    brew_uri = _release(project)
-    print(brew_uri)
-    # _template(brew_uri, project=project)
+    uri = _release(project)
+    _template(uri, project=project)
 
 
 main()
