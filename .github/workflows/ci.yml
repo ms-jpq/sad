@@ -65,10 +65,10 @@ jobs:
         run: pip install --requirement ./requirements.txt
 
       - name: Deps
-        run: python build.py deps
+        run: python3 build.py deps
 
       - name: Build
-        run: python build.py buildr -- ${{ matrix.jobs.triple }}
+        run: python3 build.py buildr -- ${{ matrix.jobs.triple }}
 
       - name: Upload Bin
         uses: actions/upload-artifact@v2
