@@ -129,7 +129,7 @@ def _sha(uri: str) -> str:
 
 def _template(project: _Project) -> None:
     prefix = f"{project.repo}/releases/download/{project.tag}"
-    aarch64_uri = f"{prefix}/aarch64-apple-darwin"
+    aarch64_uri = f"{prefix}/aarch64-apple-darwin.zip"
     x86_uri = f"{prefix}/x86_64-apple-darwin.zip"
     aarch64_sha = _sha(aarch64_uri)
     x86_sha = _sha(x86_uri)
