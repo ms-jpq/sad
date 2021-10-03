@@ -49,8 +49,7 @@ def _deps() -> None:
                 "install",
                 "--yes",
                 "--",
-                "gcc-mingw-w64", # windows
-                "gcc-arm-linux-gnueabihf", #aarch64
+                "gcc-mingw-w64",  # windows
             ),
             cwd=_TOP_LEVEL,
         )
