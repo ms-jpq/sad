@@ -202,7 +202,7 @@ mod tests {
     #[cfg(target_family = "windows")]
     {
       return (
-        l.replace().to_owned(r"\n", r"\r\n"),
+        l.replace(r"\n", r"\r\n").to_owned(),
         r.replace(r"\n", r"\r\n").to_owned(),
       );
     }
