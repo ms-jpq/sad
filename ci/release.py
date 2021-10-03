@@ -5,7 +5,7 @@ from dataclasses import asdict, dataclass
 from datetime import datetime
 from hashlib import sha256
 from itertools import chain, repeat
-from os import environ, linesep
+from os import environ, linesep, scandir
 from os.path import normcase
 from pathlib import Path
 from subprocess import check_call, check_output
@@ -28,6 +28,15 @@ class _Project:
 _TOP_LEVEL = Path(__file__).resolve().parent.parent
 
 
+def _walk(path: Path) -> Iterator[Path]:
+    for s in scandir(path):
+        p = Path(s)
+        if s.is_dir():
+            yield from _walk(p)
+        else:
+            yield p
+
+
 def _load_values() -> _Project:
     cargo = load_toml(_TOP_LEVEL / "Cargo.toml")
     vals = safe_load((_TOP_LEVEL / "ci" / "vars.yml").read_text())
@@ -43,7 +52,7 @@ def _release(project: _Project) -> str:
     body = (_TOP_LEVEL / "RELEASE_NOTES.md").read_text()
     message = f"{title}{linesep}{body}"
 
-    arts = (f"{normcase(p)}#{p.name}" for p in (_TOP_LEVEL / "arts").iterdir())
+    arts = (f"{normcase(p)}#{p.name}" for p in _walk(_TOP_LEVEL / "arts"))
     attachments = chain.from_iterable(zip(repeat("--attach"), arts))
 
     check_call(
