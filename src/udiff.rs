@@ -192,6 +192,22 @@ mod tests {
     source
   }
 
+  fn re_esc(tu: (&str, &str)) -> (String, String) {
+    let (l, r) = tu;
+
+    #[cfg(target_family = "unix")]
+    {
+      return (l.to_owned(), r.to_owned());
+    }
+    #[cfg(target_family = "windows")]
+    {
+      return (
+        l.replace().to_owned(r"\n", r"\r\n"),
+        r.replace(r"\n", r"\r\n").to_owned(),
+      );
+    }
+  }
+
   fn regexes() -> Vec<(Regex, String)> {
     vec![
       (r"std", "owo"),
@@ -203,7 +219,8 @@ mod tests {
       (r"\n+", "\n"),
     ]
     .into_iter()
-    .map(|(s1, s2)| (Regex::new(s1).unwrap(), s2.to_owned()))
+    .map(re_esc)
+    .map(|(s1, s2)| (Regex::new(&s1).unwrap(), s2))
     .collect::<_>()
   }
 
