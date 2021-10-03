@@ -236,8 +236,14 @@ mod tests {
       let patches = patches(unified, &before, &after);
       let patched = apply_patches(patches, &rangeset, &before);
 
-      let canon = after.lines().map(String::from).collect::<Vec<_>>();
-      let imp = patched.lines().map(String::from).collect::<Vec<_>>();
+      let canon = after
+        .split_inclusive("\n")
+        .map(String::from)
+        .collect::<Vec<_>>();
+      let imp = patched
+        .split_inclusive("\n")
+        .map(String::from)
+        .collect::<Vec<_>>();
       assert_eq!(imp, canon);
       assert_eq!(patched, after);
       unified += 1;
@@ -249,8 +255,8 @@ mod tests {
     let mut unified = 1;
     let diffs = diffs();
     for (before, after) in diffs {
-      let bb = before.lines().collect::<Vec<_>>();
-      let aa = after.lines().collect::<Vec<_>>();
+      let bb = before.split_inclusive("\n").collect::<Vec<_>>();
+      let aa = after.split_inclusive("\n").collect::<Vec<_>>();
       let canon = unified_diff(&bb, &aa, "", "", "", "", unified)
         .iter()
         .skip(2)
@@ -263,7 +269,7 @@ mod tests {
         })
         .collect::<Vec<_>>();
       let imp = udiff(None, unified, "", &before, &after)
-        .lines()
+        .split_inclusive("\n")
         .skip(3)
         .map(|s| {
           if s.starts_with("@@") {
