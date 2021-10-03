@@ -289,10 +289,8 @@ mod tests {
           }
         })
         .collect::<Vec<_>>();
-      let len = max(canon.len(), imp.len());
-      for i in 0..len {
-        assert_eq!(canon[i], imp[i]);
-      }
+
+      assert_eq!(canon, imp);
       unified += 1;
     }
   }
