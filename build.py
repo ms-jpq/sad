@@ -107,13 +107,13 @@ def _deb(triple: str) -> None:
     )
 
     env = {**loads(cargo.read_text())["package"], "arch": _DPKG_ARCH[arch]}
-    ctrl = j2.get_template(normcase(ctrl)).render(env)
+    render = j2.get_template(normcase(ctrl)).render(env)
 
     with suppress(FileNotFoundError):
         rmtree(tmp)
     for path in (sad, control):
         path.parent.mkdir(parents=True, exist_ok=True)
-    control.write_text(ctrl)
+    control.write_text(render)
     copy2(release, sad)
 
     if which("dpkg-deb"):
