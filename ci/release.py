@@ -129,13 +129,15 @@ def _sha(uri: str) -> str:
 
 def _template(project: _Project) -> None:
     prefix = f"{project.repo}/releases/download/{project.tag}"
+    aarch64_uri = f"{prefix}/aarch64-apple-darwin"
     x86_uri = f"{prefix}/x86_64-apple-darwin.zip"
-    # aarch64_uri = f"{prefix}/aarch64-apple-darwin"
+    aarch64_sha = _sha(aarch64_uri)
     x86_sha = _sha(x86_uri)
-    # aarch64_sha = _sha(aarch64_uri)
 
     vals = {
         **asdict(project),
+        "aarch64_uri": aarch64_uri,
+        "aarch64_sha": aarch64_sha,
         "x86_sha": x86_sha,
         "x86_uri": x86_uri,
     }

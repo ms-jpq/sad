@@ -4,8 +4,15 @@ class Sad < Formula
   version "{{ version }}"
   bottle :unneeded
 
-  url "{{ x86_uri }}"
-  sha256 "{{ x86_sha }}"
+  if Hardware::CPU.arm?
+    url "{{ aarch64_uri }}"
+    sha256 "{{ aarch64_sha }}"
+  end
+
+  if Hardware::CPU.intel?
+    url "{{ x86_uri }}"
+    sha256 "{{ x86_sha }}"
+  end
 
   depends_on "fzf"
   depends_on "git-delta"
