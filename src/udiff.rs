@@ -273,7 +273,7 @@ mod tests {
         })
         .collect::<Vec<_>>();
 
-      assert_eq!(canon, imp);
+      assert_eq!(imp, canon);
       unified += 1;
     }
   }
