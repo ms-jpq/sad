@@ -54,16 +54,6 @@ def _deps() -> None:
             ),
             cwd=_TOP_LEVEL,
         )
-    if UNAME.system == "Darwin" and which("brew"):
-        check_call(
-            (
-                "brew",
-                "install",
-                "--",
-                "gcc",
-            ),
-            cwd=_TOP_LEVEL,
-        )
     for toolchain in sorted(_TOOL_CHAINS, key=strxfrm):
         check_call(("rustup", "target", "add", "--", toolchain), cwd=_TOP_LEVEL)
 
