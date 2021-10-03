@@ -10,11 +10,6 @@ from toml import load
 _TOP_LEVEL = Path(__file__).resolve().parent.parent
 
 
-def _read(name: str) -> str:
-    with open(name, "r") as fd:
-        return fd.read()
-
-
 def _set_output(name: str, value: str) -> None:
     print(f"::set-output name={name}::{value}")
 
@@ -26,7 +21,7 @@ def _set_release_env() -> None:
     time = datetime.now()
     tag_name = f"ci_{version}_{time.strftime('%Y-%m-%d_%H-%M')}"
     release_name = f"CI - {version} | {time.strftime('%Y-%m-%d %H:%M')}"
-    release_notes = _read("release_notes.md")
+    release_notes = (_TOP_LEVEL / "release_notes.md").read_text()
     release_info = {
         "tag_name": tag_name,
         "release_name": release_name,
