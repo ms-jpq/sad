@@ -78,10 +78,10 @@ jobs:
       - name: Download Artifacts
         uses: actions/download-artifact@v2
         with:
-          path: /arts/
+          path: ./arts/
       - name: ls
         run: |-
-          cd /arts/
+          cd ./arts/
           ls -l
 
   install_macos:
