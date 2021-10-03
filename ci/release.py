@@ -49,10 +49,10 @@ def _release(project: _Project) -> str:
     check_call(
         ("hub", "release", "create", "--message", message, *attachments, "--", tag)
     )
-    a = check_output(
+    uris = check_output(
         ("hub", "release", "show", "--format", "%as", "--", tag), text=True
     )
-    return a
+    return uris
 
 
 def _build_j2() -> Environment:
@@ -103,7 +103,8 @@ def _template(brew_uri: str, project: _Project) -> None:
 def main() -> None:
     project = _load_values()
     brew_uri = _release(project)
-    _template(brew_uri, project=project)
+    print(brew_uri)
+    # _template(brew_uri, project=project)
 
 
 main()
