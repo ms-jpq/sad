@@ -9,8 +9,10 @@ from os import environ, linesep, scandir
 from os.path import normcase
 from pathlib import Path
 from subprocess import check_call
+from sys import stderr
 from time import sleep
 from typing import Iterator
+from urllib.error import HTTPError
 from urllib.request import build_opener
 
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
@@ -111,9 +113,19 @@ def _git_ops() -> Iterator[Path]:
 
 
 def _template(project: _Project) -> None:
+    opener = build_opener()
     brew_uri = f"{project.repo}/releases/download/{project.tag}/x86_64-apple-darwin.zip"
-    with build_opener().open(brew_uri) as resp:
-        brew_artifact = resp.read()
+    for _ in range(3):
+        try:
+            with opener.open(brew_uri) as resp:
+                brew_artifact = resp.read()
+        except HTTPError as e:
+            print(e, file=stderr)
+            sleep(9)
+        else:
+            break
+    else:
+        raise TimeoutError()
 
     j2 = _build_j2()
     sha = sha256(brew_artifact).hexdigest()
@@ -129,7 +141,6 @@ def _template(project: _Project) -> None:
 def main() -> None:
     project = _load_values()
     _release(project)
-    sleep(30)
     _template(project)
 
 
