@@ -7,6 +7,22 @@ on:
       - "*"
 
 jobs:
+  mypy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup Python
+        uses: actions/setup-python@v2
+
+      - name: Pip Packages
+        run: pip install -U mypy types-PyYAML types-toml types-Jinja2
+
+      - name: Lint
+        run: mypy -- .
+
   build:
     strategy:
       matrix:
