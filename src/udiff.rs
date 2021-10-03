@@ -171,21 +171,25 @@ mod tests {
   use super::*;
   use difflib::unified_diff;
   use regex::Regex;
-  use std::{cmp::max, collections::HashSet, fs, path::PathBuf};
+  use std::{
+    collections::HashSet,
+    fs::{read_dir, read_to_string},
+    path::PathBuf,
+  };
 
   fn read_files() -> Vec<String> {
-    let mut source = fs::read_dir(PathBuf::from("src"))
+    let mut source = read_dir(PathBuf::from("src"))
       .unwrap()
       .map(|entry| {
         let path = entry.unwrap().path();
-        fs::read_to_string(path).unwrap()
+        read_to_string(path).unwrap()
       })
       .collect::<Vec<_>>();
-    let tests = fs::read_dir(PathBuf::from("tests"))
+    let tests = read_dir(PathBuf::from("tests"))
       .unwrap()
       .map(|entry| {
         let path = entry.unwrap().path();
-        fs::read_to_string(path).unwrap()
+        read_to_string(path).unwrap()
       })
       .collect::<Vec<_>>();
     source.extend(tests);
@@ -234,11 +238,8 @@ mod tests {
 
       let canon = after.lines().map(String::from).collect::<Vec<_>>();
       let imp = patched.lines().map(String::from).collect::<Vec<_>>();
-      let len = max(canon.len(), imp.len());
-      for i in 0..len {
-        assert_eq!(canon[i], imp[i]);
-      }
-      assert_eq!(after, patched);
+      assert_eq!(imp, canon);
+      assert_eq!(patched, after);
       unified += 1;
     }
   }
