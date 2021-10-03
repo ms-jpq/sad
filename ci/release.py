@@ -3,38 +3,25 @@
 from argparse import ArgumentParser, Namespace
 from datetime import datetime
 from hashlib import sha256
-from os import chdir, environ, getcwd
-from os.path import abspath, dirname, isdir, join
-from subprocess import run
-from typing import Any, Callable, Dict
+from os import environ
+from pathlib import Path, PurePath
+from subprocess import check_call
+from sys import exit
+from typing import Callable, Dict
 
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from toml import load as load_toml
 from yaml import safe_load
 
-artifacts_dir = "artifacts"
-packages_dir = "packages"
+_TOP_LEVEL = Path(__file__).resolve().parent.parent
 
-
-def _cwd() -> None:
-    root = dirname(dirname(abspath(__file__)))
-    chdir(root)
-
-
-def _call(prog: str, *args: str, cwd: str = getcwd()) -> None:
-    ret = run([prog, *args], cwd=cwd.encode())
-    if ret.returncode != 0:
-        exit(ret.returncode)
-
-
-def _load_yaml(src: str) -> Any:
-    with open(src) as fd:
-        return safe_load(fd)
+artifacts_dir = _TOP_LEVEL / "artifacts"
+packages_dir = _TOP_LEVEL / "packages"
 
 
 def _load_values() -> Dict[str, str]:
-    cargo = load_toml("Cargo.toml")
-    vals = _load_yaml(join("ci", "vars.yml"))
+    cargo = load_toml(_TOP_LEVEL / "Cargo.toml")
+    vals = safe_load((_TOP_LEVEL / "ci" / "vars.yml").read_text())
     values = {
         "project_repo": "https://github.com/ms-jpq/sad",
         "version": cargo["package"]["version"],
@@ -44,7 +31,7 @@ def _load_values() -> Dict[str, str]:
     return values
 
 
-def _build_j2(src: str, filters: Dict[str, Callable] = {}) -> Environment:
+def _build_j2(src: PurePath, filters: Dict[str, Callable] = {}) -> Environment:
     j2 = Environment(
         enable_async=True,
         trim_blocks=True,
@@ -56,54 +43,38 @@ def _build_j2(src: str, filters: Dict[str, Callable] = {}) -> Environment:
     return j2
 
 
-def _git_clone(name: str) -> None:
-    if isdir(name):
-        return
+def _git_clone(name: PurePath) -> None:
     token = environ["CI_TOKEN"]
     email = "ci@ci.ci"
     username = "ci-bot"
     uri = f"https://ms-jpq:{token}@github.com/ms-jpq/homebrew-sad.git"
-    _call("git", "clone", "--depth=1", uri, name)
-    _call("git", "config", "user.email", email, cwd=name)
-    _call("git", "config", "user.name", username, cwd=name)
+    check_call(("git", "clone", "--depth=1", uri, name), cwd=_TOP_LEVEL)
+    check_call(("git", "config", "user.email", email), cwd=name)
+    check_call(("git", "config", "user.name", username), cwd=name)
 
 
-def _git_commit(repo: str) -> None:
+def _git_commit(repo: PurePath) -> None:
     time = datetime.now().strftime("%Y-%m-%d %H:%M")
     msg = f"CI - {time}"
-    _call("git", "add", "-A", cwd=repo)
-    _call("git", "commit", "-m", msg, cwd=repo)
-    _call("git", "push", "--force", cwd=repo)
-
-
-def _write(filename: str, text: str) -> None:
-    with open(filename, "w") as fd:
-        fd.write(text)
-
-
-def _calc_sha(resource: str) -> str:
-    with open(resource, "rb") as fd:
-        binary = fd.read()
-        sha = sha256(binary).hexdigest()
-        return sha
+    check_call(("git", "add", "-A"), cwd=repo)
+    check_call(("git", "commit", "-m", msg), cwd=repo)
+    check_call(("git", "push", "--force"), cwd=repo)
 
 
 def _homebrew_release(
-    j2: Environment, values: Dict[str, str], artifact: str, uri: str
+    j2: Environment, values: Dict[str, str], artifact: Path, uri: str
 ) -> None:
-    sha = _calc_sha(artifact)
+    sha = sha256(artifact.read_bytes()).hexdigest()
     vals = {**values, "sha256": sha, "release_uri": uri}
     render = j2.get_template("homebrew.rb.j2").render(**vals)
-    dest = join(packages_dir, "sad.rb")
-    _write(dest, render)
+    (packages_dir / "sad.rb").write_text(render)
     _git_commit(packages_dir)
 
 
 def _snap_release(j2: Environment, values: Dict[str, str]) -> None:
     vals = {**values}
     render = j2.get_template("snapcraft.yml.j2").render(**vals)
-    dest = join(packages_dir, "snapcraft.yaml")
-    _write(dest, render)
+    (packages_dir / "snapcraft.yaml").write_text(render)
     _git_commit(packages_dir)
 
 
@@ -116,16 +87,15 @@ def parse_args() -> Namespace:
 
 
 def main() -> None:
-    _cwd()
     args = parse_args()
     _git_clone(packages_dir)
-    j2 = _build_j2(join("ci", "templates"))
+    j2 = _build_j2(_TOP_LEVEL / "ci" / "templates")
     values = _load_values()
     if args.brew_artifact and args.brew_uri:
         _homebrew_release(
             j2=j2,
             values=values,
-            artifact=join(artifacts_dir, args.brew_artifact),
+            artifact=artifacts_dir / args.brew_artifact,
             uri=args.brew_uri,
         )
     elif args.snapcraft:
