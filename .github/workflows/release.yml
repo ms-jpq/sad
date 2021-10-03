@@ -48,6 +48,9 @@ jobs:
           - runner: macos-latest
             triple: x86_64-apple-darwin
 
+          - runner: windows-latest
+            triple: aarch64-pc-windows-msvc
+
     runs-on: ${{ matrix.jobs.runner }}
 
     steps:
@@ -61,10 +64,10 @@ jobs:
         run: pip install --requirement ./requirements.txt
 
       - name: Deps
-        run: ./build.py deps
+        run: python3 build.py deps
 
       - name: Build
-        run: ./build.py buildr -- ${{ matrix.jobs.triple }}
+        run: python3 build.py buildr -- ${{ matrix.jobs.triple }}
 
       - name: Upload Bin
         uses: actions/upload-artifact@v2
