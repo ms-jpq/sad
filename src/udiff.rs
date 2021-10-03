@@ -203,7 +203,7 @@ mod tests {
       (r"\n+", "\n"),
     ]
     .into_iter()
-    .map(|(s1, s2)| (Regex::new(&s1).unwrap(), s2))
+    .map(|(s1, s2)| (Regex::new(s1).unwrap(), s2.to_owned()))
     .collect::<_>()
   }
 
