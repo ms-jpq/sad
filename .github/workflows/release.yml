@@ -28,6 +28,9 @@ jobs:
       matrix:
         jobs:
           - runner: ubuntu-latest
+            triple: aarch64-unknown-linux-gnu
+
+          - runner: ubuntu-latest
             triple: x86_64-pc-windows-gnu
 
           - runner: ubuntu-latest
