@@ -121,7 +121,8 @@ def _sha(uri: str) -> str:
             print(uri, e, sep=linesep, file=stderr)
             sleep(9)
         else:
-            return sha256(body).hexdigest()
+            sha = sha256(body).hexdigest()
+            return sha
     else:
         raise TimeoutError()
 
