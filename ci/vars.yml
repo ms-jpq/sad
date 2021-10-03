@@ -1,11 +1,8 @@
 ---
-
-project_repo: "https://github.com/ms-jpq/sad"
-
+repo: "https://github.com/ms-jpq/sad"
 
 desc: |-
   Search and replace | Space Age seD
-
 
 long_desc: |-
   sad is a regex search / replace tool. it provides vastly
@@ -19,4 +16,3 @@ long_desc: |-
   integrates with fzf, diff-so-fancy, delta
 
   https://github.com/ms-jpq/sad
-

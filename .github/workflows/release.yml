@@ -43,7 +43,7 @@ jobs:
       - name: Upload Bin
         uses: actions/upload-artifact@v2
         with:
-          name: ${{ matrix.jobs.triple }}
+          name: ${{ matrix.jobs.triple }}.zip
           path: artifacts/${{ matrix.jobs.triple }}.zip
 
       - name: Upload Deb
@@ -67,74 +67,13 @@ jobs:
       - name: Pip Packages
         run: pip install --requirement ./requirements.txt
 
-      - name: Set ENV
-        id: set_env
-        run: ./ci/ci.py --release
-
-      - name: Create Release
-        id: new_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ fromJSON(steps.set_env.outputs.RELEASE_INFO).tag_name }}
-          release_name: ${{ fromJSON(steps.set_env.outputs.RELEASE_INFO).release_name }}
-          body: ${{ fromJSON(steps.set_env.outputs.RELEASE_INFO).release_notes }}
-          draft: false
-          prerelease: false
-
-  arts:
-    needs:
-      - release
-    strategy:
-      matrix:
-        filetype:
-          - ext: "zip"
-            mime: "application/zip"
-          - ext: "deb"
-            mime: "application/octet-stream"
-        triple:
-          - x86_64-pc-windows-gnu
-          - x86_64-unknown-linux-gnu
-          - x86_64-unknown-linux-musl
-          - x86_64-apple-darwin
-    runs-on: ubuntu-latest
-
-    steps:
       - name: Download Artifacts
         uses: actions/download-artifact@v2
         with:
-          name: ${{ matrix.triple }}.${{ matrix.filetype.ext }}
-          path: artifacts
+          path: ./arts/
 
-      - name: Upload Asset
-        id: ${{ matrix.triple }}
-        uses: actions/upload-release-asset@v1
+      - name: Create Release
         env:
+          CI_TOKEN: ${{ secrets.CI_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ release.steps.new_release.outputs.upload_url }}
-          asset_content_type: ${{ matrix.filetype.mime }}
-          asset_path: artifacts/${{ matrix.triple }}.${{ matrix.filetype.ext }}
-          asset_name: ${{ matrix.triple }}.${{ matrix.filetype.ext }}
-
-  fin:
-    needs:
-      - arts
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Homebrew
-        env:
-          CI_TOKEN: ${{ secrets.CI_TOKEN }}
-        run: >-
-          ./ci/release.py
-          --brew-artifact x86_64-apple-darwin.zip
-          --brew-uri ${{ arts.steps.x86_64-apple-darwin.outputs.browser_download_url }}
-
-      - name: Snapcraft
-        env:
-          CI_TOKEN: ${{ secrets.CI_TOKEN }}
-        run: >-
-          ./ci/release.py
-          --snapcraft
+        run: ./ci/release.py

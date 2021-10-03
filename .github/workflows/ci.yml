@@ -60,7 +60,7 @@ jobs:
       - name: Upload Bin
         uses: actions/upload-artifact@v2
         with:
-          name: ${{ matrix.jobs.triple }}
+          name: ${{ matrix.jobs.triple }}.zip
           path: artifacts/${{ matrix.jobs.triple }}.zip
 
       - name: Upload Deb
