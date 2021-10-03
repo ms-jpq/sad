@@ -49,8 +49,8 @@ jobs:
           - runner: macos-latest
             triple: x86_64-apple-darwin
 
-          - runner: windows-latest
-            triple: aarch64-pc-windows-msvc
+          # - runner: windows-latest
+          #   triple: aarch64-pc-windows-msvc
 
     runs-on: ${{ matrix.jobs.runner }}
 
