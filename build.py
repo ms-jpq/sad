@@ -49,8 +49,7 @@ def _deps() -> None:
                 "install",
                 "--yes",
                 "--",
-                "gcc-mingw-w64", # windows
-                "gcc-arm-linux-gnueabihf", #aarch64
+                "gcc-mingw-w64",  # windows
             ),
             cwd=_TOP_LEVEL,
         )
@@ -76,7 +75,7 @@ def _archive(triple: str) -> None:
     release = _bin_path(triple)
     archive = (_ARTS / triple).with_suffix(".zip")
     with ZipFile(archive, mode="w") as fd:
-        fd.write(release)
+        fd.write(release, arcname=release.name)
 
 
 def _deb(triple: str) -> None:
