@@ -85,7 +85,7 @@ If you install the things below, `sad` will automatically use them. It's progres
 
 ### Diff Colorizer
 
-Any `git` compatible colourizer would work. I perfer these two:
+Any `git` compatible colourizer would work. I prefer these two:
 
 [**delta**](https://github.com/dandavison/delta)
 
@@ -191,7 +191,7 @@ cargo install --locked --all-features --root="/usr/bin/" \
 
 ## What about stdin -> stdout
 
-If you just want to edit the shell stream, I would recommand [`sd`](https://github.com/chmln/sd), it uses the same concept, but its more for in stream edits. `sad` was inspired by my initial useage of `sd`.
+If you just want to edit the shell stream, I would recommend [`sd`](https://github.com/chmln/sd), it uses the same concept, but its more for in stream edits. `sad` was inspired by my initial usage of `sd`.
 
 ```sh
 command1 | sd '<pattern>' '<replacement>' | command2
