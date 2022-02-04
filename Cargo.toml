@@ -5,6 +5,9 @@ description = "Space Age seD | https://github.com/ms-jpq/sad"
 authors = ["git@bigly.dog"]
 edition = "2018"
 
+[build-dependencies]
+uuid = { version = "0.8", features = ["v4"] }
+
 [dependencies]
 aho-corasick = "0.7"
 ansi_term = "0.12"

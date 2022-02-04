@@ -7,6 +7,8 @@ use std::{collections::HashMap, env, path::PathBuf};
 use structopt::StructOpt;
 use which::which;
 
+pub const UNDER_THE_SEA: &str = env!("SAD_ARGS_ENV");
+
 #[derive(Debug, StructOpt)]
 #[structopt(name = "sad", author, about)]
 pub struct Arguments {
@@ -73,7 +75,7 @@ pub struct Arguments {
   pub internal_patch: Option<PathBuf>,
 }
 
-pub fn parse_args() -> Result<Arguments, Fail> {
+pub async fn parse_args() -> Result<Arguments, Fail> {
   let args = env::args().collect::<Vec<_>>();
   match (args.get(1), args.get(2)) {
     (Some(lhs), Some(rhs)) if lhs == "-c" => {

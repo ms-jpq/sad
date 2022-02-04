@@ -79,7 +79,7 @@ fn stream_trans(
 }
 
 async fn run(abort: &Arc<Abort>, cpus: usize) -> Result<(), Fail> {
-  let args = parse_args()?;
+  let args = parse_args().await?;
   let (h_1, input_stream) = stream_input(abort, &args);
   let opts = parse_opts(args)?;
   let (h_2, trans_stream) = stream_trans(abort, cpus, &opts, input_stream);
