@@ -25,7 +25,7 @@ impl Mode {
 }
 
 #[derive(Debug, Parser)]
-#[clap(about)]
+#[clap(about, version)]
 pub struct Arguments {
   /// Search pattern
   #[clap()]
