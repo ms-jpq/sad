@@ -87,7 +87,7 @@ pub struct Arguments {
   pub internal_patch: Option<PathBuf>,
 }
 
-pub async fn parse_args() -> Result<Arguments, Fail> {
+pub async fn parse_args() -> Result<(Mode, Arguments), Fail> {
   let args = env::args().collect::<Vec<_>>();
   match (
     args.get(1).map(|s| s.as_str()),
@@ -99,18 +99,22 @@ pub async fn parse_args() -> Result<Arguments, Fail> {
       let mut buf = String::new();
       let mut fd = File::open(preview).await.map_err(|_| Fail::ArgV)?;
       fd.read_to_string(&mut buf).await.map_err(|_| Fail::ArgV)?;
-      Ok(Arguments::from_iter(buf.split('\0')))
+      let args = Arguments::from_iter(buf.split('\0'));
+
+      Ok((Mode::Preview(files), args))
     }
     (Some("-c"), Some(files), None, Some(patch)) => {
       let mut buf = String::new();
       let mut fd = File::open(patch).await.map_err(|_| Fail::ArgV)?;
       fd.read_to_string(&mut buf).await.map_err(|_| Fail::ArgV)?;
-      Ok(Arguments::from_iter(buf.split('\0')))
+      let args = Arguments::from_iter(buf.split('\0'));
+
+      Ok((Mode::Patch(files), args))
     }
     (Some("-c"), _, _, _) => Err(Fail::ArgumentError(
       "`-c` is a reserved flag, use --k, or --commit".to_owned(),
     )),
-    _ => Ok(Arguments::from_args()),
+    _ => Ok((Mode::Initial, Arguments::from_iter(args))),
   }
 }
 
