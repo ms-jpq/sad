@@ -17,6 +17,7 @@ pub enum Mode {
 }
 
 impl Mode {
+  pub const ARGV: &'static str = env!("SAD_ARGV_UUID");
   pub const PREVIEW: &'static str = env!("SAD_PREVIEW_UUID");
   pub const PATCH: &'static str = env!("SAD_PATCH_UUID");
 }
