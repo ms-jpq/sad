@@ -1,4 +1,5 @@
 use super::{
+  argparse::Mode,
   subprocess::{stream_into, SubprocessCommand},
   types::{Abort, Fail},
 };
@@ -122,32 +123,37 @@ pub fn stream_fzf(
   args: Vec<String>,
   stream: Receiver<String>,
 ) -> JoinHandle<()> {
-  let sad = env::current_exe()
-    .or_else(|_| which("sad".to_owned()))
-    .map(|path| format!("{}", path.display()))
-    .unwrap_or_else(|_| "sad".to_owned());
-
-  let preview_args = env::args().skip(1).collect::<Vec<_>>().join("\x04");
-  let execute = format!("abort+execute:{sad}\x04--internal-patch\x04{{+f}}\x04{preview_args}");
+  let execute = format!("abort+execute:{}\x04{{+f}}", Mode::PATCH);
   let mut arguments = vec![
     "--read0".to_owned(),
     "--print0".to_owned(),
     "-m".to_owned(),
     "--ansi".to_owned(),
+    "--preview-window=70%:wrap".to_owned(),
     format!("--bind=enter:{execute}"),
     format!("--bind=double-click:{execute}"),
-    format!("--preview={sad}\x04--internal-preview\x04{{f}}\x04{preview_args}",),
-    "--preview-window=70%:wrap".to_owned(),
+    format!("--preview={}\x04{{f}}", Mode::PREVIEW),
   ];
   arguments.extend(args);
-  let mut env = HashMap::new();
-  env.insert("SHELL".to_owned(), sad);
-  // WARN -- versions of FZF only work with C locale.
-  env.insert("LC_ALL".to_owned(), "C".to_owned());
+
+  let mut fzf_env = HashMap::new();
+  fzf_env.insert(
+    Mode::ARGV.to_owned(),
+    env::args().skip(1).collect::<Vec<_>>().join("\0"),
+  );
+  fzf_env.insert(
+    "SHELL".to_owned(),
+    env::current_exe()
+      .or_else(|_| which("sad".to_owned()))
+      .map(|path| format!("{}", path.display()))
+      .unwrap_or_else(|_| "sad".to_owned()),
+  );
+  fzf_env.insert("LC_ALL".to_owned(), "C".to_owned());
+
   let cmd = SubprocessCommand {
     prog: bin,
     args: arguments,
-    env,
+    env: fzf_env,
   };
   run_fzf(abort, cmd, stream)
 }

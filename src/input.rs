@@ -214,7 +214,7 @@ pub fn stream_input(
   args: &Arguments,
 ) -> (JoinHandle<()>, Receiver<Payload>) {
   match mode {
-    Mode::Initial => stream_stdin(abort, args.nul_delim),
+    Mode::Initial => stream_stdin(abort, args.read0),
     Mode::Preview(path) => stream_patch(abort, path),
     Mode::Patch(path) => stream_patch(abort, path),
   }
