@@ -142,8 +142,8 @@ def _template(project: _Project) -> None:
         "x86_uri": x86_uri,
     }
     j2 = _build_j2()
-    brew_rend = j2.get_template("homebrew.rb.j2").render(**vals)
-    snap_rend = j2.get_template("snapcraft.yml.j2").render(**vals)
+    brew_rend = j2.get_template("homebrew.rb").render(**vals)
+    snap_rend = j2.get_template("snapcraft.yml").render(**vals)
 
     with _git_ops() as cwd:
         (cwd / "sad.rb").write_text(brew_rend)

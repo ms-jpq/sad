@@ -1,6 +1,6 @@
 name: sad
 
-base: core18
+base: core20
 
 version: "{{ version }}"
 
@@ -9,7 +9,6 @@ summary: |-
 
 description: |-
   {{ long_desc | indent(2) }}
-
 
 grade: stable
 confinement: devmode
@@ -21,4 +20,4 @@ apps:
 parts:
   sad:
     plugin: rust
-    source: {{ repo }}
+    source: "{{ repo }}"
