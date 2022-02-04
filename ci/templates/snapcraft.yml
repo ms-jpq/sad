@@ -10,8 +10,6 @@ summary: |-
 description: |-
   {{ long_desc | indent(2) }}
 
-grade: stable
-
 apps:
   sad:
     command: sad
