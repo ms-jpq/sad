@@ -87,7 +87,11 @@ pub fn parse_args() -> Result<(Mode, Arguments), Fail> {
   match (
     args.get(1).and_then(|a| a.to_str()),
     args.get(2).and_then(|a| {
-      let exec = a.to_str().unwrap_or("").split('\x04').collect::<Vec<_>>();
+      let exec = a
+        .to_str()
+        .unwrap_or_default()
+        .split('\x04')
+        .collect::<Vec<_>>();
       match exec[..] {
         [Mode::PREVIEW, path] => Some(Mode::Preview(PathBuf::from(path))),
         [Mode::PATCH, path] => Some(Mode::Patch(PathBuf::from(path))),
