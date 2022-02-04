@@ -1,7 +1,15 @@
 use uuid::Uuid;
 
 fn main() {
-  let under_the_sea = "SAD_ARGS_ENV";
-  let sea_id = Uuid::new_v4().to_string();
-  println!("cargo:rustc-env={under_the_sea}={sea_id}");
+  println!(
+    "cargo:rustc-env={env}={uuid}",
+    env = "SAD_PREVIEW_UUID",
+    uuid = Uuid::new_v4()
+  );
+
+  println!(
+    "cargo:rustc-env={env}={uuid}",
+    env = "SAD_PATCH_UUID",
+    uuid = Uuid::new_v4()
+  );
 }

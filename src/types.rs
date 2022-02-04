@@ -14,6 +14,7 @@ use tokio::{
 
 #[derive(Clone, Debug)]
 pub enum Fail {
+  ArgV,
   Join,
   Interrupt,
   RegexError(RegexError),

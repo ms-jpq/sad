@@ -5,9 +5,21 @@ use regex::{Regex, RegexBuilder};
 use shlex::split;
 use std::{collections::HashMap, env, path::PathBuf};
 use structopt::StructOpt;
+
+use tokio::{fs::File, io::AsyncReadExt};
 use which::which;
 
-pub const UNDER_THE_SEA: &str = env!("SAD_ARGS_ENV");
+#[derive(Debug)]
+pub enum Mode {
+  Initial,
+  Preview(PathBuf),
+  Patch(PathBuf),
+}
+
+impl Mode {
+  pub const PREVIEW: &'static str = env!("SAD_PREVIEW_UUID");
+  pub const PATCH: &'static str = env!("SAD_PATCH_UUID");
+}
 
 #[derive(Debug, StructOpt)]
 #[structopt(name = "sad", author, about)]
@@ -77,16 +89,27 @@ pub struct Arguments {
 
 pub async fn parse_args() -> Result<Arguments, Fail> {
   let args = env::args().collect::<Vec<_>>();
-  match (args.get(1), args.get(2)) {
-    (Some(lhs), Some(rhs)) if lhs == "-c" => {
-      if rhs.contains('\x04') {
-        Ok(Arguments::from_iter(rhs.split('\x04')))
-      } else {
-        Err(Fail::ArgumentError(
-          "`-c` is a reserved flag, use --k, or --commit".to_owned(),
-        ))
-      }
+  match (
+    args.get(1).map(|s| s.as_str()),
+    args.get(2).map(PathBuf::from).map(PathBuf::from),
+    env::var_os(Mode::PREVIEW).map(PathBuf::from),
+    env::var_os(Mode::PATCH).map(PathBuf::from),
+  ) {
+    (Some("-c"), Some(files), Some(preview), None) => {
+      let mut buf = String::new();
+      let mut fd = File::open(preview).await.map_err(|_| Fail::ArgV)?;
+      fd.read_to_string(&mut buf).await.map_err(|_| Fail::ArgV)?;
+      Ok(Arguments::from_iter(buf.split('\0')))
     }
+    (Some("-c"), Some(files), None, Some(patch)) => {
+      let mut buf = String::new();
+      let mut fd = File::open(patch).await.map_err(|_| Fail::ArgV)?;
+      fd.read_to_string(&mut buf).await.map_err(|_| Fail::ArgV)?;
+      Ok(Arguments::from_iter(buf.split('\0')))
+    }
+    (Some("-c"), _, _, _) => Err(Fail::ArgumentError(
+      "`-c` is a reserved flag, use --k, or --commit".to_owned(),
+    )),
     _ => Ok(Arguments::from_args()),
   }
 }
