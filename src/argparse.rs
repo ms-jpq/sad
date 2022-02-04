@@ -99,9 +99,6 @@ pub fn parse_args() -> Result<(Mode, Arguments), Fail> {
     (Some("-c"), Some(mode), Some(arg_list)) => {
       Ok((mode, Arguments::from_iter(arg_list.split('\x04'))))
     }
-    (Some("-c"), _, _) => Err(Fail::ArgumentError(
-      "`-c` is a reserved flag, use --k, or --commit".to_owned(),
-    )),
     _ => Ok((Mode::Initial, Arguments::from_iter(args))),
   }
 }
