@@ -158,7 +158,7 @@ coming soon...
 
 ##### Debian/Ubuntu:
 
-You can download `sad` deb packages from the [github release page](https://github.com/ms-jpq/sad/releases).
+You can download `sad` deb packages from the [github release page](https://github.com/ms-jpq/sad/releases/latest).
 
 ##### Arch Linux:
 
