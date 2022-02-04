@@ -44,12 +44,12 @@ UNAME = uname()
 
 
 def _deps() -> None:
-    if UNAME.system == "Linux" and which("apt"):
-        check_call(("sudo", "apt", "update"), cwd=_TOP_LEVEL)
+    if UNAME.system == "Linux" and (apt := which("apt")):
+        check_call(("sudo", apt, "update"), cwd=_TOP_LEVEL)
         check_call(
             (
                 "sudo",
-                "apt",
+                apt,
                 "install",
                 "--yes",
                 "--",
