@@ -11,7 +11,7 @@ description: |-
   {{ long_desc | indent(2) }}
 
 grade: stable
-confinement: devmode
+confinement: strict
 
 apps:
   sad:
@@ -21,3 +21,5 @@ parts:
   sad:
     plugin: rust
     source: "{{ repo }}"
+    stage-packages:
+      - fzf
