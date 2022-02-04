@@ -153,6 +153,13 @@ coming soon...
 
 You can download `sad` deb packages from the [github release page](https://github.com/ms-jpq/sad/releases).
 
+For scripting, use the following format:
+
+```sh
+# replace `x86_64-unknown-linux-gnu.deb` with your desired package
+wget 'https://github.com/ms-jpq/sad/releases/latest/download/x86_64-unknown-linux-gnu.deb'
+```
+
 ##### Arch Linux:
 
 There is an official Arch Linux package that can be installed via `pacman`:
