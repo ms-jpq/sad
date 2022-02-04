@@ -2,7 +2,11 @@ use super::{subprocess::SubprocessCommand, types::Fail};
 use aho_corasick::{AhoCorasick, AhoCorasickBuilder};
 use regex::{Regex, RegexBuilder};
 use shlex::split;
-use std::{collections::HashMap, env, path::PathBuf};
+use std::{
+  collections::HashMap,
+  env::{args_os, current_dir, var_os},
+  path::PathBuf,
+};
 use structopt::StructOpt;
 
 use tokio::{fs::File, io::AsyncReadExt};
@@ -80,7 +84,7 @@ pub struct Arguments {
 }
 
 pub async fn parse_args() -> Result<(Mode, Arguments), Fail> {
-  let args = env::args_os().collect::<Vec<_>>();
+  let args = args_os().collect::<Vec<_>>();
   match (
     args.get(1).and_then(|a| a.to_str()),
     args.get(2).and_then(|a| {
@@ -91,7 +95,7 @@ pub async fn parse_args() -> Result<(Mode, Arguments), Fail> {
         _ => None,
       }
     }),
-    env::var_os(Mode::ARGV).map(PathBuf::from),
+    var_os(Mode::ARGV).map(PathBuf::from),
   ) {
     (Some("-c"), Some(mode), Some(arg_list)) => {
       let mut buf = String::new();
@@ -192,9 +196,9 @@ fn p_regex(pattern: &str, flags: Vec<String>) -> Result<Regex, Fail> {
 
 fn p_fzf(fzf: Option<String>) -> Option<(PathBuf, Vec<String>)> {
   match (which("fzf"), atty::is(atty::Stream::Stdout)) {
-    (Ok(p), true) => match fzf {
-      Some(val) if val == "never" => None,
-      Some(val) => Some((p, split(&val).unwrap_or_default())),
+    (Ok(p), true) => match fzf.as_deref() {
+      Some("never") => None,
+      Some(val) => Some((p, split(val).unwrap_or_default())),
       None => Some((p, Vec::new())),
     },
     _ => None,
@@ -217,7 +221,10 @@ fn p_pager(pager: &Option<String>) -> Option<SubprocessCommand> {
       }
     },
     None => {
-      let val = env::var("GIT_PAGER").unwrap_or_default();
+      let val = var_os("GIT_PAGER")
+        .and_then(|v| v.into_string().ok())
+        .unwrap_or_default();
+
       let less_less = val.split('|').next().unwrap_or(&val).trim();
       let mut sh = split(less_less)
         .unwrap_or_else(|| vec![less_less.to_owned()])
@@ -269,7 +276,7 @@ pub fn parse_opts(mode: Mode, args: Arguments) -> Result<Options, Fail> {
   };
 
   Ok(Options {
-    cwd: env::current_dir().ok(),
+    cwd: current_dir().ok(),
     action,
     engine,
     printer,

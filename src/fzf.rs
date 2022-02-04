@@ -4,7 +4,13 @@ use super::{
   types::{Abort, Fail},
 };
 use futures::future::try_join;
-use std::{collections::HashMap, env, path::PathBuf, process::Stdio, sync::Arc};
+use std::{
+  collections::HashMap,
+  env::{self, current_exe},
+  path::PathBuf,
+  process::Stdio,
+  sync::Arc,
+};
 use tokio::{
   io::{AsyncWriteExt, BufWriter, ErrorKind},
   process::Command,
@@ -143,8 +149,8 @@ pub fn stream_fzf(
   );
   fzf_env.insert(
     "SHELL".to_owned(),
-    env::current_exe()
-      .or_else(|_| which("sad".to_owned()))
+    current_exe()
+      .or_else(|_| which("sad"))
       .map(|path| format!("{}", path.display()))
       .unwrap_or_else(|_| "sad".to_owned()),
   );
