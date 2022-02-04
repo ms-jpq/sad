@@ -88,9 +88,9 @@ pub struct Arguments {
 }
 
 pub async fn parse_args() -> Result<(Mode, Arguments), Fail> {
-  let args = env::args().collect::<Vec<_>>();
+  let args = env::args_os().collect::<Vec<_>>();
   match (
-    args.get(1).map(|s| s.as_str()),
+    args.get(1).and_then(|s| s.to_str()),
     args.get(2).map(PathBuf::from).map(PathBuf::from),
     env::var_os(Mode::PREVIEW).map(PathBuf::from),
     env::var_os(Mode::PATCH).map(PathBuf::from),
