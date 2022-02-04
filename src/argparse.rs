@@ -77,14 +77,6 @@ pub struct Arguments {
   /// ie. a higher {size} will leader to more changes grouped together
   #[structopt(short, long)]
   pub unified: Option<usize>,
-
-  /// *Internal use only*
-  #[structopt(long)]
-  pub internal_preview: Option<PathBuf>,
-
-  /// *Internal use only*
-  #[structopt(long)]
-  pub internal_patch: Option<PathBuf>,
 }
 
 pub async fn parse_args() -> Result<(Mode, Arguments), Fail> {
@@ -128,7 +120,7 @@ pub enum Engine {
 pub enum Action {
   Preview,
   Commit,
-  Fzf(PathBuf, Vec<String>),
+  FzfPreview(PathBuf, Vec<String>),
 }
 
 #[derive(Clone, Debug)]
@@ -168,8 +160,7 @@ fn p_aho_corasick(pattern: &str, flags: Vec<String>) -> Result<AhoCorasick, Fail
       "I" => ac.ascii_case_insensitive(false),
       _ => {
         return Err(Fail::ArgumentError(format!(
-          "Invaild regex flag, see `--help` :: {}",
-          flag
+          "Invaild regex flag, see `--help` :: {flag}"
         )))
       }
     };
@@ -193,8 +184,7 @@ fn p_regex(pattern: &str, flags: Vec<String>) -> Result<Regex, Fail> {
       "X" => re.ignore_whitespace(false),
       _ => {
         return Err(Fail::ArgumentError(format!(
-          "Invaild regex flag, see `--help` :: {}",
-          flag
+          "Invaild regex flag, see `--help` :: {flag}"
         )))
       }
     };
@@ -248,7 +238,7 @@ fn p_pager(pager: &Option<String>) -> Option<SubprocessCommand> {
   })
 }
 
-pub fn parse_opts(args: Arguments) -> Result<Options, Fail> {
+pub fn parse_opts(mode: Mode, args: Arguments) -> Result<Options, Fail> {
   let mut flagset = p_auto_flags(args.exact, &args.pattern);
   flagset.extend(
     args
@@ -268,14 +258,11 @@ pub fn parse_opts(args: Arguments) -> Result<Options, Fail> {
     }
   };
 
-  let action = if args.commit || args.internal_patch != None {
-    Action::Commit
-  } else {
-    match (args.internal_preview, p_fzf(args.fzf)) {
-      (Some(_), _) => Action::Preview,
-      (_, None) => Action::Preview,
-      (_, Some((bin, args))) => Action::Fzf(bin, args),
-    }
+  let action = match (args.commit, mode, p_fzf(args.fzf)) {
+    (true, _, _) => Action::Commit,
+    (_, Mode::Patch(_), _) => Action::Commit,
+    (_, Mode::Preview(_), Some((bin, args))) => Action::FzfPreview(bin, args),
+    _ => Action::Preview,
   };
 
   let printer = match p_pager(&args.pager) {

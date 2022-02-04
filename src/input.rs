@@ -1,4 +1,4 @@
-use super::argparse::Arguments;
+use super::argparse::{Arguments, Mode};
 use super::types::{Abort, Fail};
 use super::udiff::DiffRange;
 use async_channel::{bounded, Receiver};
@@ -206,12 +206,14 @@ fn stream_stdin(abort: &Arc<Abort>, use_nul: bool) -> (JoinHandle<()>, Receiver<
   (handle, rx)
 }
 
-pub fn stream_input(abort: &Arc<Abort>, args: &Arguments) -> (JoinHandle<()>, Receiver<Payload>) {
-  if let Some(preview) = &args.internal_preview {
-    stream_patch(abort, preview)
-  } else if let Some(patch) = &args.internal_patch {
-    stream_patch(abort, patch)
-  } else {
-    stream_stdin(abort, args.nul_delim)
+pub fn stream_input(
+  abort: &Arc<Abort>,
+  mode: &Mode,
+  args: &Arguments,
+) -> (JoinHandle<()>, Receiver<Payload>) {
+  match mode {
+    Mode::Initial => stream_stdin(abort, args.nul_delim),
+    Mode::Preview(path) => stream_patch(abort, path),
+    Mode::Patch(path) => stream_patch(abort, path),
   }
 }

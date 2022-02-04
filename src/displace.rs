@@ -67,7 +67,7 @@ pub async fn displace(opts: &Arc<Options>, payload: Payload) -> Result<String, F
         spit(&path, &slurped.meta, &after).await?;
         format!("{name}\n")
       }
-      (Action::Fzf(_, _), _) => {
+      (Action::FzfPreview(_, _), _) => {
         spawn_blocking(move || {
           let ranges = pure_diffs(o2.unified, &before, &after);
           let mut fzf_lines = String::new();
