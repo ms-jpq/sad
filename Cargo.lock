@@ -440,7 +440,7 @@ checksum = "f497285884f3fcff424ffc933e56d7cbca511def0c9831a7f9b5f6153e3cc89b"
 
 [[package]]
 name = "sad"
-version = "0.4.17"
+version = "0.4.18"
 dependencies = [
  "aho-corasick",
  "ansi_term 0.12.1",
