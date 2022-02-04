@@ -1,5 +1,6 @@
 use super::{subprocess::SubprocessCommand, types::Fail};
 use aho_corasick::{AhoCorasick, AhoCorasickBuilder};
+use clap::Parser;
 use regex::{Regex, RegexBuilder};
 use shlex::split;
 use std::{
@@ -7,7 +8,6 @@ use std::{
   env::{args_os, current_dir, var_os},
   path::PathBuf,
 };
-use structopt::StructOpt;
 
 use which::which;
 
@@ -24,27 +24,27 @@ impl Mode {
   pub const PATCH: &'static str = env!("SAD_PATCH_UUID");
 }
 
-#[derive(Debug, StructOpt)]
-#[structopt(name = "sad", author, about)]
+#[derive(Debug, Parser)]
+#[clap(about)]
 pub struct Arguments {
   /// Search pattern
-  #[structopt()]
+  #[clap()]
   pub pattern: String,
 
   /// Replacement pattern, empty = delete
-  #[structopt()]
+  #[clap()]
   pub replace: Option<String>,
 
   /// Use \0 as stdin delimiter
-  #[structopt(short = "0", long)]
+  #[clap(short = '0', long)]
   pub read0: bool,
 
   /// No preview, write changes to file
-  #[structopt(short = "k", long)]
+  #[clap(short = 'k', long)]
   pub commit: bool,
 
   /// String literal mode
-  #[structopt(short, long)]
+  #[clap(short, long)]
   pub exact: bool,
 
   /// Regex flags: use `--help` instead of `-h` to see details
@@ -60,25 +60,25 @@ pub struct Arguments {
   /// u :: swap the meaning of '*' and '*?' (lazy & greedy matching)
   ///
   /// x :: ignore whitespaces and '#' comments
-  #[structopt(short, long)]
+  #[clap(short, long)]
   pub flags: Option<String>,
 
   /// Colourizing program, disable = never, default = $GIT_PAGER
   ///
   /// Uses bash shell syntax for splitting
-  #[structopt(short, long)]
+  #[clap(short, long)]
   pub pager: Option<String>,
 
   /// Additional Fzf options, disable = never
   ///
   /// Uses bash shell syntax for splitting
-  #[structopt(long)]
+  #[clap(long)]
   pub fzf: Option<String>,
 
   /// Same as in GNU diff --unified={size}, affects aggregate size
   ///
   /// ie. a higher {size} will leader to more changes grouped together
-  #[structopt(short, long)]
+  #[clap(short, long)]
   pub unified: Option<usize>,
 }
 
@@ -101,9 +101,9 @@ pub fn parse_args() -> Result<(Mode, Arguments), Fail> {
     var_os(Mode::ARGV).and_then(|a| a.into_string().ok()),
   ) {
     (Some("-c"), Some(mode), Some(arg_list)) => {
-      Ok((mode, Arguments::from_iter(arg_list.split('\x04'))))
+      Ok((mode, Arguments::parse_from(arg_list.split('\x04'))))
     }
-    _ => Ok((Mode::Initial, Arguments::from_iter(args))),
+    _ => Ok((Mode::Initial, Arguments::parse_from(args))),
   }
 }
 

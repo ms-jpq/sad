@@ -19,7 +19,7 @@ num_cpus = "1"
 pathdiff = "0.2"
 regex = "1"
 shlex = "1"
-structopt = "0.3"
+clap = { version = "3", features = ["derive"] }
 tokio = { version = "1", features = ["full"] }
 uuid = { version = "0.8", features = ["v4"] }
 which = "4"
