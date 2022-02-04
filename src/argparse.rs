@@ -83,28 +83,26 @@ pub struct Arguments {
 pub async fn parse_args() -> Result<(Mode, Arguments), Fail> {
   let args = env::args_os().collect::<Vec<_>>();
   match (
-    args.get(1).and_then(|s| s.to_str()),
-    args.get(2).map(PathBuf::from).map(PathBuf::from),
-    env::var_os(Mode::PREVIEW).map(PathBuf::from),
-    env::var_os(Mode::PATCH).map(PathBuf::from),
+    args.get(1).and_then(|a| a.to_str()),
+    args.get(2).and_then(|a| {
+      let exec = a.to_str().unwrap_or("").split('\x04').collect::<Vec<_>>();
+      match exec[..] {
+        [Mode::PREVIEW, path] => Some(Mode::Preview(PathBuf::from(path))),
+        [Mode::PATCH, path] => Some(Mode::Patch(PathBuf::from(path))),
+        _ => None,
+      }
+    }),
+    env::var_os(Mode::ARGV).map(PathBuf::from),
   ) {
-    (Some("-c"), Some(files), Some(preview), None) => {
+    (Some("-c"), Some(mode), Some(arg_list)) => {
       let mut buf = String::new();
-      let mut fd = File::open(preview).await.map_err(|_| Fail::ArgV)?;
+      let mut fd = File::open(arg_list).await.map_err(|_| Fail::ArgV)?;
       fd.read_to_string(&mut buf).await.map_err(|_| Fail::ArgV)?;
       let args = Arguments::from_iter(buf.split('\0'));
 
-      Ok((Mode::Preview(files), args))
+      Ok((mode, args))
     }
-    (Some("-c"), Some(files), None, Some(patch)) => {
-      let mut buf = String::new();
-      let mut fd = File::open(patch).await.map_err(|_| Fail::ArgV)?;
-      fd.read_to_string(&mut buf).await.map_err(|_| Fail::ArgV)?;
-      let args = Arguments::from_iter(buf.split('\0'));
-
-      Ok((Mode::Patch(files), args))
-    }
-    (Some("-c"), _, _, _) => Err(Fail::ArgumentError(
+    (Some("-c"), _, _) => Err(Fail::ArgumentError(
       "`-c` is a reserved flag, use --k, or --commit".to_owned(),
     )),
     _ => Ok((Mode::Initial, Arguments::from_iter(args))),
