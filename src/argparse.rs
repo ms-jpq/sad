@@ -36,7 +36,7 @@ pub struct Arguments {
   pub replace: Option<String>,
 
   /// Use \0 as stdin delimiter
-  #[structopt(short = "0")]
+  #[structopt(short = "0", long)]
   pub read0: bool,
 
   /// No preview, write changes to file
