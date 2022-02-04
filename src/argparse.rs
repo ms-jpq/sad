@@ -259,7 +259,7 @@ pub fn parse_opts(mode: Mode, args: Arguments) -> Result<Options, Fail> {
   let action = match (args.commit, mode, p_fzf(args.fzf)) {
     (true, _, _) => Action::Commit,
     (_, Mode::Patch(_), _) => Action::Commit,
-    (_, Mode::Preview(_), Some((bin, args))) => Action::FzfPreview(bin, args),
+    (_, Mode::Initial, Some((bin, args))) => Action::FzfPreview(bin, args),
     _ => Action::Preview,
   };
 
