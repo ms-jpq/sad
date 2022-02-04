@@ -1,7 +1,6 @@
 use super::types::{Abort, Fail};
-use futures::future::try_join;
 use futures::{
-  future::{select, Either},
+  future::{select, try_join, Either},
   pin_mut,
 };
 use std::{collections::HashMap, path::PathBuf, process::Stdio, sync::Arc};

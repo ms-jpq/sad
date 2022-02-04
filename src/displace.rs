@@ -1,8 +1,10 @@
-use super::argparse::{Action, Engine, Options};
-use super::fs_pipe::{slurp, spit};
-use super::input::Payload;
-use super::types::Fail;
-use super::udiff::{apply_patches, patches, pure_diffs, udiff};
+use super::{
+  argparse::{Action, Engine, Options},
+  fs_pipe::{slurp, spit},
+  input::Payload,
+  types::Fail,
+  udiff::{apply_patches, patches, pure_diffs, udiff},
+};
 use ansi_term::Colour;
 use pathdiff::diff_paths;
 use std::{path::PathBuf, sync::Arc};

@@ -1,6 +1,8 @@
-use super::argparse::{Arguments, Mode};
-use super::types::{Abort, Fail};
-use super::udiff::DiffRange;
+use super::{
+  argparse::{Arguments, Mode},
+  types::{Abort, Fail},
+  udiff::DiffRange,
+};
 use async_channel::{bounded, Receiver};
 use futures::{
   future::{select, Either},

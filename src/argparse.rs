@@ -1,5 +1,4 @@
-use super::subprocess::SubprocessCommand;
-use super::types::Fail;
+use super::{subprocess::SubprocessCommand, types::Fail};
 use aho_corasick::{AhoCorasick, AhoCorasickBuilder};
 use regex::{Regex, RegexBuilder};
 use shlex::split;

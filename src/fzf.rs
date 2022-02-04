@@ -1,6 +1,7 @@
-use super::subprocess::stream_into;
-use super::subprocess::SubprocessCommand;
-use super::types::{Abort, Fail};
+use super::{
+  subprocess::{stream_into, SubprocessCommand},
+  types::{Abort, Fail},
+};
 use futures::future::try_join;
 use std::{collections::HashMap, env, path::PathBuf, process::Stdio, sync::Arc};
 use tokio::{
