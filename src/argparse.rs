@@ -207,19 +207,18 @@ fn p_fzf(fzf: Option<String>) -> Option<(PathBuf, Vec<String>)> {
 
 fn p_pager(pager: &Option<String>) -> Option<SubprocessCommand> {
   let norm = || which("delta").or_else(|_| which("diff-so-fancy")).ok();
-  let (prog, arguments) = match pager {
-    Some(val) => match val as &str {
-      "never" => (None, Vec::new()),
-      _ => {
-        let mut sh = split(val)
-          .unwrap_or_else(|| vec![val.to_owned()])
-          .into_iter();
-        (
-          sh.next().and_then(|p| which(p).ok()).or_else(norm),
-          sh.collect(),
-        )
-      }
-    },
+
+  let (prog, arguments) = match pager.as_deref() {
+    Some("never") => (None, Vec::new()),
+    Some(val) => {
+      let mut sh = split(val)
+        .unwrap_or_else(|| vec![val.to_owned()])
+        .into_iter();
+      (
+        sh.next().and_then(|p| which(p).ok()).or_else(norm),
+        sh.collect(),
+      )
+    }
     None => {
       let val = var_os("GIT_PAGER")
         .and_then(|v| v.into_string().ok())
