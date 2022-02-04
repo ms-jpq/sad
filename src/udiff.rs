@@ -24,14 +24,10 @@ impl DiffRange {
 
 impl Display for DiffRange {
   fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-    write!(
-      f,
-      "@@ -{},{} +{},{} @@",
-      self.before.0 + 1,
-      self.before.1,
-      self.after.0 + 1,
-      self.after.1,
-    )
+    let (before_lo, before_hi) = (self.before.0 + 1, self.before.1);
+    let (after_lo, after_hi) = (self.after.0 + 1, self.after.1);
+
+    write!(f, "@@ -{before_lo},{before_hi} +{after_lo},{after_hi} @@")
   }
 }
 
@@ -127,13 +123,13 @@ pub fn udiff(
   before: &str,
   after: &str,
 ) -> String {
-  let before = before.split_inclusive("\n").collect::<Vec<_>>();
-  let after = after.split_inclusive("\n").collect::<Vec<_>>();
+  let before = before.split_inclusive('\n').collect::<Vec<_>>();
+  let after = after.split_inclusive('\n').collect::<Vec<_>>();
 
   let mut ret = String::new();
-  ret.push_str(&format!("diff --git {} {}\n", name, name));
-  ret.push_str(&format!("--- {}\n", name));
-  ret.push_str(&format!("+++ {}\n", name));
+  ret.push_str(&format!("diff --git {name} {name}\n"));
+  ret.push_str(&format!("--- {name}\n"));
+  ret.push_str(&format!("+++ {name}\n"));
 
   let mut matcher = SequenceMatcher::new(&before, &after);
   for group in &matcher.get_grouped_opcodes(unified) {
@@ -143,145 +139,28 @@ pub fn udiff(
         continue;
       }
     };
-    ret.push_str(&format!("{}\n", range));
+    ret.push_str(&format!("{range}\n"));
     for code in group {
       if code.tag == "equal" {
-        for line in before.iter().take(code.first_end).skip(code.first_start) {
-          ret.push_str(&format!(" {}", *line))
+        for line_ref in before.iter().take(code.first_end).skip(code.first_start) {
+          let line = *line_ref;
+          ret.push_str(&format!(" {line}"))
         }
         continue;
       }
       if code.tag == "replace" || code.tag == "delete" {
-        for line in before.iter().take(code.first_end).skip(code.first_start) {
-          ret.push_str(&format!("-{}", *line))
+        for line_ref in before.iter().take(code.first_end).skip(code.first_start) {
+          let line = *line_ref;
+          ret.push_str(&format!("-{line}"))
         }
       }
       if code.tag == "replace" || code.tag == "insert" {
-        for line in after.iter().take(code.second_end).skip(code.second_start) {
-          ret.push_str(&format!("+{}", *line))
+        for line_ref in after.iter().take(code.second_end).skip(code.second_start) {
+          let line = *line_ref;
+          ret.push_str(&format!("+{line}"))
         }
       }
     }
   }
   ret
-}
-
-#[cfg(test)]
-mod tests {
-  use super::*;
-  use difflib::unified_diff;
-  use regex::Regex;
-  use std::{
-    collections::HashSet,
-    fs::{read_dir, read_to_string},
-    path::PathBuf,
-  };
-
-  fn read_files() -> Vec<String> {
-    let mut source = read_dir(PathBuf::from("src"))
-      .unwrap()
-      .map(|entry| {
-        let path = entry.unwrap().path();
-        read_to_string(path).unwrap()
-      })
-      .collect::<Vec<_>>();
-    let tests = read_dir(PathBuf::from("tests"))
-      .unwrap()
-      .map(|entry| {
-        let path = entry.unwrap().path();
-        read_to_string(path).unwrap()
-      })
-      .collect::<Vec<_>>();
-    source.extend(tests);
-    source
-  }
-
-  fn regexes() -> Vec<(Regex, String)> {
-    vec![
-      (r"std", "owo"),
-      (r"<([^\)])>", "\\|$1"),
-      (r"\n", r""),
-      (r"use [^\n]+\n", ""),
-      (r"use [^\n]+\n", "\n\nowo\n\nowo"),
-      (r"\n+", ""),
-      (r"\n+", "\n"),
-    ]
-    .into_iter()
-    .map(|(s1, s2)| (Regex::new(s1).unwrap(), s2.to_owned()))
-    .collect::<_>()
-  }
-
-  fn diffs() -> Vec<(String, String)> {
-    let texts = read_files();
-    let regexes = regexes();
-    let mut acc = Vec::new();
-    for text in texts {
-      for re in &regexes {
-        let before = text.clone();
-        let after = re.0.replace_all(text.as_str(), re.1.as_str());
-        acc.push((before, after.to_string()))
-      }
-    }
-    acc
-  }
-
-  #[test]
-  fn patch() {
-    let mut unified = 0;
-    let diffs = diffs();
-    for (before, after) in diffs {
-      let ranges = pure_diffs(unified, &before, &after);
-      let rangeset = ranges.into_iter().collect::<HashSet<_>>();
-
-      let patches = patches(unified, &before, &after);
-      let patched = apply_patches(patches, &rangeset, &before);
-
-      let canon = after
-        .split_inclusive("\n")
-        .map(String::from)
-        .collect::<Vec<_>>();
-      let imp = patched
-        .split_inclusive("\n")
-        .map(String::from)
-        .collect::<Vec<_>>();
-      assert_eq!(imp, canon);
-      assert_eq!(patched, after);
-      unified += 1;
-    }
-  }
-
-  #[test]
-  fn unified() {
-    let mut unified = 1;
-    let diffs = diffs();
-    for (before, after) in diffs {
-      let bb = before.split_inclusive("\n").collect::<Vec<_>>();
-      let aa = after.split_inclusive("\n").collect::<Vec<_>>();
-      let canon = unified_diff(&bb, &aa, "", "", "", "", unified)
-        .iter()
-        .skip(2)
-        .map(|s| {
-          if s.starts_with("@@") {
-            "@@".to_owned()
-          } else {
-            s.to_owned()
-          }
-        })
-        .collect::<Vec<_>>();
-      let imp = udiff(None, unified, "", &before, &after)
-        .split_inclusive("\n")
-        .skip(3)
-        .map(|s| {
-          if s.starts_with("@@") {
-            "@@".to_owned()
-          } else {
-            s.to_owned()
-          }
-        })
-        .collect::<Vec<_>>();
-
-      assert_eq!(imp, canon);
-      unified += 1;
-    }
-  }
 }

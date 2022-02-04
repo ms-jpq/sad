@@ -26,7 +26,7 @@ impl Error for Fail {}
 
 impl Display for Fail {
   fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-    write!(f, "Error:\n{:#?}", self)
+    write!(f, "Error:\n{self:#?}")
   }
 }
 

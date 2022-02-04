@@ -123,25 +123,19 @@ pub fn stream_fzf(
 ) -> JoinHandle<()> {
   let sad = env::current_exe()
     .or_else(|_| which("sad".to_owned()))
-    .map(|p| format!("{}", p.display()))
+    .map(|path| format!("{}", path.display()))
     .unwrap_or_else(|_| "sad".to_owned());
 
   let preview_args = env::args().skip(1).collect::<Vec<_>>().join("\x04");
-  let execute = format!(
-    "abort+execute:{}\x04--internal-patch\x04{{+f}}\x04{}",
-    sad, preview_args
-  );
+  let execute = format!("abort+execute:{sad}\x04--internal-patch\x04{{+f}}\x04{preview_args}");
   let mut arguments = vec![
     "--read0".to_owned(),
     "--print0".to_owned(),
     "-m".to_owned(),
     "--ansi".to_owned(),
-    format!("--bind=enter:{}", execute),
-    format!("--bind=double-click:{}", execute),
-    format!(
-      "--preview={}\x04--internal-preview\x04{{f}}\x04{}",
-      sad, preview_args
-    ),
+    format!("--bind=enter:{execute}"),
+    format!("--bind=double-click:{execute}"),
+    format!("--preview={sad}\x04--internal-preview\x04{{f}}\x04{preview_args}",),
     "--preview-window=70%:wrap".to_owned(),
   ];
   arguments.extend(args);

@@ -25,6 +25,7 @@ mod output;
 mod subprocess;
 mod types;
 mod udiff;
+mod udiff_spec;
 
 fn stream_trans(
   abort: &Arc<Abort>,

@@ -33,8 +33,8 @@ pub async fn displace(opts: &Arc<Options>, payload: Payload) -> Result<String, F
     .as_ref()
     .and_then(|cwd| diff_paths(&path, cwd))
     .unwrap_or_else(|| path.clone());
-  let name = format!("{}", rel_path.display());
 
+  let name = format!("{}", rel_path.display());
   let slurped = slurp(&path).await?;
   let before = Arc::new(slurped.content);
 
@@ -55,7 +55,7 @@ pub async fn displace(opts: &Arc<Options>, payload: Payload) -> Result<String, F
       }
       (Action::Commit, Payload::Entire(_)) => {
         spit(&path, &slurped.meta, &after).await?;
-        format!("{}\n", name)
+        format!("{name}\n")
       }
       (Action::Commit, Payload::Piecewise(_, ranges)) => {
         let after = spawn_blocking(move || {
@@ -65,15 +65,15 @@ pub async fn displace(opts: &Arc<Options>, payload: Payload) -> Result<String, F
         .await?;
 
         spit(&path, &slurped.meta, &after).await?;
-        format!("{}\n", name)
+        format!("{name}\n")
       }
       (Action::Fzf(_, _), _) => {
         spawn_blocking(move || {
           let ranges = pure_diffs(o2.unified, &before, &after);
           let mut fzf_lines = String::new();
           for range in ranges {
-            let repr = Colour::Red.paint(format!("{}", range));
-            let line = format!("{}\n\n\n\n{}\0", name, repr);
+            let repr = Colour::Red.paint(format!("{range}"));
+            let line = format!("{name}\n\n\n\n{repr}\0");
             fzf_lines.push_str(&line);
           }
           fzf_lines
