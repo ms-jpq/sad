@@ -145,7 +145,7 @@ pub fn stream_fzf(
   let mut fzf_env = HashMap::new();
   fzf_env.insert(
     Mode::ARGV.to_owned(),
-    env::args().skip(1).collect::<Vec<_>>().join("\0"),
+    env::args().skip(1).collect::<Vec<_>>().join("\x04"),
   );
   fzf_env.insert(
     "SHELL".to_owned(),

@@ -9,7 +9,6 @@ use std::{
 };
 use structopt::StructOpt;
 
-use tokio::{fs::File, io::AsyncReadExt};
 use which::which;
 
 #[derive(Debug)]
@@ -83,7 +82,7 @@ pub struct Arguments {
   pub unified: Option<usize>,
 }
 
-pub async fn parse_args() -> Result<(Mode, Arguments), Fail> {
+pub fn parse_args() -> Result<(Mode, Arguments), Fail> {
   let args = args_os().collect::<Vec<_>>();
   match (
     args.get(1).and_then(|a| a.to_str()),
@@ -95,15 +94,10 @@ pub async fn parse_args() -> Result<(Mode, Arguments), Fail> {
         _ => None,
       }
     }),
-    var_os(Mode::ARGV).map(PathBuf::from),
+    var_os(Mode::ARGV).and_then(|a| a.into_string().ok()),
   ) {
     (Some("-c"), Some(mode), Some(arg_list)) => {
-      let mut buf = String::new();
-      let mut fd = File::open(arg_list).await.map_err(|_| Fail::ArgV)?;
-      fd.read_to_string(&mut buf).await.map_err(|_| Fail::ArgV)?;
-      let args = Arguments::from_iter(buf.split('\0'));
-
-      Ok((mode, args))
+      Ok((mode, Arguments::from_iter(arg_list.split('\x04'))))
     }
     (Some("-c"), _, _) => Err(Fail::ArgumentError(
       "`-c` is a reserved flag, use --k, or --commit".to_owned(),
