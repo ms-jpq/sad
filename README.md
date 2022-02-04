@@ -139,6 +139,13 @@ ie. `i` => on, `I` => off
 
 ## GET SAD NOW!
 
+For scripting, use the following format:
+
+```sh
+# replace `x86_64-unknown-linux-gnu.deb` with your desired package
+wget 'https://github.com/ms-jpq/sad/releases/latest/download/x86_64-unknown-linux-gnu.deb'
+```
+
 ### Homebrew:
 
 `brew install ms-jpq/sad/sad`
@@ -152,13 +159,6 @@ coming soon...
 ##### Debian/Ubuntu:
 
 You can download `sad` deb packages from the [github release page](https://github.com/ms-jpq/sad/releases).
-
-For scripting, use the following format:
-
-```sh
-# replace `x86_64-unknown-linux-gnu.deb` with your desired package
-wget 'https://github.com/ms-jpq/sad/releases/latest/download/x86_64-unknown-linux-gnu.deb'
-```
 
 ##### Arch Linux:
 
