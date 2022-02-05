@@ -36,7 +36,7 @@ use `--commit` or `-k` to commit changes all at once.
 
 **with fzf**
 
-```sh
+```bash
 export GIT_PAGER='<highlighter-of-your-choice>'
 # ^ can be done in your bash/zsh/rc file.
 find "$FIND_ARGS" | sad '<pattern>' '<replacement>'
@@ -44,19 +44,19 @@ find "$FIND_ARGS" | sad '<pattern>' '<replacement>'
 
 **without fzf**
 
-```sh
+```bash
 find "$FIND_ARGS" | sad '<pattern>' '<replacement>' | highlighter-of-your-choice
 ```
 
 or
 
-```sh
+```bash
 find "$FIND_ARGS" | sad '<pattern>' '<replacement>' --pager=<highlighter-of-your-choice>
 ```
 
 or
 
-```sh
+```bash
 export GIT_PAGER='<highlighter-of-your-choice>'
 find "$FIND_ARGS" | sad '<pattern>' '<replacement>'
 ```
@@ -141,7 +141,7 @@ ie. `i` => on, `I` => off
 
 For scripting, use the following format:
 
-```sh
+```bash
 # replace `x86_64-unknown-linux-gnu.deb` with your desired package
 wget 'https://github.com/ms-jpq/sad/releases/latest/download/x86_64-unknown-linux-gnu.deb'
 ```
@@ -183,7 +183,7 @@ To compile sad yourself you'll have to make sure you have
 
 To install cargo from source you can run the following commands:
 
-```sh
+```bash
 cargo install --locked --all-features \
   --git https://github.com/ms-jpq/sad --branch senpai
 ```
@@ -191,7 +191,7 @@ cargo install --locked --all-features \
 If you want to install it in a specific directory you can provide the `--root`
 flag, like so:
 
-```sh
+```bash
 cargo install --locked --all-features --root="/usr/bin/" \
   --git https://github.com/ms-jpq/sad --branch senpai
 ```
@@ -200,13 +200,13 @@ cargo install --locked --all-features --root="/usr/bin/" \
 
 If you just want to edit the shell stream, I would recommend [`sd`](https://github.com/chmln/sd), it uses the same concept, but its more for in stream edits. `sad` was inspired by my initial usage of `sd`.
 
-```sh
+```bash
 command1 | sd '<pattern>' '<replacement>' | command2
 ```
 
 [`ripgrep`](https://github.com/BurntSushi/ripgrep) with `--replace` also works
 
-```sh
+```bash
 command1 | rg --passthru --replace '<replacement>' -- '<pattern>' | command2
 ```
 
