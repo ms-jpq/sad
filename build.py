@@ -37,8 +37,7 @@ _TOOL_CHAINS = {
 
 _DPKG_ARCH = {
     "x86_64": "amd64",
-    "arm64": "aarch64",
-    # TODO -- old was aarch64
+    "aarch64": "aarch64",
 }
 
 UNAME = uname()
@@ -134,8 +133,8 @@ def _build(triple: str) -> None:
 
 def _parse_args() -> Namespace:
     arch_choices = {"x86_64", "aarch64"}
-    os_choices = {os for (os, _) in _DEFAULTS.values()}
-    compiler_choices = {"musl", "gnu", "darwin"}
+    sys_choices = {vendor_sys for (vendor_sys, _) in _DEFAULTS.values()}
+    abi_choices = {"musl", "gnu", "darwin"}
     os, compiler = _DEFAULTS.get(UNAME.system) or (None, None)
 
     parser = ArgumentParser()
@@ -159,13 +158,13 @@ def _parse_args() -> Namespace:
         p.add_argument(
             "--os",
             required=not bool(os),
-            choices=sorted(os_choices, key=strxfrm),
+            choices=sorted(sys_choices, key=strxfrm),
             default=os,
         )
         p.add_argument(
             "--compiler",
             required=not bool(compiler),
-            choices=sorted(compiler_choices, key=strxfrm),
+            choices=sorted(abi_choices, key=strxfrm),
             default=compiler,
         )
 
