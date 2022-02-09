@@ -16,7 +16,6 @@ atty = "0.2"
 difflib = "0.4"
 futures = "0.3"
 num_cpus = "1"
-pathdiff = "0.2"
 regex = "1"
 shlex = "1"
 clap = { version = "3", features = ["derive"] }

@@ -6,7 +6,6 @@ use super::{
   udiff::{apply_patches, patches, pure_diffs, udiff},
 };
 use ansi_term::Colour;
-use pathdiff::diff_paths;
 use std::{path::PathBuf, sync::Arc};
 use tokio::task::spawn_blocking;
 
@@ -33,8 +32,8 @@ pub async fn displace(opts: &Arc<Options>, payload: Payload) -> Result<String, F
   let rel_path = opts
     .cwd
     .as_ref()
-    .and_then(|cwd| diff_paths(&path, cwd))
-    .unwrap_or_else(|| path.clone());
+    .and_then(|cwd| path.strip_prefix(cwd).ok())
+    .unwrap_or_else(|| path.as_ref());
 
   let name = format!("{}", rel_path.display());
   let slurped = slurp(&path).await?;
