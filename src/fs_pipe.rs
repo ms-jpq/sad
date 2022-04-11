@@ -1,10 +1,12 @@
-use super::types::Fail;
-use std::{ffi::OsString, fs::Metadata, io::ErrorKind, path::Path};
-use tokio::{
-  fs::{rename, File, OpenOptions},
-  io::{AsyncReadExt, AsyncWriteExt},
+use {
+  super::types::Fail,
+  std::{borrow::ToOwned, fs::Metadata, io::ErrorKind, path::Path},
+  tokio::{
+    fs::{rename, File, OpenOptions},
+    io::{AsyncReadExt, AsyncWriteExt},
+  },
+  uuid::Uuid,
 };
-use uuid::Uuid;
 
 pub struct Slurpee {
   pub meta: Metadata,
@@ -39,8 +41,8 @@ pub async fn spit(canonical: &Path, meta: &Metadata, text: &str) -> Result<(), F
   let uuid = Uuid::new_v4().to_simple().to_string();
   let mut file_name = canonical
     .file_name()
-    .map(|n| n.to_owned())
-    .unwrap_or_else(|| OsString::from(""));
+    .map(ToOwned::to_owned)
+    .unwrap_or_default();
   file_name.push("___");
   file_name.push(uuid);
   let tmp = canonical.with_file_name(file_name);

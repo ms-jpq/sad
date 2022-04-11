@@ -1,24 +1,26 @@
-use super::{
-  argparse::Mode,
-  subprocess::{stream_into, SubprocessCommand},
-  types::{Abort, Fail},
+use {
+  super::{
+    argparse::Mode,
+    subprocess::{stream_into, SubprocCommand},
+    types::{Abort, Fail},
+  },
+  futures::future::try_join,
+  std::{
+    collections::HashMap,
+    env::{self, current_exe},
+    path::PathBuf,
+    process::Stdio,
+    sync::Arc,
+  },
+  tokio::{
+    io::{AsyncWriteExt, BufWriter, ErrorKind},
+    process::Command,
+    select,
+    sync::mpsc::Receiver,
+    task::{spawn, JoinHandle},
+  },
+  which::which,
 };
-use futures::future::try_join;
-use std::{
-  collections::HashMap,
-  env::{self, current_exe},
-  path::PathBuf,
-  process::Stdio,
-  sync::Arc,
-};
-use tokio::{
-  io::{AsyncWriteExt, BufWriter, ErrorKind},
-  process::Command,
-  select,
-  sync::mpsc::Receiver,
-  task::{spawn, JoinHandle},
-};
-use which::which;
 
 async fn reset_term() -> Result<(), Fail> {
   if let Ok(path) = which("tput") {
@@ -48,7 +50,7 @@ async fn reset_term() -> Result<(), Fail> {
   Err(Fail::IO(PathBuf::from("reset"), ErrorKind::NotFound))
 }
 
-fn run_fzf(abort: &Arc<Abort>, cmd: SubprocessCommand, stream: Receiver<String>) -> JoinHandle<()> {
+fn run_fzf(abort: &Arc<Abort>, cmd: SubprocCommand, stream: Receiver<String>) -> JoinHandle<()> {
   let abort = abort.clone();
 
   spawn(async move {
@@ -95,7 +97,7 @@ fn run_fzf(abort: &Arc<Abort>, cmd: SubprocessCommand, stream: Receiver<String>)
               match rhs {
                 Ok(status) => {
                   match status.code() {
-                    Some(0) | Some(1) | None => (),
+                    Some(0 | 1) | None => (),
                     Some(130) => {
                       abort_2.send(Fail::Interrupt).await;
                     }
@@ -123,7 +125,7 @@ fn run_fzf(abort: &Arc<Abort>, cmd: SubprocessCommand, stream: Receiver<String>)
   })
 }
 
-pub fn stream_fzf(
+pub fn stream_fzf_proc(
   abort: &Arc<Abort>,
   bin: PathBuf,
   args: Vec<String>,
@@ -150,13 +152,15 @@ pub fn stream_fzf(
   fzf_env.insert(
     "SHELL".to_owned(),
     current_exe()
-      .or_else(|_| which("sad"))
-      .map(|path| format!("{}", path.display()))
-      .unwrap_or_else(|_| "sad".to_owned()),
+      .or_else(|_| which(env!("CARGO_PKG_NAME")))
+      .map_or_else(
+        |_| env!("CARGO_PKG_NAME").to_owned(),
+        |path| format!("{}", path.display()),
+      ),
   );
   fzf_env.insert("LC_ALL".to_owned(), "C".to_owned());
 
-  let cmd = SubprocessCommand {
+  let cmd = SubprocCommand {
     prog: bin,
     args: arguments,
     env: fzf_env,

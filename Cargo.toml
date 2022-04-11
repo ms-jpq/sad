@@ -1,9 +1,9 @@
 [package]
+authors = ["git@bigly.dog"]
+description = "Space Age seD | https://github.com/ms-jpq/sad"
+edition = "2021"
 name = "sad"
 version = "0.4.20"
-description = "Space Age seD | https://github.com/ms-jpq/sad"
-authors = ["git@bigly.dog"]
-edition = "2021"
 
 [build-dependencies]
 uuid = { version = "0.8", features = ["v4"] }
@@ -13,12 +13,12 @@ aho-corasick = "0.7"
 ansi_term = "0.12"
 async-channel = "1.6"
 atty = "0.2"
+clap = { version = "3", features = ["derive", "wrap_help"] }
 difflib = "0.4"
 futures = "0.3"
 num_cpus = "1"
 regex = "1"
 shlex = "1"
-clap = { version = "3", features = ["derive"] }
 tokio = { version = "1", features = ["full"] }
 uuid = { version = "0.8", features = ["v4"] }
 which = "4"

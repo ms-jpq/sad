@@ -1,18 +1,20 @@
-use super::types::{Abort, Fail};
-use futures::{
-  future::{select, try_join, Either},
-  pin_mut,
-};
-use std::{collections::HashMap, path::PathBuf, process::Stdio, sync::Arc};
-use tokio::{
-  io::{AsyncWrite, AsyncWriteExt, BufWriter},
-  process::Command,
-  sync::mpsc::Receiver,
-  task::{spawn, JoinHandle},
+use {
+  super::types::{Abort, Fail},
+  futures::{
+    future::{select, try_join, Either},
+    pin_mut,
+  },
+  std::{collections::HashMap, path::PathBuf, process::Stdio, sync::Arc},
+  tokio::{
+    io::{AsyncWrite, AsyncWriteExt, BufWriter},
+    process::Command,
+    sync::mpsc::Receiver,
+    task::{spawn, JoinHandle},
+  },
 };
 
 #[derive(Clone, Debug)]
-pub struct SubprocessCommand {
+pub struct SubprocCommand {
   pub prog: PathBuf,
   pub args: Vec<String>,
   pub env: HashMap<String, String>,
@@ -21,7 +23,7 @@ pub struct SubprocessCommand {
 pub async fn stream_into(
   abort: &Arc<Abort>,
   path: PathBuf,
-  writer: &mut BufWriter<impl AsyncWrite + Unpin>,
+  writer: &mut BufWriter<impl AsyncWrite + Send + Unpin>,
   mut stream: Receiver<String>,
 ) {
   loop {
@@ -30,7 +32,6 @@ pub async fn stream_into(
     pin_mut!(f1);
     pin_mut!(f2);
     match select(f1, f2).await {
-      Either::Left(_) => break,
       Either::Right((Some(print), _)) => {
         if let Err(err) = writer.write(print.as_bytes()).await {
           abort.send(Fail::IO(path, err.kind())).await;
@@ -42,9 +43,9 @@ pub async fn stream_into(
   }
 }
 
-pub fn stream_subprocess(
+pub fn stream_subproc(
   abort: &Arc<Abort>,
-  cmd: SubprocessCommand,
+  cmd: SubprocCommand,
   stream: Receiver<String>,
 ) -> JoinHandle<()> {
   let abort = abort.clone();
@@ -80,7 +81,7 @@ pub fn stream_subprocess(
         });
 
         if let Err(err) = try_join(handle_child, handle_in).await {
-          abort.send(err.into()).await
+          abort.send(err.into()).await;
         }
       }
     }

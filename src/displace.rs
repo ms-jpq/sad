@@ -1,13 +1,15 @@
-use super::{
-  argparse::{Action, Engine, Options},
-  fs_pipe::{slurp, spit},
-  input::Payload,
-  types::Fail,
-  udiff::{apply_patches, patches, pure_diffs, udiff},
+use {
+  super::{
+    argparse::{Action, Engine, Options},
+    fs_pipe::{slurp, spit},
+    input::Payload,
+    types::Fail,
+    udiff::{apply_patches, patches, pure_diffs, udiff},
+  },
+  ansi_term::Colour,
+  std::{path::PathBuf, sync::Arc},
+  tokio::task::spawn_blocking,
 };
-use ansi_term::Colour;
-use std::{path::PathBuf, sync::Arc};
-use tokio::task::spawn_blocking;
 
 impl Engine {
   fn replace(&self, before: &str) -> String {
@@ -19,10 +21,9 @@ impl Engine {
 }
 
 impl Payload {
-  fn path(&self) -> &PathBuf {
+  const fn path(&self) -> &PathBuf {
     match self {
-      Payload::Entire(path) => path,
-      Payload::Piecewise(path, _) => path,
+      Payload::Entire(path) | Payload::Piecewise(path, _) => path,
     }
   }
 }

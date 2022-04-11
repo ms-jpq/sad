@@ -1,20 +1,5 @@
-use ansi_term::Colour;
-use argparse::{parse_args, parse_opts, Options};
-use async_channel::Receiver as MPMCR;
-use displace::displace;
-use futures::{
-  future::{select, try_join3, try_join_all, Either},
-  pin_mut,
-};
-use input::{stream_input, Payload};
-use output::stream_output;
-use std::{process::exit, sync::Arc};
-use tokio::{
-  runtime::Builder,
-  sync::mpsc::{self, Receiver},
-  task::{spawn, JoinHandle},
-};
-use types::{Abort, Fail};
+#![deny(clippy::all, clippy::cargo, clippy::nursery, clippy::pedantic)]
+#![allow(clippy::cargo_common_metadata)]
 
 mod argparse;
 mod displace;
@@ -27,11 +12,31 @@ mod types;
 mod udiff;
 mod udiff_spec;
 
+use {
+  ansi_term::Colour,
+  argparse::{parse_args, parse_opts, Options},
+  async_channel::Receiver as MPMCR,
+  displace::displace,
+  futures::{
+    future::{select, try_join3, try_join_all, Either},
+    pin_mut,
+  },
+  input::{stream_in, Payload},
+  output::stream_out,
+  std::{process::exit, sync::Arc},
+  tokio::{
+    runtime::Builder,
+    sync::mpsc::{self, Receiver},
+    task::{spawn, JoinHandle},
+  },
+  types::{Abort, Fail},
+};
+
 fn stream_trans(
   abort: &Arc<Abort>,
   cpus: usize,
   opts: &Options,
-  stream: MPMCR<Payload>,
+  stream: &MPMCR<Payload>,
 ) -> (JoinHandle<()>, Receiver<String>) {
   let a_opts = Arc::new(opts.clone());
   let (tx, rx) = mpsc::channel::<String>(1);
@@ -51,8 +56,7 @@ fn stream_trans(
           pin_mut!(f2);
 
           match select(f1, f2).await {
-            Either::Left(_) => break,
-            Either::Right((Err(_), _)) => break,
+            Either::Left(_) | Either::Right((Err(_), _)) => break,
             Either::Right((Ok(payload), _)) => match displace(&opts, payload).await {
               Ok(displaced) => {
                 if tx.send(displaced).await.is_err() {
@@ -80,11 +84,11 @@ fn stream_trans(
 }
 
 async fn run(abort: &Arc<Abort>, cpus: usize) -> Result<(), Fail> {
-  let (mode, args) = parse_args()?;
-  let (h_1, input_stream) = stream_input(abort, &mode, &args);
+  let (mode, args) = parse_args();
+  let (h_1, input_stream) = stream_in(abort, &mode, &args);
   let opts = parse_opts(mode, args)?;
-  let (h_2, trans_stream) = stream_trans(abort, cpus, &opts, input_stream);
-  let h_3 = stream_output(abort, &opts, trans_stream);
+  let (h_2, trans_stream) = stream_trans(abort, cpus, &opts, &input_stream);
+  let h_3 = stream_out(abort, &opts, trans_stream);
   try_join3(h_1, h_2, h_3).await?;
   Ok(())
 }

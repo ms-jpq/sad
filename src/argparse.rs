@@ -1,15 +1,16 @@
-use super::{subprocess::SubprocessCommand, types::Fail};
-use aho_corasick::{AhoCorasick, AhoCorasickBuilder};
-use clap::Parser;
-use regex::{Regex, RegexBuilder};
-use shlex::split;
-use std::{
-  collections::HashMap,
-  env::{args_os, current_dir, var_os},
-  path::PathBuf,
+use {
+  super::{subprocess::SubprocCommand, types::Fail},
+  aho_corasick::{AhoCorasick, AhoCorasickBuilder},
+  clap::Parser,
+  regex::{Regex, RegexBuilder},
+  shlex::split,
+  std::{
+    collections::HashMap,
+    env::{args_os, current_dir, var_os},
+    path::PathBuf,
+  },
+  which::which,
 };
-
-use which::which;
 
 #[derive(Debug)]
 pub enum Mode {
@@ -82,7 +83,7 @@ pub struct Arguments {
   pub unified: Option<usize>,
 }
 
-pub fn parse_args() -> Result<(Mode, Arguments), Fail> {
+pub fn parse_args() -> (Mode, Arguments) {
   let args = args_os().collect::<Vec<_>>();
   match (
     args.get(1).and_then(|a| a.to_str()),
@@ -101,13 +102,14 @@ pub fn parse_args() -> Result<(Mode, Arguments), Fail> {
     var_os(Mode::ARGV).and_then(|a| a.into_string().ok()),
   ) {
     (Some("-c"), Some(mode), Some(arg_list)) => {
-      Ok((mode, Arguments::parse_from(arg_list.split('\x04'))))
+      (mode, Arguments::parse_from(arg_list.split('\x04')))
     }
-    _ => Ok((Mode::Initial, Arguments::parse_from(args))),
+    _ => (Mode::Initial, Arguments::parse_from(args)),
   }
 }
 
 #[derive(Clone, Debug)]
+#[allow(clippy::large_enum_variant)]
 pub enum Engine {
   AhoCorasick(AhoCorasick, String),
   Regex(Regex, String),
@@ -123,7 +125,7 @@ pub enum Action {
 #[derive(Clone, Debug)]
 pub enum Printer {
   Stdout,
-  Pager(SubprocessCommand),
+  Pager(SubprocCommand),
 }
 
 #[derive(Clone, Debug)]
@@ -138,7 +140,7 @@ pub struct Options {
 fn p_auto_flags(exact: bool, pattern: &str) -> Vec<String> {
   let mut flags = vec!["i".to_owned()];
   if !exact {
-    flags.push("m".to_owned())
+    flags.push("m".to_owned());
   }
   for c in pattern.chars() {
     if c.is_uppercase() {
@@ -189,9 +191,13 @@ fn p_regex(pattern: &str, flags: Vec<String>) -> Result<Regex, Fail> {
   Ok(re.build()?)
 }
 
-fn p_fzf(fzf: Option<String>) -> Option<(PathBuf, Vec<String>)> {
-  match (which("fzf"), atty::is(atty::Stream::Stdout)) {
-    (Ok(p), true) => match fzf.as_deref() {
+fn p_fzf(fzf: &Option<String>) -> Option<(PathBuf, Vec<String>)> {
+  match (
+    which("fzf"),
+    atty::is(atty::Stream::Stdout),
+    atty::is(atty::Stream::Stderr),
+  ) {
+    (Ok(p), true, true) => match fzf.as_deref() {
       Some("never") => None,
       Some(val) => Some((p, split(val).unwrap_or_default())),
       None => Some((p, Vec::new())),
@@ -200,7 +206,7 @@ fn p_fzf(fzf: Option<String>) -> Option<(PathBuf, Vec<String>)> {
   }
 }
 
-fn p_pager(pager: &Option<String>) -> Option<SubprocessCommand> {
+fn p_pager(pager: &Option<String>) -> Option<SubprocCommand> {
   let norm = || which("delta").or_else(|_| which("diff-so-fancy")).ok();
 
   let (prog, arguments) = match pager.as_deref() {
@@ -230,7 +236,7 @@ fn p_pager(pager: &Option<String>) -> Option<SubprocessCommand> {
     }
   };
 
-  prog.map(|program| SubprocessCommand {
+  prog.map(|program| SubprocCommand {
     args: arguments,
     prog: program,
     env: HashMap::new(),
@@ -257,9 +263,8 @@ pub fn parse_opts(mode: Mode, args: Arguments) -> Result<Options, Fail> {
     }
   };
 
-  let action = match (args.commit, mode, p_fzf(args.fzf)) {
-    (true, _, _) => Action::Commit,
-    (_, Mode::Patch(_), _) => Action::Commit,
+  let action = match (args.commit, mode, p_fzf(&args.fzf)) {
+    (true, _, _) | (_, Mode::Patch(_), _) => Action::Commit,
     (_, Mode::Initial, Some((bin, args))) => Action::FzfPreview(bin, args),
     _ => Action::Preview,
   };

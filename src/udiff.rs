@@ -1,19 +1,21 @@
-use difflib::{sequencematcher::Opcode, sequencematcher::SequenceMatcher};
-use std::{
-  collections::HashSet,
-  fmt::{self, Display, Formatter},
+use {
+  difflib::{sequencematcher::Opcode, sequencematcher::SequenceMatcher},
+  std::{
+    collections::HashSet,
+    fmt::{self, Display, Formatter},
+  },
 };
 
-#[derive(Debug, Eq, Hash, PartialEq)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub struct DiffRange {
   pub before: (usize, usize),
   pub after: (usize, usize),
 }
 
 impl DiffRange {
-  pub fn new(ops: &[Opcode]) -> Option<DiffRange> {
+  pub const fn new(ops: &[Opcode]) -> Option<Self> {
     match (ops.first(), ops.last()) {
-      (Some(first), Some(last)) => Some(DiffRange {
+      (Some(first), Some(last)) => Some(Self {
         before: (first.first_start, last.first_end - first.first_start),
         after: (first.second_start, last.second_end - first.second_start),
       }),
@@ -84,7 +86,7 @@ pub fn apply_patches(patches: Vec<Patch>, ranges: &HashSet<DiffRange>, before: &
   let mut ret = String::new();
   let mut prev = 0;
 
-  for diff in patches.iter() {
+  for diff in patches {
     let (before_start, before_inc) = diff.range.before;
     let before_end = before_start + before_inc;
     for i in prev..before_start {
@@ -94,7 +96,7 @@ pub fn apply_patches(patches: Vec<Patch>, ranges: &HashSet<DiffRange>, before: &
         .expect("algo failure");
     }
     if ranges.contains(&diff.range) {
-      for line in diff.new_lines.iter() {
+      for line in &diff.new_lines {
         ret.push_str(line);
       }
     } else {
@@ -144,20 +146,20 @@ pub fn udiff(
       if code.tag == "equal" {
         for line_ref in before.iter().take(code.first_end).skip(code.first_start) {
           let line = *line_ref;
-          ret.push_str(&format!(" {line}"))
+          ret.push_str(&format!(" {line}"));
         }
         continue;
       }
       if code.tag == "replace" || code.tag == "delete" {
         for line_ref in before.iter().take(code.first_end).skip(code.first_start) {
           let line = *line_ref;
-          ret.push_str(&format!("-{line}"))
+          ret.push_str(&format!("-{line}"));
         }
       }
       if code.tag == "replace" || code.tag == "insert" {
         for line_ref in after.iter().take(code.second_end).skip(code.second_start) {
           let line = *line_ref;
-          ret.push_str(&format!("+{line}"))
+          ret.push_str(&format!("+{line}"));
         }
       }
     }

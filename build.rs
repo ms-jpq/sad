@@ -1,3 +1,6 @@
+#![deny(clippy::all, clippy::cargo, clippy::nursery, clippy::pedantic)]
+#![allow(clippy::cargo_common_metadata)]
+
 use uuid::Uuid;
 
 fn main() {
