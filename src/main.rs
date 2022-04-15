@@ -23,7 +23,7 @@ use {
   },
   input::{stream_in, Payload},
   output::stream_out,
-  std::{process::exit, sync::Arc},
+  std::{process::exit, sync::Arc, thread::available_parallelism},
   tokio::{
     runtime::Builder,
     sync::mpsc::{self, Receiver},
@@ -34,14 +34,14 @@ use {
 
 fn stream_trans(
   abort: &Arc<Abort>,
-  cpus: usize,
+  threads: usize,
   opts: &Options,
   stream: &MPMCR<Payload>,
 ) -> (JoinHandle<()>, Receiver<String>) {
   let a_opts = Arc::new(opts.clone());
   let (tx, rx) = mpsc::channel::<String>(1);
 
-  let handles = (1..=cpus * 2)
+  let handles = (1..=threads * 2)
     .map(|_| {
       let abort = abort.clone();
       let stream = stream.clone();
@@ -83,27 +83,27 @@ fn stream_trans(
   (handle, rx)
 }
 
-async fn run(abort: &Arc<Abort>, cpus: usize) -> Result<(), Fail> {
+async fn run(abort: &Arc<Abort>, threads: usize) -> Result<(), Fail> {
   let (mode, args) = parse_args();
   let (h_1, input_stream) = stream_in(abort, &mode, &args);
   let opts = parse_opts(mode, args)?;
-  let (h_2, trans_stream) = stream_trans(abort, cpus, &opts, &input_stream);
+  let (h_2, trans_stream) = stream_trans(abort, threads, &opts, &input_stream);
   let h_3 = stream_out(abort, &opts, trans_stream);
   try_join3(h_1, h_2, h_3).await?;
   Ok(())
 }
 
 fn main() {
-  let cpus = num_cpus::get();
+  let threads = available_parallelism().map(|s| s.into()).unwrap_or(4);
   let rt = Builder::new_multi_thread()
     .enable_io()
-    .max_blocking_threads(cpus)
+    .max_blocking_threads(threads)
     .build()
     .expect("runtime failure");
 
   let errors = rt.block_on(async {
     let abort = Abort::new();
-    if let Err(err) = run(&abort, cpus).await {
+    if let Err(err) = run(&abort, threads).await {
       let mut errs = abort.fin().await;
       errs.push(err);
       errs

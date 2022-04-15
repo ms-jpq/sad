@@ -478,7 +478,6 @@ dependencies = [
  "clap",
  "difflib",
  "futures",
- "num_cpus",
  "regex",
  "shlex",
  "tokio",
