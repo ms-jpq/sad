@@ -74,13 +74,13 @@ jobs:
         run: python3 build.py buildr -- ${{ matrix.jobs.triple }}
 
       - name: Upload Bin
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: ${{ matrix.jobs.triple }}.zip
           path: artifacts/${{ matrix.jobs.triple }}.zip
 
       - name: Upload Deb
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: ${{ matrix.jobs.triple }}.deb
           path: artifacts/${{ matrix.jobs.triple }}.deb
@@ -92,7 +92,7 @@ jobs:
 
     steps:
       - name: Download Artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           path: ./arts/
 
