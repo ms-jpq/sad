@@ -1,33 +1,24 @@
-[dependencies]
-aho-corasick = "0.7"
-ansi_term = "0.12"
-async-channel = "1.6"
-atty = "0.2"
-difflib = "0.4"
-futures = "0.3"
-regex = "1"
-shlex = "1"
-which = "4"
-
 [package]
-authors = [ "git@bigly.dog",]
+authors = ["git@bigly.dog"]
 description = "Space Age seD | https://github.com/ms-jpq/sad"
 edition = "2021"
 name = "sad"
 version = "0.4.20"
 
-[build-dependencies.uuid]
-features = [ "v4",]
-version = "0.8"
 
-[dependencies.clap]
-features = [ "derive", "wrap_help",]
-version = "3"
+[build-dependencies]
+uuid = { version = "1", features = ["v4"] }
 
-[dependencies.tokio]
-features = [ "full",]
-version = "1"
-
-[dependencies.uuid]
-features = [ "v4",]
-version = "0.8"
+[dependencies]
+aho-corasick  = { version = "0.7" }
+ansi_term     = { version = "0.12" }
+async-channel = { version = "1.6" }
+atty          = { version = "0.2" }
+clap          = { version = "3", features = ["derive", "wrap_help"] }
+difflib       = { version = "0.4" }
+futures       = { version = "0.3" }
+regex         = { version = "1" }
+shlex         = { version = "1" }
+tokio         = { version = "1", features = ["full"] }
+uuid          = { version = "1", features = ["v4"] }
+which         = { version = "4" }

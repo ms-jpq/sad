@@ -38,7 +38,7 @@ pub async fn slurp(path: &Path) -> Result<Slurpee, Fail> {
 }
 
 pub async fn spit(canonical: &Path, meta: &Metadata, text: &str) -> Result<(), Fail> {
-  let uuid = Uuid::new_v4().to_simple().to_string();
+  let uuid = Uuid::new_v4().as_simple().to_string();
   let mut file_name = canonical
     .file_name()
     .map(ToOwned::to_owned)
