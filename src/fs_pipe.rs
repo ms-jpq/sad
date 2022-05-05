@@ -3,7 +3,7 @@ use {
   std::{borrow::ToOwned, fs::Metadata, io::ErrorKind, path::Path},
   tokio::{
     fs::{rename, File, OpenOptions},
-    io::{AsyncReadExt, AsyncWriteExt},
+    io::{AsyncReadExt, AsyncWriteExt, BufWriter},
   },
   uuid::Uuid,
 };
@@ -47,7 +47,7 @@ pub async fn spit(canonical: &Path, meta: &Metadata, text: &str) -> Result<(), F
   file_name.push(uuid);
   let tmp = canonical.with_file_name(file_name);
 
-  let mut fd = OpenOptions::new()
+  let fd = OpenOptions::new()
     .create_new(true)
     .write(true)
     .open(&tmp)
@@ -56,7 +56,10 @@ pub async fn spit(canonical: &Path, meta: &Metadata, text: &str) -> Result<(), F
   fd.set_permissions(meta.permissions())
     .await
     .map_err(|e| Fail::IO(tmp.clone(), e.kind()))?;
-  fd.write_all(text.as_bytes())
+
+  let mut writer = BufWriter::new(fd);
+  writer
+    .write_all(text.as_bytes())
     .await
     .map_err(|e| Fail::IO(tmp.clone(), e.kind()))?;
 

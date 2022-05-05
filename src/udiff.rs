@@ -34,8 +34,8 @@ impl Display for DiffRange {
 }
 
 pub fn pure_diffs(unified: usize, before: &str, after: &str) -> Vec<DiffRange> {
-  let before = before.split_inclusive("\n").collect::<Vec<_>>();
-  let after = after.split_inclusive("\n").collect::<Vec<_>>();
+  let before = before.split_inclusive('\n').collect::<Vec<_>>();
+  let after = after.split_inclusive('\n').collect::<Vec<_>>();
   let mut ret = Vec::new();
   let mut matcher = SequenceMatcher::new(&before, &after);
   for group in &matcher.get_grouped_opcodes(unified) {
@@ -51,8 +51,8 @@ pub struct Patch {
 }
 
 pub fn patches(unified: usize, before: &str, after: &str) -> Vec<Patch> {
-  let before = before.split_inclusive("\n").collect::<Vec<_>>();
-  let after = after.split_inclusive("\n").collect::<Vec<_>>();
+  let before = before.split_inclusive('\n').collect::<Vec<_>>();
+  let after = after.split_inclusive('\n').collect::<Vec<_>>();
 
   let mut ret = Vec::new();
   let mut matcher = SequenceMatcher::new(&before, &after);
@@ -82,7 +82,7 @@ pub fn patches(unified: usize, before: &str, after: &str) -> Vec<Patch> {
 }
 
 pub fn apply_patches(patches: Vec<Patch>, ranges: &HashSet<DiffRange>, before: &str) -> String {
-  let before = before.split_inclusive("\n").collect::<Vec<_>>();
+  let before = before.split_inclusive('\n').collect::<Vec<_>>();
   let mut ret = String::new();
   let mut prev = 0;
 

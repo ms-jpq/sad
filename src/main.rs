@@ -23,7 +23,7 @@ use {
   },
   input::{stream_in, Payload},
   output::stream_out,
-  std::{process::exit, sync::Arc, thread::available_parallelism},
+  std::{convert::Into, process::exit, sync::Arc, thread::available_parallelism},
   tokio::{
     runtime::Builder,
     sync::mpsc::{self, Receiver},
@@ -94,7 +94,7 @@ async fn run(abort: &Arc<Abort>, threads: usize) -> Result<(), Fail> {
 }
 
 fn main() {
-  let threads = available_parallelism().map(|s| s.into()).unwrap_or(4);
+  let threads = available_parallelism().map(Into::into).unwrap_or(4);
   let rt = Builder::new_multi_thread()
     .enable_io()
     .max_blocking_threads(threads)
