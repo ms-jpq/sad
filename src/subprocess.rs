@@ -33,7 +33,7 @@ pub async fn stream_into(
     pin_mut!(f2);
     match select(f1, f2).await {
       Either::Right((Some(print), _)) => {
-        if let Err(err) = writer.write(print.as_bytes()).await {
+        if let Err(err) = writer.write_all(print.as_bytes()).await {
           abort.send(Fail::IO(path, err.kind())).await;
           break;
         }
