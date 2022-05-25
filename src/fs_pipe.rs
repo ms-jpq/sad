@@ -63,6 +63,11 @@ pub async fn spit(canonical: &Path, meta: &Metadata, text: &str) -> Result<(), F
     .await
     .map_err(|e| Fail::IO(tmp.clone(), e.kind()))?;
 
+  writer
+    .flush()
+    .await
+    .map_err(|e| Fail::IO(tmp.clone(), e.kind()))?;
+
   rename(&tmp, &canonical)
     .await
     .map_err(|e| Fail::IO(canonical.to_owned(), e.kind()))?;

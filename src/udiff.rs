@@ -2,6 +2,7 @@ use {
   difflib::{sequencematcher::Opcode, sequencematcher::SequenceMatcher},
   std::{
     collections::HashSet,
+    ffi::{OsStr, OsString},
     fmt::{self, Display, Formatter},
   },
 };
@@ -121,17 +122,28 @@ pub fn apply_patches(patches: Vec<Patch>, ranges: &HashSet<DiffRange>, before: &
 pub fn udiff(
   ranges: Option<&HashSet<DiffRange>>,
   unified: usize,
-  name: &str,
+  name: &OsStr,
   before: &str,
   after: &str,
-) -> String {
+) -> OsString {
   let before = before.split_inclusive('\n').collect::<Vec<_>>();
   let after = after.split_inclusive('\n').collect::<Vec<_>>();
 
-  let mut ret = String::new();
-  ret.push_str(&format!("diff --git {name} {name}\n"));
-  ret.push_str(&format!("--- {name}\n"));
-  ret.push_str(&format!("+++ {name}\n"));
+  let mut ret = OsString::new();
+
+  ret.push("diff --git ");
+  ret.push(name);
+  ret.push(" ");
+  ret.push(name);
+  ret.push("\n");
+
+  ret.push("--- ");
+  ret.push(name);
+  ret.push("\n");
+
+  ret.push("+++ ");
+  ret.push(name);
+  ret.push("\n");
 
   let mut matcher = SequenceMatcher::new(&before, &after);
   for group in &matcher.get_grouped_opcodes(unified) {
@@ -141,25 +153,27 @@ pub fn udiff(
         continue;
       }
     };
-    ret.push_str(&format!("{range}\n"));
+
+    ret.push(&format!("{range}\n"));
+
     for code in group {
       if code.tag == "equal" {
-        for line_ref in before.iter().take(code.first_end).skip(code.first_start) {
-          let line = *line_ref;
-          ret.push_str(&format!(" {line}"));
+        for line in before.iter().take(code.first_end).skip(code.first_start) {
+          ret.push(" ");
+          ret.push(*line);
         }
         continue;
       }
       if code.tag == "replace" || code.tag == "delete" {
-        for line_ref in before.iter().take(code.first_end).skip(code.first_start) {
-          let line = *line_ref;
-          ret.push_str(&format!("-{line}"));
+        for line in before.iter().take(code.first_end).skip(code.first_start) {
+          ret.push("-");
+          ret.push(*line);
         }
       }
       if code.tag == "replace" || code.tag == "insert" {
-        for line_ref in after.iter().take(code.second_end).skip(code.second_start) {
-          let line = *line_ref;
-          ret.push_str(&format!("+{line}"));
+        for line in after.iter().take(code.second_end).skip(code.second_start) {
+          ret.push("+");
+          ret.push(*line);
         }
       }
     }

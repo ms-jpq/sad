@@ -5,6 +5,7 @@ mod udiff_spec {
   use regex::Regex;
   use std::{
     collections::HashSet,
+    ffi::OsStr,
     fs::{read_dir, read_to_string},
     path::PathBuf,
   };
@@ -100,7 +101,8 @@ mod udiff_spec {
           }
         })
         .collect::<Vec<_>>();
-      let imp = udiff(None, unified, "", &before, &after)
+      let imp = udiff(None, unified, &OsStr::new(""), &before, &after)
+        .to_string_lossy()
         .split_inclusive("\n")
         .skip(3)
         .map(|s| {

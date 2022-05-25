@@ -4,7 +4,7 @@ use {
     future::{select, try_join, Either},
     pin_mut,
   },
-  std::{collections::HashMap, path::PathBuf, process::Stdio, sync::Arc},
+  std::{collections::HashMap, ffi::OsString, path::PathBuf, process::Stdio, sync::Arc},
   tokio::{
     io::{AsyncWrite, AsyncWriteExt, BufWriter},
     process::Command,
@@ -24,7 +24,7 @@ pub async fn stream_into(
   abort: &Arc<Abort>,
   path: PathBuf,
   writer: &mut BufWriter<impl AsyncWrite + Send + Unpin>,
-  mut stream: Receiver<String>,
+  mut stream: Receiver<OsString>,
 ) {
   loop {
     let f1 = abort.notified();
@@ -33,7 +33,16 @@ pub async fn stream_into(
     pin_mut!(f2);
     match select(f1, f2).await {
       Either::Right((Some(print), _)) => {
-        if let Err(err) = writer.write_all(print.as_bytes()).await {
+        #[cfg(target_family = "unix")]
+        let bytes = {
+          use std::os::unix::ffi::OsStrExt;
+          print.as_bytes()
+        };
+        #[cfg(target_family = "windows")]
+        let tmp = print.to_string_lossy();
+        #[cfg(target_family = "windows")]
+        let bytes = tmp.as_bytes();
+        if let Err(err) = writer.write_all(bytes).await {
           abort.send(Fail::IO(path, err.kind())).await;
           break;
         }
@@ -46,7 +55,7 @@ pub async fn stream_into(
 pub fn stream_subproc(
   abort: &Arc<Abort>,
   cmd: SubprocCommand,
-  stream: Receiver<String>,
+  stream: Receiver<OsString>,
 ) -> JoinHandle<()> {
   let abort = abort.clone();
 

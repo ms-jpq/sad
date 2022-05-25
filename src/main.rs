@@ -23,7 +23,7 @@ use {
   },
   input::{stream_in, Payload},
   output::stream_out,
-  std::{convert::Into, process::exit, sync::Arc, thread::available_parallelism},
+  std::{convert::Into, ffi::OsString, process::exit, sync::Arc, thread::available_parallelism},
   tokio::{
     runtime::Builder,
     sync::mpsc::{self, Receiver},
@@ -37,9 +37,9 @@ fn stream_trans(
   threads: usize,
   opts: &Options,
   stream: &MPMCR<Payload>,
-) -> (JoinHandle<()>, Receiver<String>) {
+) -> (JoinHandle<()>, Receiver<OsString>) {
   let a_opts = Arc::new(opts.clone());
-  let (tx, rx) = mpsc::channel::<String>(1);
+  let (tx, rx) = mpsc::channel::<OsString>(1);
 
   let handles = (1..=threads * 2)
     .map(|_| {

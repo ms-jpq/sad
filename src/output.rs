@@ -5,7 +5,7 @@ use {
     subprocess::{stream_into, stream_subproc},
     types::{Abort, Fail},
   },
-  std::{path::PathBuf, sync::Arc},
+  std::{ffi::OsString, path::PathBuf, sync::Arc},
   tokio::{
     io::{self, AsyncWriteExt, BufWriter},
     sync::mpsc::Receiver,
@@ -13,7 +13,7 @@ use {
   },
 };
 
-fn stream_stdout(abort: &Arc<Abort>, stream: Receiver<String>) -> JoinHandle<()> {
+fn stream_stdout(abort: &Arc<Abort>, stream: Receiver<OsString>) -> JoinHandle<()> {
   let abort = abort.clone();
   let mut stdout = BufWriter::new(io::stdout());
 
@@ -27,7 +27,7 @@ fn stream_stdout(abort: &Arc<Abort>, stream: Receiver<String>) -> JoinHandle<()>
   })
 }
 
-pub fn stream_out(abort: &Arc<Abort>, opts: &Options, stream: Receiver<String>) -> JoinHandle<()> {
+pub fn stream_out(abort: &Arc<Abort>, opts: &Options, stream: Receiver<OsString>) -> JoinHandle<()> {
   match (&opts.action, &opts.printer) {
     (Action::FzfPreview(fzf_p, fzf_a), _) => {
       stream_fzf_proc(abort, fzf_p.clone(), fzf_a.clone(), stream)

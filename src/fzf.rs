@@ -8,6 +8,7 @@ use {
   std::{
     collections::HashMap,
     env::{self, current_exe},
+    ffi::OsString,
     path::PathBuf,
     process::Stdio,
     sync::Arc,
@@ -50,7 +51,7 @@ async fn reset_term() -> Result<(), Fail> {
   Err(Fail::IO(PathBuf::from("reset"), ErrorKind::NotFound))
 }
 
-fn run_fzf(abort: &Arc<Abort>, cmd: SubprocCommand, stream: Receiver<String>) -> JoinHandle<()> {
+fn run_fzf(abort: &Arc<Abort>, cmd: SubprocCommand, stream: Receiver<OsString>) -> JoinHandle<()> {
   let abort = abort.clone();
 
   spawn(async move {
@@ -129,7 +130,7 @@ pub fn stream_fzf_proc(
   abort: &Arc<Abort>,
   bin: PathBuf,
   args: Vec<String>,
-  stream: Receiver<String>,
+  stream: Receiver<OsString>,
 ) -> JoinHandle<()> {
   let execute = format!("abort+execute:{}\x04{{+f}}", Mode::PATCH);
   let mut arguments = vec![
