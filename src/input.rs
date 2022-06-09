@@ -33,7 +33,7 @@ pub enum Payload {
 struct DiffLine(PathBuf, DiffRange);
 
 fn p_line(line: &str) -> Result<DiffLine, Fail> {
-  let f = Fail::ArgumentError(String::new());
+  let f = Fail::ArgumentError(Default::default());
   let preg = "\n\n\n\n@@ -(\\d+),(\\d+) \\+(\\d+),(\\d+) @@$";
   let re = Regex::new(preg).map_err(Fail::RegexError)?;
   let captures = re.captures(line).ok_or_else(|| f.clone())?;
@@ -76,10 +76,10 @@ async fn read_patches(path_file: &Path) -> Result<HashMap<PathBuf, HashSet<DiffR
     .await
     .map_err(|e| Fail::IO(path_file.to_owned(), e.kind()))?;
   let mut reader = BufReader::new(fd);
-  let mut acc = HashMap::<PathBuf, HashSet<DiffRange>>::new();
+  let mut acc = HashMap::<_, HashSet<_>>::new();
 
   loop {
-    let mut buf = Vec::new();
+    let mut buf = Default::default();
     let n = reader
       .read_until(b'\0', &mut buf)
       .await
@@ -163,7 +163,7 @@ fn stream_stdin(abort: &Arc<Abort>, use_nul: bool) -> (JoinHandle<()>, Receiver<
       let mut seen = HashSet::new();
 
       loop {
-        let mut buf = Vec::new();
+        let mut buf = Default::default();
         let f1 = abort.notified();
         let f2 = reader.read_until(delim, &mut buf);
 

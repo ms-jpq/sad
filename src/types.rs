@@ -56,7 +56,7 @@ pub struct Abort {
 impl Abort {
   pub fn new() -> Arc<Self> {
     Arc::new(Self {
-      errors: Mutex::new(Vec::new()),
+      errors: Mutex::new(Default::default()),
       rx: Notify::new(),
     })
   }

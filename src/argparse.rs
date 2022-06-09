@@ -200,7 +200,7 @@ fn p_fzf(fzf: &Option<String>) -> Option<(PathBuf, Vec<String>)> {
     (Ok(p), true, true) => match fzf.as_deref() {
       Some("never") => None,
       Some(val) => Some((p, split(val).unwrap_or_default())),
-      None => Some((p, Vec::new())),
+      None => Some((p, Default::default())),
     },
     _ => None,
   }
@@ -210,7 +210,7 @@ fn p_pager(pager: &Option<String>) -> Option<SubprocCommand> {
   let norm = || which("delta").or_else(|_| which("diff-so-fancy")).ok();
 
   let (prog, arguments) = match pager.as_deref() {
-    Some("never") => (None, Vec::new()),
+    Some("never") => (None, Default::default()),
     Some(val) => {
       let mut sh = split(val)
         .unwrap_or_else(|| vec![val.to_owned()])

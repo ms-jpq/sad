@@ -47,7 +47,7 @@ pub async fn displace(opts: &Arc<Options>, payload: Payload) -> Result<OsString,
   let after = spawn_blocking(move || o.engine.replace(&b)).await?;
 
   if *before == after {
-    Ok(OsString::new())
+    Ok(Default::default())
   } else {
     let print = match (&opts.action, payload) {
       (Action::Preview, Payload::Entire(_)) => {
