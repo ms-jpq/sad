@@ -37,7 +37,7 @@ _TOOL_CHAINS = {
 
 _DPKG_ARCH = {
     "x86_64": "amd64",
-    "aarch64": "aarch64",
+    "aarch64": "arm64",
 }
 
 UNAME = uname()
