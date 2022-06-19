@@ -23,7 +23,13 @@ use {
   },
   input::{stream_in, Payload},
   output::stream_out,
-  std::{convert::Into, ffi::OsString, process::exit, sync::Arc, thread::available_parallelism},
+  std::{
+    convert::Into,
+    ffi::OsString,
+    process::{ExitCode, Termination},
+    sync::Arc,
+    thread::available_parallelism,
+  },
   tokio::{
     runtime::Builder,
     sync::mpsc::{self, Receiver},
@@ -93,7 +99,7 @@ async fn run(abort: &Arc<Abort>, threads: usize) -> Result<(), Fail> {
   Ok(())
 }
 
-fn main() {
+fn main() -> impl Termination {
   let threads = available_parallelism().map(Into::into).unwrap_or(4);
   let rt = Builder::new_multi_thread()
     .enable_io()
@@ -113,13 +119,13 @@ fn main() {
   });
 
   match errors[..] {
-    [] => exit(0),
-    [Fail::Interrupt] => exit(130),
+    [] => ExitCode::SUCCESS,
+    [Fail::Interrupt] => ExitCode::from(130),
     _ => {
       for err in errors {
         eprintln!("{}", Colour::Red.paint(format!("{}", err)));
       }
-      exit(1)
+      ExitCode::FAILURE
     }
   }
 }

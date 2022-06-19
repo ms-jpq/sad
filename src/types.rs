@@ -1,4 +1,5 @@
 use {
+  futures::lock::Mutex,
   regex::Error as RegexError,
   std::{
     clone::Clone,
@@ -8,10 +9,7 @@ use {
     path::PathBuf,
     sync::Arc,
   },
-  tokio::{
-    sync::{Mutex, Notify},
-    task::JoinError,
-  },
+  tokio::{sync::Notify, task::JoinError},
 };
 
 #[derive(Clone, Debug)]
