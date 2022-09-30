@@ -27,7 +27,11 @@ fn stream_stdout(abort: &Arc<Abort>, stream: Receiver<OsString>) -> JoinHandle<(
   })
 }
 
-pub fn stream_out(abort: &Arc<Abort>, opts: &Options, stream: Receiver<OsString>) -> JoinHandle<()> {
+pub fn stream_out(
+  abort: &Arc<Abort>,
+  opts: &Options,
+  stream: Receiver<OsString>,
+) -> JoinHandle<()> {
   match (&opts.action, &opts.printer) {
     (Action::FzfPreview(fzf_p, fzf_a), _) => {
       stream_fzf_proc(abort, fzf_p.clone(), fzf_a.clone(), stream)

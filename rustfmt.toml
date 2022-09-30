@@ -1,1 +1,7 @@
-tab_spaces = 2
+format_code_in_doc_comments = true
+format_macro_matchers       = true
+format_strings              = true
+imports_granularity         = "One"
+normalize_doc_attributes    = true
+tab_spaces                  = 2
+unstable_features           = true
