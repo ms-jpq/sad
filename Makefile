@@ -4,7 +4,7 @@ MAKEFLAGS += --warn-undefined-variables
 SHELL := bash
 .DELETE_ON_ERROR:
 .ONESHELL:
-.SHELLFLAGS := -Eeuo pipefail -O dotglob -O failglob -O globstar -c
+.SHELLFLAGS := -Eeuo pipefail -O dotglob -O nullglob -O failglob -O globstar -c
 
 .DEFAULT_GOAL := help
 
@@ -17,10 +17,11 @@ VENV := bin
 endif
 
 clean:
-	rm -rf --
+	shopt -u failglob
+	rm -rf -- artifacts/*.{zip,deb} .mypy_cache/ target/ temp/
 
 clobber: clean
-	rm -rf --
+	rm -rf -- .venv/
 
 .venv/$(VENV)/pip:
 	python3 -m venv -- .venv
