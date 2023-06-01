@@ -159,7 +159,7 @@ fn p_aho_corasick(pattern: &str, flags: Vec<String>) -> Result<AhoCorasick, Fail
       "I" => ac.ascii_case_insensitive(false),
       _ => {
         return Err(Fail::ArgumentError(format!(
-          "Invaild regex flag, see `--help` :: {flag}"
+          "Invalid regex flag, see `--help` :: {flag}"
         )))
       }
     };
@@ -183,7 +183,7 @@ fn p_regex(pattern: &str, flags: Vec<String>) -> Result<Regex, Fail> {
       "X" => re.ignore_whitespace(false),
       _ => {
         return Err(Fail::ArgumentError(format!(
-          "Invaild regex flag, see `--help` :: {flag}"
+          "Invalid regex flag, see `--help` :: {flag}"
         )))
       }
     };
