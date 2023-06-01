@@ -11,9 +11,9 @@ SHELL := bash
 .PHONY: clean clobber
 
 ifeq ($(OS),Windows_NT)
-	VENV=Scripts
+VENV := Scripts
 else
-	VENV=bin
+VENV := bin
 endif
 
 clean:
@@ -22,34 +22,33 @@ clean:
 clobber: clean
 	rm -rf --
 
-.venv/$VENV/pip:
+.venv/$(VENV)/pip:
 	python3 -m venv -- .venv
 
-.venv/$VENV/mypy: .venv/$VENV/pip
+.venv/$(VENV)/mypy: .venv/$(VENV)/pip
 	'$<' install --upgrade --requirement requirements.txt -- mypy types-PyYAML types-toml types-Jinja2
-
 
 .PHONY: lint
 
-lint: .venv/$VENV/mypy
+lint: .venv/$(VENV)/mypy
 	'$<' -- .
 
 .PHONY: deps
 
-deps: .venv/$VENV/mypy
-	.venv/$VENV/python3 ./build.py deps
+deps: .venv/$(VENV)/mypy
+	.venv/$(VENV)/python3 ./build.py deps
 
 .PHONY: build
 
-build: .venv/$VENV/mypy
-	.venv/$VENV/python3 ./build.py build
+build: .venv/$(VENV)/mypy
+	.venv/$(VENV)/python3 ./build.py build
 
 .PHONY: release
 
-release: .venv/$VENV/mypy
-	.venv/$VENV/python3 ./build.py buildr -- "$$TRIPLE"
+release: .venv/$(VENV)/mypy
+	.venv/$(VENV)/python3 ./build.py buildr -- "$$TRIPLE"
 
 .PHONY: ci
 
-ci: .venv/$VENV/mypy
-	.venv/$VENV/python3 ./ci/release.py
+ci: .venv/$(VENV)/mypy
+	.venv/$(VENV)/python3 ./ci/release.py
