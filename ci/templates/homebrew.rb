@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class Sad < Formula
   desc '{{ desc }}'
   homepage '{{ repo }}'

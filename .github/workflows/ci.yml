@@ -13,16 +13,14 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Setup Python
-        uses: actions/setup-python@v2
-
-      - name: Pip Packages
-        run: pip install -U mypy types-PyYAML types-toml types-Jinja2
+        uses: actions/setup-python@v3
 
       - name: Lint
-        run: mypy -- .
+        run: |-
+          make lint
 
   build:
     strategy:
@@ -59,19 +57,18 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Setup Python
-        uses: actions/setup-python@v2
-
-      - name: Pip Packages
-        run: pip install --requirement ./requirements.txt
+        uses: actions/setup-python@v3
 
       - name: Deps
-        run: python3 build.py deps
+        run: |-
+          make deps
 
       - name: Build
-        run: python3 build.py buildr -- ${{ matrix.jobs.triple }}
+        run: |-
+          make release TRIPLE=${{ matrix.jobs.triple }}
 
       - name: Upload Bin
         uses: actions/upload-artifact@v3
