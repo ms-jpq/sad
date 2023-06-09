@@ -81,7 +81,7 @@ jobs:
 
       - name: Build
         run: |-
-          make releae TRIPLE=${{ matrix.jobs.triple }}
+          make release TRIPLE=${{ matrix.jobs.triple }}
 
       - name: Upload Bin
         uses: actions/upload-artifact@v3
