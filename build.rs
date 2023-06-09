@@ -7,7 +7,15 @@ use std::{
 };
 
 fn uuid() -> Result<String, Box<dyn Error>> {
-  let proc = Command::new("uuidgen").stdout(Stdio::piped()).output()?;
+  #[cfg(target_family = "windows")]
+  let py = "python.exe";
+  #[cfg(target_family = "unix")]
+  let py = "python3";
+  let proc = Command::new(py)
+    .arg("-c")
+    .arg("import uuid; print(uuid.uuid4())")
+    .stdout(Stdio::piped())
+    .output()?;
   assert!(proc.status.success());
   let uuid = String::from_utf8(proc.stdout)?.trim().into();
   Ok(uuid)
