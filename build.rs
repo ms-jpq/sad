@@ -7,9 +7,9 @@ use std::{
 };
 
 fn uuid() -> Result<String, Box<dyn Error>> {
-  let out = Command::new("uuidgen").stdout(Stdio::piped()).output()?;
-  assert!(out.status.success());
-  let uuid = String::from_utf8(out.stdout)?.trim().into();
+  let proc = Command::new("uuidgen").stdout(Stdio::piped()).output()?;
+  assert!(proc.status.success());
+  let uuid = String::from_utf8(proc.stdout)?.trim().into();
   Ok(uuid)
 }
 
@@ -19,5 +19,6 @@ fn main() -> Result<(), Box<dyn Error>> {
   println!("cargo:rustc-env=SAD_PREVIEW_UUID={uuid}", uuid = uuid()?);
 
   println!("cargo:rustc-env=SAD_PATCH_UUID={uuid}", uuid = uuid()?);
+
   Ok(())
 }

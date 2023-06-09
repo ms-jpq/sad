@@ -17,6 +17,13 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v3
 
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          default: true
+          override: true
+
       - name: Lint
         run: |-
           make lint
@@ -60,6 +67,13 @@ jobs:
 
       - name: Setup Python
         uses: actions/setup-python@v3
+
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          default: true
+          override: true
 
       - name: Deps
         run: |-
