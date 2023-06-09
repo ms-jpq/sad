@@ -1,6 +1,6 @@
 #[cfg(test)]
-mod udiff_spec {
-  use super::super::udiff::*;
+mod spec {
+  use super::super::udiff::{apply_patches, patches, pure_diffs, udiff};
   use difflib::unified_diff;
   use regex::Regex;
   use std::{
@@ -51,7 +51,7 @@ mod udiff_spec {
       for re in &regexes {
         let before = text.clone();
         let after = re.0.replace_all(text.as_str(), re.1.as_str());
-        acc.push((before, after.to_string()))
+        acc.push((before, after.to_string()));
       }
     }
     acc
@@ -59,36 +59,33 @@ mod udiff_spec {
 
   #[test]
   fn patch() {
-    let mut unified = 0;
     let diffs = diffs();
-    for (before, after) in diffs {
+    for (unified, (before, after)) in diffs.into_iter().enumerate() {
       let ranges = pure_diffs(unified, &before, &after);
       let rangeset = ranges.into_iter().collect::<HashSet<_>>();
 
-      let patches = patches(unified, &before, &after);
-      let patched = apply_patches(patches, &rangeset, &before);
+      let ps = patches(unified, &before, &after);
+      let patched = apply_patches(ps, &rangeset, &before);
 
       let canon = after
-        .split_inclusive("\n")
+        .split_inclusive('\n')
         .map(String::from)
         .collect::<Vec<_>>();
       let imp = patched
-        .split_inclusive("\n")
+        .split_inclusive('\n')
         .map(String::from)
         .collect::<Vec<_>>();
       assert_eq!(imp, canon);
       assert_eq!(patched, after);
-      unified += 1;
     }
   }
 
   #[test]
   fn unified() {
-    let mut unified = 1;
     let diffs = diffs();
-    for (before, after) in diffs {
-      let bb = before.split_inclusive("\n").collect::<Vec<_>>();
-      let aa = after.split_inclusive("\n").collect::<Vec<_>>();
+    for (unified, (before, after)) in diffs.into_iter().enumerate() {
+      let bb = before.split_inclusive('\n').collect::<Vec<_>>();
+      let aa = after.split_inclusive('\n').collect::<Vec<_>>();
       let canon = unified_diff(&bb, &aa, "", "", "", "", unified)
         .iter()
         .skip(2)
@@ -96,13 +93,13 @@ mod udiff_spec {
           if s.starts_with("@@") {
             "@@".to_owned()
           } else {
-            s.to_owned()
+            s.clone()
           }
         })
         .collect::<Vec<_>>();
       let imp = udiff(None, unified, Default::default(), &before, &after)
         .to_string_lossy()
-        .split_inclusive("\n")
+        .split_inclusive('\n')
         .skip(3)
         .map(|s| {
           if s.starts_with("@@") {
@@ -114,7 +111,6 @@ mod udiff_spec {
         .collect::<Vec<_>>();
 
       assert_eq!(imp, canon);
-      unified += 1;
     }
   }
 }

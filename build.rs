@@ -1,5 +1,5 @@
 #![deny(clippy::all, clippy::cargo, clippy::nursery, clippy::pedantic)]
-#![allow(clippy::cargo_common_metadata)]
+#![allow(clippy::cargo_common_metadata, clippy::wildcard_dependencies)]
 
 use uuid::Uuid;
 

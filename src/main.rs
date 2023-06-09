@@ -1,5 +1,9 @@
 #![deny(clippy::all, clippy::cargo, clippy::nursery, clippy::pedantic)]
-#![allow(clippy::cargo_common_metadata)]
+#![allow(
+  clippy::cargo_common_metadata,
+  clippy::multiple_crate_versions,
+  clippy::wildcard_dependencies
+)]
 
 mod argparse;
 mod displace;
@@ -123,7 +127,7 @@ fn main() -> impl Termination {
     [Fail::Interrupt] => ExitCode::from(130),
     _ => {
       for err in errors {
-        eprintln!("{}", Colour::Red.paint(format!("{}", err)));
+        eprintln!("{}", Colour::Red.paint(format!("{err}")));
       }
       ExitCode::FAILURE
     }

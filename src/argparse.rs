@@ -7,6 +7,7 @@ use {
   std::{
     collections::HashMap,
     env::{args_os, current_dir, var_os},
+    io::{stderr, stdout, IsTerminal},
     path::PathBuf,
   },
   which::which,
@@ -164,7 +165,7 @@ fn p_aho_corasick(pattern: &str, flags: Vec<String>) -> Result<AhoCorasick, Fail
       }
     };
   }
-  Ok(ac.build(&[pattern]))
+  Ok(ac.build([pattern])?)
 }
 
 fn p_regex(pattern: &str, flags: Vec<String>) -> Result<Regex, Fail> {
@@ -192,15 +193,11 @@ fn p_regex(pattern: &str, flags: Vec<String>) -> Result<Regex, Fail> {
 }
 
 fn p_fzf(fzf: &Option<String>) -> Option<(PathBuf, Vec<String>)> {
-  match (
-    which("fzf"),
-    atty::is(atty::Stream::Stdout),
-    atty::is(atty::Stream::Stderr),
-  ) {
+  match (which("fzf"), stdout().is_terminal(), stderr().is_terminal()) {
     (Ok(p), true, true) => match fzf.as_deref() {
       Some("never") => None,
       Some(val) => Some((p, split(val).unwrap_or_default())),
-      None => Some((p, Default::default())),
+      None => Some((p, Vec::default())),
     },
     _ => None,
   }
@@ -210,7 +207,7 @@ fn p_pager(pager: &Option<String>) -> Option<SubprocCommand> {
   let norm = || which("delta").or_else(|_| which("diff-so-fancy")).ok();
 
   let (prog, arguments) = match pager.as_deref() {
-    Some("never") => (None, Default::default()),
+    Some("never") => (None, Vec::default()),
     Some(val) => {
       let mut sh = split(val)
         .unwrap_or_else(|| vec![val.to_owned()])
@@ -269,10 +266,7 @@ pub fn parse_opts(mode: Mode, args: Arguments) -> Result<Options, Fail> {
     _ => Action::Preview,
   };
 
-  let printer = match p_pager(&args.pager) {
-    Some(cmd) => Printer::Pager(cmd),
-    None => Printer::Stdout,
-  };
+  let printer = p_pager(&args.pager).map_or(Printer::Stdout, Printer::Pager);
 
   Ok(Options {
     cwd: current_dir().ok(),

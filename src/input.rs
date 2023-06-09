@@ -13,7 +13,7 @@ use {
   std::{
     collections::{HashMap, HashSet},
     ffi::OsString,
-    io::ErrorKind,
+    io::{self, ErrorKind, IsTerminal},
     path::{Path, PathBuf},
     sync::Arc,
   },
@@ -33,7 +33,7 @@ pub enum Payload {
 struct DiffLine(PathBuf, DiffRange);
 
 fn p_line(line: &str) -> Result<DiffLine, Fail> {
-  let f = Fail::ArgumentError(Default::default());
+  let f = Fail::ArgumentError(String::default());
   let preg = "\n\n\n\n@@ -(\\d+),(\\d+) \\+(\\d+),(\\d+) @@$";
   let re = Regex::new(preg).map_err(Fail::RegexError)?;
   let captures = re.captures(line).ok_or_else(|| f.clone())?;
@@ -79,7 +79,7 @@ async fn read_patches(path_file: &Path) -> Result<HashMap<PathBuf, HashSet<DiffR
   let mut acc = HashMap::<_, HashSet<_>>::new();
 
   loop {
-    let mut buf = Default::default();
+    let mut buf = Vec::default();
     let n = reader
       .read_until(b'\0', &mut buf)
       .await
@@ -151,7 +151,7 @@ fn stream_stdin(abort: &Arc<Abort>, use_nul: bool) -> (JoinHandle<()>, Receiver<
 
   let abort = abort.clone();
   let handle = spawn(async move {
-    if atty::is(atty::Stream::Stdin) {
+    if io::stdin().is_terminal() {
       abort
         .send(Fail::ArgumentError(
           "/dev/stdin connected to tty".to_owned(),
@@ -163,7 +163,7 @@ fn stream_stdin(abort: &Arc<Abort>, use_nul: bool) -> (JoinHandle<()>, Receiver<
       let mut seen = HashSet::new();
 
       loop {
-        let mut buf = Default::default();
+        let mut buf = Vec::default();
         let f1 = abort.notified();
         let f2 = reader.read_until(delim, &mut buf);
 

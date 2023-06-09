@@ -31,8 +31,18 @@ clobber: clean
 
 .PHONY: lint
 
-lint: .venv/$(VENV)/mypy
+.PHONY: mypy
+
+mypy: .venv/$(VENV)/mypy
 	'$<' -- .
+
+.PHONY: clippy
+
+clippy:
+	cargo clippy --all-targets --all-features
+
+
+lint: mypy clippy
 
 .PHONY: deps
 
@@ -41,7 +51,7 @@ deps: .venv/$(VENV)/mypy
 
 .PHONY: build
 
-build: .venv/$(VENV)/mypy
+build: lint test
 	.venv/$(VENV)/python3 ./build.py build
 
 .PHONY: release
@@ -53,3 +63,8 @@ release: .venv/$(VENV)/mypy
 
 ci: .venv/$(VENV)/mypy
 	.venv/$(VENV)/python3 ./ci/release.py
+
+.PHONY: test
+
+test:
+	cargo test --locked

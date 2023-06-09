@@ -14,8 +14,8 @@ use {
 impl Engine {
   fn replace(&self, before: &str) -> String {
     match self {
-      Engine::AhoCorasick(ac, replace) => ac.replace_all(before, &[replace.as_str()]),
-      Engine::Regex(re, replace) => re.replace_all(before, replace.as_str()).into(),
+      Self::AhoCorasick(ac, replace) => ac.replace_all(before, &[replace.as_str()]),
+      Self::Regex(re, replace) => re.replace_all(before, replace.as_str()).into(),
     }
   }
 }
@@ -23,7 +23,7 @@ impl Engine {
 impl Payload {
   const fn path(&self) -> &PathBuf {
     match self {
-      Payload::Entire(path) | Payload::Piecewise(path, _) => path,
+      Self::Entire(path) | Self::Piecewise(path, _) => path,
     }
   }
 }
@@ -47,7 +47,7 @@ pub async fn displace(opts: &Arc<Options>, payload: Payload) -> Result<OsString,
   let after = spawn_blocking(move || o.engine.replace(&b)).await?;
 
   if *before == after {
-    Ok(Default::default())
+    Ok(OsString::default())
   } else {
     let print = match (&opts.action, payload) {
       (Action::Preview, Payload::Entire(_)) => {
@@ -58,7 +58,7 @@ pub async fn displace(opts: &Arc<Options>, payload: Payload) -> Result<OsString,
       }
       (Action::Commit, Payload::Entire(_)) => {
         spit(&path, &slurped.meta, &after).await?;
-        let mut out = OsString::from(name);
+        let mut out = name;
         out.push("\n");
         out
       }
@@ -70,7 +70,7 @@ pub async fn displace(opts: &Arc<Options>, payload: Payload) -> Result<OsString,
         .await?;
 
         spit(&path, &slurped.meta, &after).await?;
-        let mut out = OsString::from(name);
+        let mut out = name;
         out.push("\n");
         out
       }

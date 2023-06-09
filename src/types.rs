@@ -1,4 +1,5 @@
 use {
+  aho_corasick::BuildError,
   futures::lock::Mutex,
   regex::Error as RegexError,
   std::{
@@ -17,6 +18,7 @@ pub enum Fail {
   Join,
   Interrupt,
   RegexError(RegexError),
+  BuildError(BuildError),
   ArgumentError(String),
   IO(PathBuf, ErrorKind),
   BadExit(PathBuf, i32),
@@ -46,6 +48,12 @@ impl From<RegexError> for Fail {
   }
 }
 
+impl From<BuildError> for Fail {
+  fn from(e: BuildError) -> Self {
+    Self::BuildError(e)
+  }
+}
+
 pub struct Abort {
   errors: Mutex<Vec<Fail>>,
   rx: Notify,
@@ -54,7 +62,7 @@ pub struct Abort {
 impl Abort {
   pub fn new() -> Arc<Self> {
     Arc::new(Self {
-      errors: Mutex::new(Default::default()),
+      errors: Mutex::new(Vec::default()),
       rx: Notify::new(),
     })
   }

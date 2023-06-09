@@ -66,7 +66,6 @@ def _deps() -> None:
 
 
 def _compile(triple: str) -> None:
-    check_call(("cargo", "test", "--locked"), cwd=_TOP_LEVEL)
     check_call(
         ("cargo", "build", "--locked", "--release", "--target", triple),
         cwd=_TOP_LEVEL,

@@ -3,7 +3,7 @@ authors     = ["git@bigly.dog"]
 description = "Space Age seD | https://github.com/ms-jpq/sad"
 edition     = "2021"
 name        = "sad"
-version     = "0.4.22"
+version     = "0.4.23"
 
 
 [build-dependencies]
@@ -13,7 +13,6 @@ uuid = { version = "1", features = ["v4"] }
 aho-corasick  = { version = "*" }
 ansi_term     = { version = "*" }
 async-channel = { version = "*" }
-atty          = { version = "*" }
 clap          = { version = "*", features = ["derive", "wrap_help"] }
 difflib       = { version = "*" }
 futures       = { version = "*" }
