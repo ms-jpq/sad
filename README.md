@@ -149,7 +149,7 @@ wget 'https://github.com/ms-jpq/sad/releases/latest/download/x86_64-unknown-linu
 ### Homebrew:
 
 ```
-brew install ms-jpq/sad/sad
+brew install sad
 ```
 
 ### Scoop:
