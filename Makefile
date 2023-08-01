@@ -18,10 +18,10 @@ endif
 
 clean:
 	shopt -u failglob
-	rm -rf -- artifacts/*.{zip,deb} .mypy_cache/ target/ temp/
+	rm -v -rf -- artifacts/*.{zip,deb} .mypy_cache/ target/ temp/
 
 clobber: clean
-	rm -rf -- .venv/
+	rm -v -rf -- .venv/
 
 .venv/$(VENV)/pip:
 	python3 -m venv -- .venv
