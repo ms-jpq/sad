@@ -8,7 +8,7 @@ SHELL := bash
 
 .DEFAULT_GOAL := help
 
-.PHONY: clean clobber
+.PHONY: clean clobber lint mypy clippy deps build release ci test
 
 ifeq ($(OS),Windows_NT)
 VENV := Scripts
@@ -29,42 +29,25 @@ clobber: clean
 .venv/$(VENV)/mypy: .venv/$(VENV)/pip
 	'$<' install --upgrade --requirement requirements.txt -- mypy types-PyYAML types-toml types-Jinja2
 
-.PHONY: lint
-
-.PHONY: mypy
-
 mypy: .venv/$(VENV)/mypy
 	'$<' -- .
-
-.PHONY: clippy
 
 clippy:
 	cargo clippy --all-targets --all-features
 
-
 lint: mypy clippy
-
-.PHONY: deps
 
 deps: .venv/$(VENV)/mypy
 	.venv/$(VENV)/python3 ./build.py deps
 
-.PHONY: build
-
 build: lint test
 	.venv/$(VENV)/python3 ./build.py build
-
-.PHONY: release
 
 release: .venv/$(VENV)/mypy
 	.venv/$(VENV)/python3 ./build.py buildr -- "$$TRIPLE"
 
-.PHONY: ci
-
 ci: .venv/$(VENV)/mypy
 	.venv/$(VENV)/python3 ./ci/release.py
-
-.PHONY: test
 
 test:
 	cargo test --locked
