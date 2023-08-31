@@ -10,6 +10,8 @@ SHELL := bash
 
 .PHONY: clean clobber lint mypy clippy deps build release ci test
 
+OS ?=
+
 ifeq ($(OS),Windows_NT)
 VENV := Scripts
 else
