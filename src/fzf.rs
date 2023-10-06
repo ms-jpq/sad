@@ -82,7 +82,7 @@ fn run_fzf(abort: &Arc<Abort>, cmd: SubprocCommand, stream: Receiver<OsString>) 
         let p2 = cmd.prog.clone();
         let handle_child = spawn(async move {
           select! {
-            _ = abort_2.notified() => {
+            () = abort_2.notified() => {
               match child.kill().await {
                 Err(err) => {
                   abort_2.send(Fail::IO(p2, err.kind())).await;
