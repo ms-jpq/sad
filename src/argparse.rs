@@ -7,6 +7,7 @@ use {
   std::{
     collections::HashMap,
     env::{args_os, current_dir, var_os},
+    ffi::OsString,
     io::{stderr, stdout, IsTerminal},
     path::PathBuf,
   },
@@ -84,22 +85,24 @@ pub struct Arguments {
   pub unified: Option<usize>,
 }
 
+fn parse_fzf_mode(argv: &OsString) -> Option<Mode> {
+  let exec = argv
+    .to_str()
+    .unwrap_or_default()
+    .split('\x04')
+    .collect::<Vec<_>>();
+  match exec[..] {
+    [Mode::PREVIEW, path] => Some(Mode::Preview(PathBuf::from(path))),
+    [Mode::PATCH, path] => Some(Mode::Patch(PathBuf::from(path))),
+    _ => None,
+  }
+}
+
 pub fn parse_args() -> (Mode, Arguments) {
   let args = args_os().collect::<Vec<_>>();
   match (
     args.get(1).and_then(|a| a.to_str()),
-    args.get(2).and_then(|a| {
-      let exec = a
-        .to_str()
-        .unwrap_or_default()
-        .split('\x04')
-        .collect::<Vec<_>>();
-      match exec[..] {
-        [Mode::PREVIEW, path] => Some(Mode::Preview(PathBuf::from(path))),
-        [Mode::PATCH, path] => Some(Mode::Patch(PathBuf::from(path))),
-        _ => None,
-      }
-    }),
+    args.get(2).and_then(parse_fzf_mode),
     var_os(Mode::ARGV).and_then(|a| a.into_string().ok()),
   ) {
     (Some("-c"), Some(mode), Some(arg_list)) => {

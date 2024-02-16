@@ -9,10 +9,10 @@ from platform import uname
 from posixpath import normcase
 from shutil import copy2, rmtree, which
 from subprocess import check_call
+from tomllib import loads
 from zipfile import ZipFile
 
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
-from toml import loads
 
 _TOP_LEVEL = Path(__file__).resolve().parent
 _ARTS = _TOP_LEVEL / "artifacts"

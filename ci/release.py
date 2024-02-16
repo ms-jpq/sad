@@ -11,12 +11,12 @@ from pathlib import Path
 from subprocess import check_call
 from sys import stderr
 from time import sleep
+from tomllib import loads
 from typing import Iterator
 from urllib.error import HTTPError
 from urllib.request import build_opener
 
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
-from toml import load as load_toml
 from yaml import safe_load
 
 
@@ -45,7 +45,7 @@ def _load_values() -> _Project:
     tag = environ["GITHUB_REF"].removeprefix("refs/tags/")
     repo = environ["GITHUB_REPOSITORY"]
     repo_uri = f"https://github.com/{repo}"
-    cargo = load_toml(_TOP_LEVEL / "Cargo.toml")
+    cargo = loads((_TOP_LEVEL / "Cargo.toml").read_text())
     vals = safe_load((_TOP_LEVEL / "ci" / "vars.yml").read_text())
     project = _Project(
         **{

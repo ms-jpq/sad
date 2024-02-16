@@ -587,7 +587,7 @@ dependencies = [
 
 [[package]]
 name = "sad"
-version = "0.4.23"
+version = "0.4.24"
 dependencies = [
  "aho-corasick",
  "ansi_term",
