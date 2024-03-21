@@ -5,8 +5,8 @@ use {
     subprocess::{stream_into, stream_subproc},
     types::Fail,
   },
-  futures::stream::{Stream, StreamExt, TryStreamExt},
-  std::{ffi::OsString, marker::Unpin, path::PathBuf, sync::Arc},
+  futures::stream::Stream,
+  std::{ffi::OsString, marker::Unpin, path::PathBuf},
   tokio::io,
 };
 

@@ -20,20 +20,17 @@ use {
   ansi_term::Colour,
   argparse::{parse_args, parse_opts},
   displace::displace,
-  futures::{
-    sink::Sink,
-    stream::{BoxStream, StreamExt, TryStreamExt},
-  },
+  futures::stream::{once, select, BoxStream, TryStreamExt},
   input::stream_in,
   output::stream_sink,
   std::{
     convert::Into,
-    ffi::OsString,
+    path::PathBuf,
     process::{ExitCode, Termination},
     sync::Arc,
     thread::available_parallelism,
   },
-  tokio::runtime::Builder,
+  tokio::{runtime::Builder, signal::ctrl_c},
   types::Fail,
 };
 
@@ -49,7 +46,15 @@ async fn run(threads: usize) -> Result<(), Fail> {
       async move { displace(&opts, input).await }
     })
     .try_buffer_unordered(threads);
-  let sink = stream_sink(&opts, trans_stream);
+
+  let int = once(async {
+    ctrl_c()
+      .await
+      .map_err(|e| Fail::IO(PathBuf::new(), e.kind()))?;
+    Err::<(), Fail>(Fail::Interrupt)
+  });
+  let out_stream = stream_sink(&opts, trans_stream);
+  let fin = select(out_stream, int);
 
   Ok(())
 }
