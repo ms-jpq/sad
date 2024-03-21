@@ -10,7 +10,7 @@ use {
     path::PathBuf,
     sync::Arc,
   },
-  tokio::{sync::Notify, task::JoinError},
+  tokio::task::JoinError,
 };
 
 #[derive(Clone, Debug)]
@@ -51,37 +51,5 @@ impl From<RegexError> for Fail {
 impl From<BuildError> for Fail {
   fn from(e: BuildError) -> Self {
     Self::BuildError(e)
-  }
-}
-
-pub struct Abort {
-  errors: Mutex<Vec<Fail>>,
-  rx: Notify,
-}
-
-impl Abort {
-  pub fn new() -> Arc<Self> {
-    Arc::new(Self {
-      errors: Mutex::new(Vec::default()),
-      rx: Notify::new(),
-    })
-  }
-
-  pub async fn fin(&self) -> Vec<Fail> {
-    self.errors.lock().await.to_vec()
-  }
-
-  pub async fn send(&self, fail: Fail) {
-    let mut errors = self.errors.lock().await;
-    errors.push(fail);
-    self.rx.notify_waiters();
-  }
-
-  pub async fn notified(&self) {
-    let errors = self.errors.lock().await;
-    if errors.len() > 0 {
-    } else {
-      self.rx.notified().await;
-    }
   }
 }

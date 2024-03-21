@@ -34,7 +34,7 @@ use {
     thread::available_parallelism,
   },
   tokio::runtime::Builder,
-  types::{Abort, Fail},
+  types::Fail,
 };
 
 async fn run(threads: usize) -> Result<(), Fail> {
@@ -62,24 +62,11 @@ fn main() -> impl Termination {
     .build()
     .expect("runtime failure");
 
-  let errors = rt.block_on(async {
-    let abort = Abort::new();
-    if let Err(err) = run(threads).await {
-      let mut errs = abort.fin().await;
-      errs.push(err);
-      errs
-    } else {
-      abort.fin().await
-    }
-  });
-
-  match errors[..] {
-    [] => ExitCode::SUCCESS,
-    [Fail::Interrupt] => ExitCode::from(130),
-    _ => {
-      for err in errors {
-        eprintln!("{}", Colour::Red.paint(format!("{err}")));
-      }
+  match rt.block_on(run(threads)).err() {
+    None => ExitCode::SUCCESS,
+    Some(Fail::Interrupt) => ExitCode::from(130),
+    Some(e) => {
+      eprintln!("{}", Colour::Red.paint(format!("{e}")));
       ExitCode::FAILURE
     }
   }

@@ -30,10 +30,22 @@ pub fn stream_into(
 where
 {
   let buf = BufWriter::new(writer);
-  try_unfold((buf, stream, path), |mut s| async {
-    match s.1.next().await {
-      None => Ok(None),
-      Some(Err(e)) => Err(e),
+  try_unfold((stream, buf, path), |mut s| async {
+    match s.0.next().await {
+      None => {
+        s.1
+          .shutdown()
+          .await
+          .map_err(|e| Fail::IO(s.2.clone(), e.kind()))?;
+        Ok(None)
+      }
+      Some(Err(e)) => {
+        s.1
+          .shutdown()
+          .await
+          .map_err(|e| Fail::IO(s.2.clone(), e.kind()))?;
+        Err(e)
+      }
       Some(Ok(print)) => {
         #[cfg(target_family = "unix")]
         let bytes = {
@@ -45,7 +57,7 @@ where
           let tmp = print.to_string_lossy();
           tmp.as_bytes()
         };
-        s.0
+        s.1
           .write_all(bytes)
           .await
           .map_err(|e| Fail::IO(s.2.clone(), e.kind()))?;
