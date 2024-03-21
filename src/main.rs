@@ -94,12 +94,12 @@ fn stream_trans(
 }
 
 async fn run(abort: &Arc<Abort>, threads: usize) -> Result<(), Fail> {
-  let (mode, args) = parse_args();
-  let (h_1, input_stream) = stream_in(abort, &mode, &args);
-  let opts = parse_opts(mode, args)?;
-  let (h_2, trans_stream) = stream_trans(abort, threads, &opts, &input_stream);
-  let h_3 = stream_out(abort, &opts, trans_stream);
-  try_join3(h_1, h_2, h_3).await?;
+  //let (mode, args) = parse_args();
+  //let (h_1, input_stream) = stream_in(abort, &mode, &args);
+  //let opts = parse_opts(mode, args)?;
+  //let (h_2, trans_stream) = stream_trans(abort, threads, &opts, &input_stream);
+  //let h_3 = stream_out(abort, &opts, trans_stream);
+  //try_join3(h_1, h_2, h_3).await?;
   Ok(())
 }
 

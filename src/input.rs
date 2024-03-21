@@ -8,15 +8,17 @@ use {
   futures::{
     future::{ready, select, Either},
     pin_mut,
-    stream::{once, try_unfold, StreamExt, TryStream, TryStreamExt},
+    stream::{once, try_unfold, Stream, StreamExt, TryStream, TryStreamExt},
   },
   regex::Regex,
   std::{
     collections::{HashMap, HashSet},
     ffi::OsString,
     io::{self, ErrorKind, IsTerminal},
+    marker::Unpin,
     path::{Path, PathBuf},
-    sync::Arc,
+    pin::{pin, Pin},
+    task::{Context, Poll},
   },
   tokio::{
     fs::{canonicalize, File},
@@ -72,59 +74,41 @@ fn p_line(line: &str) -> Result<DiffLine, Fail> {
   Ok(DiffLine(path, range))
 }
 
-async fn read_patches(path_file: &Path) -> Result<HashMap<PathBuf, HashSet<DiffRange>>, Fail> {
-  let fd = File::open(path_file)
-    .await
-    .map_err(|e| Fail::IO(path_file.to_owned(), e.kind()))?;
-  let mut reader = BufReader::new(fd);
-  let mut acc = HashMap::<_, HashSet<_>>::new();
-
-  loop {
-    let mut buf = Vec::default();
-    let n = reader
-      .read_until(b'\0', &mut buf)
-      .await
-      .map_err(|e| Fail::IO(path_file.to_owned(), e.kind()))?;
-
-    if n == 0 {
-      break;
-    }
-
-    buf.pop();
-    let line =
-      String::from_utf8(buf).map_err(|_| Fail::IO(path_file.to_owned(), ErrorKind::InvalidData))?;
-    let patch = p_line(&line)?;
-    if let Some(ranges) = acc.get_mut(&patch.0) {
-      ranges.insert(patch.1);
-    } else {
-      let mut ranges = HashSet::new();
-      ranges.insert(patch.1);
-      acc.insert(patch.0, ranges);
-    }
-  }
-
-  Ok(acc)
-}
-
 fn stream_patch(patch: &Path) -> impl TryStream<Ok = Payload, Error = Fail> {
-  let patch = patch.to_owned();
-  let (tx, rx) = bounded::<Payload>(1);
+  //let patch = patch.to_owned();
 
-  let handle = spawn(async move {
-    match read_patches(&patch).await {
-      Ok(patches) => {
-        for patch in patches {
-          if tx.send(Payload::Piecewise(patch.0, patch.1)).await.is_err() {
-            break;
-          }
-        }
-      }
-      Err(err) => {
-        abort.send(err).await;
-      }
-    }
-  });
-  (handle, rx)
+  //let fd = File::open(path_file)
+  //  .await
+  //  .map_err(|e| Fail::IO(path_file.to_owned(), e.kind()))?;
+  //let mut reader = BufReader::new(fd);
+  //let mut acc = HashMap::<_, HashSet<_>>::new();
+
+  //loop {
+  //  let mut buf = Vec::default();
+  //  let n = reader
+  //    .read_until(b'\0', &mut buf)
+  //    .await
+  //    .map_err(|e| Fail::IO(path_file.to_owned(), e.kind()))?;
+
+  //  if n == 0 {
+  //    break;
+  //  }
+
+  //  buf.pop();
+  //  let line =
+  //    String::from_utf8(buf).map_err(|_| Fail::IO(path_file.to_owned(), ErrorKind::InvalidData))?;
+  //  let patch = p_line(&line)?;
+  //  if let Some(ranges) = acc.get_mut(&patch.0) {
+  //    ranges.insert(patch.1);
+  //  } else {
+  //    let mut ranges = HashSet::new();
+  //    ranges.insert(patch.1);
+  //    acc.insert(patch.0, ranges);
+  //  }
+  //}
+
+  //Ok(acc)
+  todo!();
 }
 
 fn u8_pathbuf(v8: Vec<u8>) -> PathBuf {
@@ -180,9 +164,10 @@ fn stream_stdin(use_nul: bool) -> impl TryStream<Ok = Payload, Error = Fail> {
 pub fn stream_in(mode: &Mode, args: &Arguments) -> impl TryStream<Ok = Payload, Error = Fail> {
   match mode {
     Mode::Initial if io::stdin().is_terminal() => {
-      return once(async { Fail::ArgumentError("/dev/stdin connected to tty".to_owned()) }).into()
+      let err = Fail::ArgumentError("/dev/stdin connected to tty".to_owned());
+      once(ready(err)).into()
     }
     Mode::Initial => stream_stdin(args.read0),
-    Mode::Preview(path) | Mode::Patch(path) => stream_patch(abort, path),
+    Mode::Preview(path) | Mode::Patch(path) => stream_patch(path),
   }
 }
