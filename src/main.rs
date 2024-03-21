@@ -39,13 +39,14 @@ async fn run(threads: usize) -> Result<(), Fail> {
   let input_stream = stream_in(&mode, &args).await;
   let opts = parse_opts(mode, args)?;
   let options = Arc::new(opts);
+  let opts = options.clone();
   let trans_stream = BoxStream::from(input_stream)
     .map_ok(move |input| {
       let opts = options.clone();
       async move { displace(&opts, input).await }
     })
     .try_buffer_unordered(threads);
-  let h_3 = stream_out(&options.clone(), trans_stream);
+  let h_3 = stream_out(&opts, trans_stream);
 
   Ok(())
 }
