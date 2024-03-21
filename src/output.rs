@@ -10,24 +10,20 @@ use {
   tokio::io::{self, AsyncWrite, AsyncWriteExt, BufWriter},
 };
 
-pub fn stream_sink(
+pub fn stream_sink<'a>(
   opts: &Options,
-  stream: impl Stream<Item = Result<OsString, Fail>> + Unpin,
-) -> Box<dyn Stream<Item = Result<(), Fail>>> {
+  stream: impl Stream<Item = Result<OsString, Fail>> + Unpin + 'a,
+) -> Box<dyn Stream<Item = Result<(), Fail>> + 'a> {
   match (&opts.action, &opts.printer) {
     (Action::FzfPreview(fzf_p, fzf_a), _) => {
       //stream_fzf_proc( fzf_p, fzf_a, stream)
 
       todo!()
     }
-    (_, Printer::Pager(cmd)) => {
-      todo!()
-      //Box::new(stream_subproc(cmd.clone(), stream))
-    }
+    (_, Printer::Pager(cmd)) => stream_subproc(cmd.clone(), stream),
     (_, Printer::Stdout) => {
-      todo!()
-      //let stdout = BufWriter::new(io::stdout());
-      //Box::new(stream_into(PathBuf::from("/dev/stdout"), stdout, stream))
+      let stdout = BufWriter::new(io::stdout());
+      Box::new(stream_into(PathBuf::from("/dev/stdout"), stdout, stream))
     }
   }
 }

@@ -1,8 +1,8 @@
 use {
   super::types::Fail,
   futures::{
-    future::{ready, select, try_join, Either},
-    stream::{once, try_unfold, Stream, StreamExt},
+    future::ready,
+    stream::{once, select, try_unfold, Stream, StreamExt},
   },
   std::{
     collections::HashMap, ffi::OsString, marker::Unpin, path::PathBuf, process::Stdio, sync::Arc,
@@ -10,8 +10,6 @@ use {
   tokio::{
     io::{AsyncWrite, AsyncWriteExt, BufWriter},
     process::Command,
-    sync::mpsc::Receiver,
-    task::{spawn, JoinHandle},
   },
 };
 
@@ -40,10 +38,7 @@ where
         Ok(None)
       }
       Some(Err(e)) => {
-        s.1
-          .shutdown()
-          .await
-          .map_err(|e| Fail::IO(s.2.clone(), e.kind()))?;
+        let _ = s.1.shutdown().await;
         Err(e)
       }
       Some(Ok(print)) => {
@@ -67,10 +62,10 @@ where
   })
 }
 
-pub fn stream_subproc(
+pub fn stream_subproc<'a>(
   cmd: SubprocCommand,
-  stream: impl Stream<Item = Result<OsString, Fail>>,
-) -> Box<dyn Stream<Item = Result<(), Fail>>> {
+  stream: impl Stream<Item = Result<OsString, Fail>> + Unpin + 'a,
+) -> Box<dyn Stream<Item = Result<(), Fail>> + 'a> {
   let subprocess = Command::new(&cmd.prog)
     .kill_on_drop(true)
     .args(&cmd.args)
@@ -84,32 +79,19 @@ pub fn stream_subproc(
       Box::new(once(ready(Err(err))))
     }
     Ok(mut child) => {
-      todo!()
-      //let mut stdin = child
-      //  .stdin
-      //  .take()
-      //  .map(BufWriter::new)
-      //  .expect("child process stdin");
-
-      //stream_into( p1.clone(),  stdin);
-
-      //let p1 = cmd.prog.clone();
-      //let handle_in = spawn(async move {
-      //  .await;
-      //  if let Err(err) = stdin.shutdown().await {
-      //    abort_1.send(Fail::IO(p1, err.kind())).await;
-      //  }
-      //});
-
-      //let handle_child = spawn(async move {
-      //  if let Err(err) = child.wait().await {
-      //    abort_2.send(Fail::IO(p2, err.kind())).await;
-      //  }
-      //});
-
-      //if let Err(err) = try_join(handle_child, handle_in).await {
-      //  abort.send(err.into()).await;
-      //}
+      let stdin = child.stdin.take().expect("child process stdin");
+      let out = stream_into(cmd.prog.clone(), stdin, stream);
+      let die = once(async move {
+        match child.wait().await {
+          Err(e) => Err(Fail::IO(cmd.prog, e.kind())),
+          Ok(status) if status.success() => Ok(()),
+          Ok(status) => {
+            let code = status.code().unwrap_or(1);
+            Err(Fail::BadExit(cmd.prog, code))
+          }
+        }
+      });
+      Box::new(select(out, die))
     }
   }
 }
