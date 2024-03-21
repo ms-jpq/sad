@@ -18,10 +18,10 @@ mod udiff_spec;
 
 use {
   ansi_term::Colour,
-  argparse::{parse_args, parse_opts, Options},
+  argparse::{parse_args, parse_opts},
   displace::displace,
   futures::stream::{BoxStream, StreamExt, TryStreamExt},
-  input::{stream_in, LineIn},
+  input::stream_in,
   output::stream_out,
   std::{
     convert::Into,
@@ -45,8 +45,8 @@ async fn run(threads: usize) -> Result<(), Fail> {
       async move { displace(&opts, input).await }
     })
     .try_buffer_unordered(threads);
-  //let h_3 = stream_out(abort, &opts, trans_stream);
-  //try_join3(h_1, h_2, h_3).await?;
+  let h_3 = stream_out(&options.clone(), trans_stream);
+
   Ok(())
 }
 

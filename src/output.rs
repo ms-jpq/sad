@@ -2,41 +2,58 @@ use {
   super::{
     argparse::{Action, Options, Printer},
     fzf::stream_fzf_proc,
-    subprocess::{stream_into, stream_subproc},
+    subprocess::stream_subproc,
     types::{Abort, Fail},
   },
+  futures::stream::{Stream, TryStreamExt},
   std::{ffi::OsString, path::PathBuf, sync::Arc},
-  tokio::{
-    io::{self, AsyncWriteExt, BufWriter},
-    sync::mpsc::Receiver,
-    task::{spawn, JoinHandle},
-  },
+  tokio::io::{self, AsyncWrite, AsyncWriteExt, BufWriter},
 };
 
-fn stream_stdout(abort: &Arc<Abort>, stream: Receiver<OsString>) -> JoinHandle<()> {
-  let abort = abort.clone();
-  let mut stdout = BufWriter::new(io::stdout());
+fn stream_into(
+  path: PathBuf,
+  writer: &mut BufWriter<impl AsyncWrite + Send + Unpin>,
+  stream: impl Stream<Item = Result<OsString, Fail>>,
+) -> impl Stream<Item = Result<(), Fail>> {
+  let x = stream.map_ok(|line| async {
+    #[cfg(target_family = "unix")]
+    let bytes = {
+      use std::os::unix::ffi::OsStrExt;
+      line.as_bytes()
+    };
+    #[cfg(target_family = "windows")]
+    let bytes = {
+      let tmp = line.to_string_lossy();
+      tmp.as_bytes()
+    };
 
-  spawn(async move {
-    stream_into(&abort, PathBuf::from("/dev/stdout"), &mut stdout, stream).await;
-    if let Err(err) = stdout.flush().await {
-      abort
-        .send(Fail::IO(PathBuf::from("/dev/stdout"), err.kind()))
-        .await;
-    }
-  })
+    writer
+      .write_all(bytes)
+      .await
+      .map_err(|e| Fail::IO(path, e.kind()))?;
+    Ok(())
+  });
+  x
 }
 
 pub fn stream_out(
-  abort: &Arc<Abort>,
   opts: &Options,
-  stream: Receiver<OsString>,
-) -> JoinHandle<()> {
+  stream: impl Stream<Item = Result<OsString, Fail>>,
+) -> impl Stream<Item = Result<(), Fail>> {
   match (&opts.action, &opts.printer) {
     (Action::FzfPreview(fzf_p, fzf_a), _) => {
-      stream_fzf_proc(abort, fzf_p.clone(), fzf_a.clone(), stream)
+      //stream_fzf_proc(abort, fzf_p.clone(), fzf_a.clone(), stream)
+
+      todo!()
     }
-    (_, Printer::Pager(cmd)) => stream_subproc(abort, cmd.clone(), stream),
-    (_, Printer::Stdout) => stream_stdout(abort, stream),
+    (_, Printer::Pager(cmd)) => {
+      //stream_subproc(abort, cmd.clone(), stream)
+
+      todo!()
+    }
+    (_, Printer::Stdout) => {
+      let mut stdout = BufWriter::new(io::stdout());
+      stream_into(PathBuf::from("/dev/stdout"), &mut stdout, stream)
+    }
   }
 }
