@@ -94,7 +94,7 @@ def _deb(triple: str) -> None:
     release = _bin_path(triple)
     tmp = _TOP_LEVEL / "temp" / triple
 
-    sad = tmp / "usr" / "local" / "bin" / "sad"
+    sad = tmp / "usr" / "bin" / "sad"
     control = tmp / "DEBIAN" / "control"
     deb = (_ARTS / triple).with_suffix(".deb")
 
