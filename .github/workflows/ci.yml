@@ -3,6 +3,8 @@ name: CI
 
 on:
   push:
+    branches:
+      - senpai
   pull_request:
   schedule:
     - cron: "0 0 * * *" # daily
