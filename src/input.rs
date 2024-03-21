@@ -8,7 +8,7 @@ use {
   futures::{
     future::{ready, select, Either},
     pin_mut,
-    stream::{once, try_unfold, Stream, StreamExt, TryStream, TryStreamExt},
+    stream::{once, try_unfold, Stream, StreamExt, TryStream, TryStreamExt, chain, empty},
   },
   regex::Regex,
   std::{
@@ -74,7 +74,7 @@ fn p_line(line: &str) -> Result<DiffLine, Fail> {
   Ok(DiffLine(path, range))
 }
 
-fn stream_patch(patch: &Path) -> impl TryStream<Ok = Payload, Error = Fail> {
+fn stream_patch(patch: &Path) -> impl Stream<Item = Result<Payload, Fail>> {
   //let patch = patch.to_owned();
 
   //let fd = File::open(path_file)
@@ -108,7 +108,7 @@ fn stream_patch(patch: &Path) -> impl TryStream<Ok = Payload, Error = Fail> {
   //}
 
   //Ok(acc)
-  todo!();
+  try_unfold(0, |_| async { Ok(None) })
 }
 
 fn u8_pathbuf(v8: Vec<u8>) -> PathBuf {
@@ -130,7 +130,7 @@ fn u8_pathbuf(v8: Vec<u8>) -> PathBuf {
   }
 }
 
-fn stream_stdin(use_nul: bool) -> impl TryStream<Ok = Payload, Error = Fail> {
+fn stream_stdin(use_nul: bool) -> impl Stream<Item = Result<Payload, Fail>> {
   let delim = if use_nul { b'\0' } else { b'\n' };
   let reader = BufReader::new(stdin());
   let seen = HashSet::new();
@@ -161,13 +161,13 @@ fn stream_stdin(use_nul: bool) -> impl TryStream<Ok = Payload, Error = Fail> {
   return stream.try_filter_map(|x| async { Ok(x) });
 }
 
-pub fn stream_in(mode: &Mode, args: &Arguments) -> impl TryStream<Ok = Payload, Error = Fail> {
+pub fn stream_in(mode: &Mode, args: &Arguments) -> Box<dyn Stream<Item = Result<Payload, Fail>>> {
   match mode {
     Mode::Initial if io::stdin().is_terminal() => {
       let err = Fail::ArgumentError("/dev/stdin connected to tty".to_owned());
-      once(ready(err)).into()
+      Box::new(once(ready(Err(err))))
     }
-    Mode::Initial => stream_stdin(args.read0),
-    Mode::Preview(path) | Mode::Patch(path) => stream_patch(path),
+    Mode::Initial => Box::new(stream_stdin(args.read0)),
+    Mode::Preview(path) | Mode::Patch(path) => Box::new(stream_patch(path)),
   }
 }
