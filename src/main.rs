@@ -10,7 +10,6 @@ mod displace;
 mod fs_pipe;
 mod fzf;
 mod input;
-mod output;
 mod subprocess;
 mod types;
 mod udiff;
@@ -18,42 +17,60 @@ mod udiff_spec;
 
 use {
   ansi_term::Colour,
-  argparse::{parse_args, parse_opts},
+  argparse::{parse_args, parse_opts, Action, Options, Printer},
   displace::displace,
   futures::{
-    sink::unfold,
+    sink::{unfold, SinkExt},
     stream::{once, select, BoxStream, Stream, StreamExt, TryStreamExt},
   },
+  fzf::stream_fzf_proc,
   input::stream_in,
-  output::stream_sink,
   std::{
     convert::Into,
-    io,
+    ffi::OsString,
+    marker::Unpin,
     path::PathBuf,
+    pin::pin,
     process::{ExitCode, Termination},
     sync::Arc,
     thread::available_parallelism,
   },
-  tokio::{runtime::Builder, signal::ctrl_c},
+  subprocess::{stream_into, stream_subproc},
+  tokio::{io, runtime::Builder, signal::ctrl_c},
   types::Fail,
 };
 
+fn stream_sink<'a>(
+  opts: &Options,
+  stream: impl Stream<Item = Result<OsString, Fail>> + Unpin + Send + 'a,
+) -> Box<dyn Stream<Item = Result<(), Fail>> + Send + 'a> {
+  match (&opts.action, &opts.printer) {
+    (Action::FzfPreview(fzf_p, fzf_a), _) => stream_fzf_proc(fzf_p.clone(), fzf_a.clone(), stream),
+    (_, Printer::Pager(cmd)) => stream_subproc(cmd.clone(), stream),
+    (_, Printer::Stdout) => {
+      let stdout = io::stdout();
+      Box::new(stream_into(PathBuf::from("/dev/stdout"), stdout, stream))
+    }
+  }
+}
+
 async fn consume(stream: impl Stream<Item = Result<(), Fail>> + Unpin) -> Result<(), Fail> {
   let int = once(async {
-    ctrl_c()
-      .await
-      .map_err(|e| Fail::IO(PathBuf::new(), e.kind()))?;
-    Err::<(), Fail>(Fail::Interrupt)
+    match ctrl_c().await {
+      Err(e) => Fail::IO(PathBuf::new(), e.kind()),
+      Ok(()) => Fail::Interrupt,
+    }
   });
-  let sink = unfold(io::stderr(), |mut s, line| async move {
-    s.write_all(&line)
-      .await
-      .map_err(|e| Fail::IO(PathBuf::from("/dev/stderr"), e.kind()))?;
-    Ok::<(), Fail>(Some(s))
-  });
-  let out = select(stream, int);
-
-  out.forward(sink).await
+  let out = select(stream.filter_map(|row| async { row.err() }), int);
+  let mut out = pin!(out);
+  loop {
+    match out.next().await {
+      None => break,
+      Some(Fail::Interrupt) => return Err(Fail::Interrupt),
+      Some(e) => eprintln!("{}", Colour::Red.paint(format!("{e}"))),
+    }
+  }
+  Ok(())
 }
 
 async fn run(threads: usize) -> Result<(), Fail> {
