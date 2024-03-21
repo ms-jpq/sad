@@ -20,10 +20,14 @@ pub fn stream_sink(
 
       todo!()
     }
-    (_, Printer::Pager(cmd)) => Box::new(stream_subproc(cmd.clone(), stream)),
+    (_, Printer::Pager(cmd)) => {
+      todo!()
+      //Box::new(stream_subproc(cmd.clone(), stream))
+    }
     (_, Printer::Stdout) => {
-      let stdout = BufWriter::new(io::stdout());
-      Box::new(stream_into(PathBuf::from("/dev/stdout"), stdout, stream))
+      todo!()
+      //let stdout = BufWriter::new(io::stdout());
+      //Box::new(stream_into(PathBuf::from("/dev/stdout"), stdout, stream))
     }
   }
 }
