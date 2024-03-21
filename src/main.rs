@@ -19,10 +19,7 @@ use {
   ansi_term::Colour,
   argparse::{parse_args, parse_opts, Action, Options, Printer},
   displace::displace,
-  futures::{
-    sink::{unfold, SinkExt},
-    stream::{once, select, BoxStream, Stream, StreamExt, TryStreamExt},
-  },
+  futures::stream::{once, select, BoxStream, Stream, StreamExt, TryStreamExt},
   fzf::stream_fzf_proc,
   input::stream_in,
   std::{
@@ -54,7 +51,7 @@ fn stream_sink<'a>(
   }
 }
 
-async fn consume(stream: impl Stream<Item = Result<(), Fail>> + Unpin) -> Result<(), Fail> {
+async fn consume(stream: impl Stream<Item = Result<(), Fail>> + Send + Unpin) -> Result<(), Fail> {
   let int = once(async {
     match ctrl_c().await {
       Err(e) => Fail::IO(PathBuf::new(), e.kind()),

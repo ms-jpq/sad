@@ -68,12 +68,12 @@ fn p_line(line: &str) -> Result<DiffLine, Fail> {
   Ok(DiffLine(path, range))
 }
 
-async fn stream_patch(patch: &Path) -> Box<dyn Stream<Item = Result<LineIn, Fail>> + Send> {
-  let patch = patch.to_owned();
+async fn stream_patch(patches: &Path) -> Box<dyn Stream<Item = Result<LineIn, Fail>> + Send> {
+  let patches = patches.to_owned();
 
-  let fd = match File::open(&patch).await {
+  let fd = match File::open(&patches).await {
     Err(e) => {
-      let err = Fail::IO(patch.to_owned(), e.kind());
+      let err = Fail::IO(patches.clone(), e.kind());
       return Box::new(once(ready(Err(err))));
     }
     Ok(fd) => fd,
@@ -82,11 +82,11 @@ async fn stream_patch(patch: &Path) -> Box<dyn Stream<Item = Result<LineIn, Fail
   let acc = HashSet::new();
 
   let stream = try_unfold(
-    (reader, patch, PathBuf::new(), acc),
+    (reader, patches, PathBuf::new(), acc),
     move |mut s| async move {
       let mut buf = Vec::default();
       match s.0.read_until(b'\0', &mut buf).await {
-        Err(err) => Err(Fail::IO(s.1.to_owned(), err.kind())),
+        Err(err) => Err(Fail::IO(s.1.clone(), err.kind())),
         Ok(0) if s.3.is_empty() => Ok(None),
         Ok(0) => {
           let path = s.2;
@@ -98,7 +98,7 @@ async fn stream_patch(patch: &Path) -> Box<dyn Stream<Item = Result<LineIn, Fail
         Ok(_) => {
           buf.pop();
           let line =
-            String::from_utf8(buf).map_err(|_| Fail::IO(s.1.to_owned(), ErrorKind::InvalidData))?;
+            String::from_utf8(buf).map_err(|_| Fail::IO(s.1.clone(), ErrorKind::InvalidData))?;
           let parsed = p_line(&line)?;
           if parsed.0 == s.2 {
             s.3.insert(parsed.1);
