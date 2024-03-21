@@ -7,7 +7,7 @@ use {
   },
   futures::stream::{Stream, StreamExt, TryStreamExt},
   std::{ffi::OsString, marker::Unpin, path::PathBuf, sync::Arc},
-  tokio::io::{self, AsyncWrite, AsyncWriteExt, BufWriter},
+  tokio::io,
 };
 
 pub fn stream_sink<'a>(
@@ -15,14 +15,10 @@ pub fn stream_sink<'a>(
   stream: impl Stream<Item = Result<OsString, Fail>> + Unpin + 'a,
 ) -> Box<dyn Stream<Item = Result<(), Fail>> + 'a> {
   match (&opts.action, &opts.printer) {
-    (Action::FzfPreview(fzf_p, fzf_a), _) => {
-      //stream_fzf_proc( fzf_p, fzf_a, stream)
-
-      todo!()
-    }
+    (Action::FzfPreview(fzf_p, fzf_a), _) => stream_fzf_proc(fzf_p.clone(), fzf_a.clone(), stream),
     (_, Printer::Pager(cmd)) => stream_subproc(cmd.clone(), stream),
     (_, Printer::Stdout) => {
-      let stdout = BufWriter::new(io::stdout());
+      let stdout = io::stdout();
       Box::new(stream_into(PathBuf::from("/dev/stdout"), stdout, stream))
     }
   }

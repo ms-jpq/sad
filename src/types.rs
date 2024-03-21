@@ -1,6 +1,5 @@
 use {
   aho_corasick::BuildError,
-  futures::lock::Mutex,
   regex::Error as RegexError,
   std::{
     clone::Clone,
@@ -8,7 +7,6 @@ use {
     fmt::{self, Display, Formatter},
     io::ErrorKind,
     path::PathBuf,
-    sync::Arc,
   },
   tokio::task::JoinError,
 };

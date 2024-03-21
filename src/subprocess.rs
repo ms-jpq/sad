@@ -4,9 +4,7 @@ use {
     future::ready,
     stream::{once, select, try_unfold, Stream, StreamExt},
   },
-  std::{
-    collections::HashMap, ffi::OsString, marker::Unpin, path::PathBuf, process::Stdio, sync::Arc,
-  },
+  std::{collections::HashMap, ffi::OsString, marker::Unpin, path::PathBuf, process::Stdio},
   tokio::{
     io::{AsyncWrite, AsyncWriteExt, BufWriter},
     process::Command,
