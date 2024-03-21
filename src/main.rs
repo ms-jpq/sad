@@ -104,7 +104,7 @@ async fn run(abort: &Arc<Abort>, threads: usize) -> Result<(), Fail> {
 }
 
 fn main() -> impl Termination {
-  let threads = available_parallelism().map(Into::into).unwrap_or(4);
+  let threads = available_parallelism().map(Into::into).unwrap_or(6);
   let rt = Builder::new_multi_thread()
     .enable_io()
     .max_blocking_threads(threads)

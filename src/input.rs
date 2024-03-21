@@ -6,8 +6,9 @@ use {
   },
   async_channel::{bounded, Receiver},
   futures::{
-    future::{select, Either},
+    future::{ready, select, Either},
     pin_mut,
+    stream::{once, try_unfold, StreamExt, TryStream, TryStreamExt},
   },
   regex::Regex,
   std::{
@@ -105,8 +106,7 @@ async fn read_patches(path_file: &Path) -> Result<HashMap<PathBuf, HashSet<DiffR
   Ok(acc)
 }
 
-fn stream_patch(abort: &Arc<Abort>, patch: &Path) -> (JoinHandle<()>, Receiver<Payload>) {
-  let abort = abort.clone();
+fn stream_patch(patch: &Path) -> impl TryStream<Ok = Payload, Error = Fail> {
   let patch = patch.to_owned();
   let (tx, rx) = bounded::<Payload>(1);
 
@@ -146,69 +146,43 @@ fn u8_pathbuf(v8: Vec<u8>) -> PathBuf {
   }
 }
 
-fn stream_stdin(abort: &Arc<Abort>, use_nul: bool) -> (JoinHandle<()>, Receiver<Payload>) {
-  let (tx, rx) = bounded::<Payload>(1);
+fn stream_stdin(use_nul: bool) -> impl TryStream<Ok = Payload, Error = Fail> {
+  let delim = if use_nul { b'\0' } else { b'\n' };
+  let reader = BufReader::new(stdin());
+  let seen = HashSet::new();
 
-  let abort = abort.clone();
-  let handle = spawn(async move {
-    if io::stdin().is_terminal() {
-      abort
-        .send(Fail::ArgumentError(
-          "/dev/stdin connected to tty".to_owned(),
-        ))
-        .await;
-    } else {
-      let delim = if use_nul { b'\0' } else { b'\n' };
-      let mut reader = BufReader::new(stdin());
-      let mut seen = HashSet::new();
-
-      loop {
-        let mut buf = Vec::default();
-        let f1 = abort.notified();
-        let f2 = reader.read_until(delim, &mut buf);
-
-        pin_mut!(f1);
-        pin_mut!(f2);
-        match select(f1, f2).await {
-          Either::Left(_) | Either::Right((Ok(0), _)) => break,
-          Either::Right((Err(err), _)) => {
-            abort
-              .send(Fail::IO(PathBuf::from("/dev/stdin"), err.kind()))
-              .await;
-            break;
-          }
-          Either::Right((Ok(_), _)) => {
-            buf.pop();
-            let path = u8_pathbuf(buf);
-            match canonicalize(&path).await {
-              Ok(canonical) => {
-                if seen.insert(canonical.clone())
-                  && tx.send(Payload::Entire(canonical)).await.is_err()
-                {
-                  break;
-                }
-              }
-              Err(err) if err.kind() == ErrorKind::NotFound => (),
-              Err(err) => {
-                abort.send(Fail::IO(path, err.kind())).await;
-                break;
-              }
+  let stream = try_unfold((reader, seen), move |mut s| async move {
+    let mut buf = Vec::default();
+    match s.0.read_until(delim, &mut buf).await {
+      Err(err) => Err(Fail::IO(PathBuf::from("/dev/stdin"), err.kind())),
+      Ok(0) => Ok(Some((None, s))),
+      Ok(_) => {
+        buf.pop();
+        let path = u8_pathbuf(buf);
+        match canonicalize(&path).await {
+          Err(err) if err.kind() == ErrorKind::NotFound => Ok(Some((None, s))),
+          Err(err) => Err(Fail::IO(path, err.kind())),
+          Ok(canonical) => Ok(Some({
+            if s.1.insert(canonical.clone()) {
+              (Some(Payload::Entire(canonical)), s)
+            } else {
+              (None, s)
             }
-          }
+          })),
         }
       }
     }
   });
-  (handle, rx)
+
+  return stream.try_filter_map(|x| async { Ok(x) });
 }
 
-pub fn stream_in(
-  abort: &Arc<Abort>,
-  mode: &Mode,
-  args: &Arguments,
-) -> (JoinHandle<()>, Receiver<Payload>) {
+pub fn stream_in(mode: &Mode, args: &Arguments) -> impl TryStream<Ok = Payload, Error = Fail> {
   match mode {
-    Mode::Initial => stream_stdin(abort, args.read0),
+    Mode::Initial if io::stdin().is_terminal() => {
+      return once(async { Fail::ArgumentError("/dev/stdin connected to tty".to_owned()) }).into()
+    }
+    Mode::Initial => stream_stdin(args.read0),
     Mode::Preview(path) | Mode::Patch(path) => stream_patch(abort, path),
   }
 }
