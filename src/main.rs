@@ -26,6 +26,7 @@ use {
   std::{
     convert::Into,
     path::PathBuf,
+    pin::pin,
     process::{ExitCode, Termination},
     sync::Arc,
     thread::available_parallelism,
@@ -54,7 +55,9 @@ async fn run(threads: usize) -> Result<(), Fail> {
     Err::<(), Fail>(Fail::Interrupt)
   });
   let out_stream = stream_sink(&opts, trans_stream);
-  let fin = select(out_stream, int);
+  //let os = pin!(out_stream);
+  let os = once(async { Ok(()) });
+  let fin = select(os, int);
 
   Ok(())
 }

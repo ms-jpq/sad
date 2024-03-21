@@ -4,7 +4,10 @@ use {
     subprocess::{stream_subproc, SubprocCommand},
     types::Fail,
   },
-  futures::stream::Stream,
+  futures::{
+    future::ready,
+    stream::{Stream, StreamExt},
+  },
   std::{
     collections::HashMap,
     env::{self, current_exe},
