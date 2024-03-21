@@ -68,7 +68,7 @@ fn p_line(line: &str) -> Result<DiffLine, Fail> {
   Ok(DiffLine(path, range))
 }
 
-async fn stream_patch(patch: &Path) -> Box<dyn Stream<Item = Result<LineIn, Fail>>> {
+async fn stream_patch(patch: &Path) -> Box<dyn Stream<Item = Result<LineIn, Fail>> + Send> {
   let patch = patch.to_owned();
 
   let fd = match File::open(&patch).await {
@@ -171,7 +171,7 @@ fn stream_stdin(use_nul: bool) -> impl Stream<Item = Result<LineIn, Fail>> {
 pub async fn stream_in(
   mode: &Mode,
   args: &Arguments,
-) -> Box<dyn Stream<Item = Result<LineIn, Fail>>> {
+) -> Box<dyn Stream<Item = Result<LineIn, Fail>> + Send> {
   match mode {
     Mode::Initial if io::stdin().is_terminal() => {
       let err = Fail::ArgumentError("/dev/stdin connected to tty".to_owned());

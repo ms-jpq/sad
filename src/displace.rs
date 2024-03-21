@@ -28,8 +28,8 @@ impl LineIn {
   }
 }
 
-pub async fn displace(opts: &Arc<Options>, payload: LineIn) -> Result<OsString, Fail> {
-  let path = payload.path().clone();
+pub async fn displace(opts: &Arc<Options>, input: LineIn) -> Result<OsString, Fail> {
+  let path = input.path().clone();
   let name = opts
     .cwd
     .as_ref()
@@ -49,7 +49,7 @@ pub async fn displace(opts: &Arc<Options>, payload: LineIn) -> Result<OsString, 
   if *before == after {
     Ok(OsString::default())
   } else {
-    let print = match (&opts.action, payload) {
+    let print = match (&opts.action, input) {
       (Action::Preview, LineIn::Entire(_)) => {
         spawn_blocking(move || udiff(None, o2.unified, &name, &before, &after)).await?
       }

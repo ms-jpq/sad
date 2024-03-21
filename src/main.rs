@@ -19,12 +19,8 @@ mod udiff_spec;
 use {
   ansi_term::Colour,
   argparse::{parse_args, parse_opts, Options},
-  async_channel::Receiver as MPMCR,
   displace::displace,
-  futures::{
-    future::{select, try_join3, try_join_all, Either},
-    stream::{once, Stream, StreamExt},
-  },
+  futures::stream::{BoxStream, StreamExt, TryStreamExt},
   input::{stream_in, LineIn},
   output::stream_out,
   std::{
@@ -34,61 +30,21 @@ use {
     sync::Arc,
     thread::available_parallelism,
   },
-  tokio::{
-    runtime::Builder,
-    sync::mpsc::{self, Receiver},
-    task::{spawn, JoinHandle},
-  },
+  tokio::runtime::Builder,
   types::{Abort, Fail},
 };
-
-fn stream_trans(
-  threads: usize,
-  opts: &Options,
-  stream: Box<dyn Stream<Item = Result<LineIn, Fail>>>,
-) -> impl Stream<Item = Result<OsString, Fail>> {
-  //let (tx, rx) = mpsc::channel::<OsString>(1);
-
-  //let handles = (1..=threads * 2)
-  //  .map(|_| {
-  //    let abort = abort.clone();
-  //    let stream = stream.clone();
-  //    let opts = a_opts.clone();
-  //    let tx = tx.clone();
-
-  //    spawn(async move {
-  //      loop {
-  //        let f1 = abort.notified();
-  //        let f2 = stream.recv();
-  //        pin_mut!(f1);
-  //        pin_mut!(f2);
-
-  //        match select(f1, f2).await {
-  //          Either::Left(_) | Either::Right((Err(_), _)) => break,
-  //          Either::Right((Ok(payload), _)) => match displace(&opts, payload).await {
-  //            Ok(displaced) => {
-  //              if tx.send(displaced).await.is_err() {
-  //                break;
-  //              }
-  //            }
-  //            Err(err) => {
-  //              abort.send(err).await;
-  //              break;
-  //            }
-  //          },
-  //        }
-  //      }
-  //    })
-  //  })
-  //  .collect::<Vec<_>>();
-  once(async { Err(Fail::Join) })
-}
 
 async fn run(threads: usize) -> Result<(), Fail> {
   let (mode, args) = parse_args();
   let input_stream = stream_in(&mode, &args).await;
   let opts = parse_opts(mode, args)?;
-  let trans_stream = stream_trans(threads, &opts, input_stream);
+  let options = Arc::new(opts);
+  let trans_stream = BoxStream::from(input_stream)
+    .map_ok(move |input| {
+      let opts = options.clone();
+      async move { displace(&opts, input).await }
+    })
+    .try_buffer_unordered(threads);
   //let h_3 = stream_out(abort, &opts, trans_stream);
   //try_join3(h_1, h_2, h_3).await?;
   Ok(())
