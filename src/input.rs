@@ -87,7 +87,14 @@ async fn stream_patch(patch: &Path) -> Box<dyn Stream<Item = Result<LineIn, Fail
       let mut buf = Vec::default();
       match s.0.read_until(b'\0', &mut buf).await {
         Err(err) => Err(Fail::IO(s.1.to_owned(), err.kind())),
-        Ok(0) => Ok(None),
+        Ok(0) if s.3.is_empty() => Ok(None),
+        Ok(0) => {
+          let path = s.2;
+          let ranges = s.3;
+          s.2 = PathBuf::new();
+          s.3 = HashSet::new();
+          Ok(Some((Some(LineIn::Piecewise(path, ranges)), s)))
+        }
         Ok(_) => {
           buf.pop();
           let line =
@@ -108,7 +115,7 @@ async fn stream_patch(patch: &Path) -> Box<dyn Stream<Item = Result<LineIn, Fail
     },
   );
 
-  return Box::new(stream.try_filter_map(|x| ready(Ok(x))));
+  Box::new(stream.try_filter_map(|x| ready(Ok(x))))
 }
 
 fn u8_pathbuf(v8: Vec<u8>) -> PathBuf {
@@ -158,7 +165,7 @@ fn stream_stdin(use_nul: bool) -> impl Stream<Item = Result<LineIn, Fail>> {
     }
   });
 
-  return stream.try_filter_map(|x| ready(Ok(x)));
+  stream.try_filter_map(|x| ready(Ok(x)))
 }
 
 pub async fn stream_in(
