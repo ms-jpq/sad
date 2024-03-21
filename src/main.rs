@@ -20,13 +20,12 @@ use {
   ansi_term::Colour,
   argparse::{parse_args, parse_opts},
   displace::displace,
-  futures::stream::{once, select, BoxStream, TryStreamExt},
+  futures::stream::{once, select, BoxStream, Stream, TryStreamExt},
   input::stream_in,
   output::stream_sink,
   std::{
     convert::Into,
     path::PathBuf,
-    pin::pin,
     process::{ExitCode, Termination},
     sync::Arc,
     thread::available_parallelism,
@@ -34,6 +33,17 @@ use {
   tokio::{runtime::Builder, signal::ctrl_c},
   types::Fail,
 };
+
+fn sigify(stream: impl Stream<Item = Result<(), Fail>>) -> impl Stream<Item = Result<(), Fail>> {
+  let int = once(async {
+    ctrl_c()
+      .await
+      .map_err(|e| Fail::IO(PathBuf::new(), e.kind()))?;
+    Err::<(), Fail>(Fail::Interrupt)
+  });
+
+  select(stream, int)
+}
 
 async fn run(threads: usize) -> Result<(), Fail> {
   let (mode, args) = parse_args();
@@ -48,16 +58,8 @@ async fn run(threads: usize) -> Result<(), Fail> {
     })
     .try_buffer_unordered(threads);
 
-  let int = once(async {
-    ctrl_c()
-      .await
-      .map_err(|e| Fail::IO(PathBuf::new(), e.kind()))?;
-    Err::<(), Fail>(Fail::Interrupt)
-  });
-  let out_stream = stream_sink(&opts, trans_stream);
-  //let os = pin!(out_stream);
-  let os = once(async { Ok(()) });
-  let fin = select(os, int);
+  let out_stream = BoxStream::from(stream_sink(&opts, trans_stream));
+  let fin = sigify(out_stream);
 
   Ok(())
 }

@@ -6,7 +6,7 @@ use {
   },
   futures::{
     future::ready,
-    stream::{Stream, StreamExt},
+    stream::{BoxStream, Stream, StreamExt},
   },
   std::{
     collections::HashMap,
@@ -50,8 +50,8 @@ async fn reset_term() -> Result<(), Fail> {
 pub fn stream_fzf_proc<'a>(
   bin: PathBuf,
   args: Vec<String>,
-  stream: impl Stream<Item = Result<OsString, Fail>> + Unpin + 'a,
-) -> Box<dyn Stream<Item = Result<(), Fail>> + 'a> {
+  stream: impl Stream<Item = Result<OsString, Fail>> + Unpin + Send + 'a,
+) -> Box<dyn Stream<Item = Result<(), Fail>> + Send + 'a> {
   let execute = format!("abort+execute:{}\x04{{+f}}", Mode::PATCH);
   let mut arguments = vec![
     "--read0".to_owned(),
@@ -86,5 +86,14 @@ pub fn stream_fzf_proc<'a>(
     args: arguments,
     env: fzf_env,
   };
-  stream_subproc(cmd, stream)
+  let stream = BoxStream::from(stream_subproc(cmd, stream)).then(|line| async {
+    match line {
+      Ok(o) => Ok(o),
+      e => {
+        let _ = reset_term().await;
+        e
+      }
+    }
+  });
+  Box::new(stream)
 }
