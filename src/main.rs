@@ -20,9 +20,12 @@ use {
   ansi_term::Colour,
   argparse::{parse_args, parse_opts},
   displace::displace,
-  futures::stream::{BoxStream, StreamExt, TryStreamExt},
+  futures::{
+    sink::Sink,
+    stream::{BoxStream, StreamExt, TryStreamExt},
+  },
   input::stream_in,
-  output::stream_out,
+  output::stream_sink,
   std::{
     convert::Into,
     ffi::OsString,
@@ -46,7 +49,7 @@ async fn run(threads: usize) -> Result<(), Fail> {
       async move { displace(&opts, input).await }
     })
     .try_buffer_unordered(threads);
-  let h_3 = stream_out(&opts, trans_stream);
+  let sink = stream_sink(&opts);
 
   Ok(())
 }
