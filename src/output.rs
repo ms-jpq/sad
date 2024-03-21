@@ -5,7 +5,10 @@ use {
     subprocess::stream_subproc,
     types::Fail,
   },
-  futures::stream::{Stream, StreamExt, TryStreamExt},
+  futures::{
+    future::ready,
+    stream::{Stream, StreamExt, TryStreamExt},
+  },
   std::{ffi::OsString, path::PathBuf, sync::Arc},
   tokio::io::{self, AsyncWrite, AsyncWriteExt, BufWriter},
 };
@@ -47,8 +50,8 @@ where
 pub fn stream_out<'a>(
   opts: &Options,
   stream: impl Stream<Item = Result<OsString, Fail>> + 'a,
-) -> impl Stream<Item = Result<(), Fail>> + 'a {
-  match (&opts.action, &opts.printer) {
+) -> impl Stream<Item = Fail> + 'a {
+  let pipe = match (&opts.action, &opts.printer) {
     (Action::FzfPreview(fzf_p, fzf_a), _) => {
       //stream_fzf_proc(abort, fzf_p.clone(), fzf_a.clone(), stream)
 
@@ -63,5 +66,12 @@ pub fn stream_out<'a>(
       let stdout = BufWriter::new(io::stdout());
       stream_into(PathBuf::from("/dev/stdout"), stdout, stream)
     }
-  }
+  };
+
+  pipe.filter_map(|r| {
+    ready(match r {
+      Ok(()) => None,
+      Err(e) => Some(e),
+    })
+  })
 }
