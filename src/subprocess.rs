@@ -1,10 +1,12 @@
 use {
-  super::types::{Abort, Fail},
+  super::types::Fail,
   futures::{
-    future::{select, try_join, Either},
-    pin_mut,
+    future::{ready, select, try_join, Either},
+    stream::{once, try_unfold, Stream, StreamExt},
   },
-  std::{collections::HashMap, ffi::OsString, path::PathBuf, process::Stdio, sync::Arc},
+  std::{
+    collections::HashMap, ffi::OsString, marker::Unpin, path::PathBuf, process::Stdio, sync::Arc,
+  },
   tokio::{
     io::{AsyncWrite, AsyncWriteExt, BufWriter},
     process::Command,
@@ -20,79 +22,82 @@ pub struct SubprocCommand {
   pub env: HashMap<String, String>,
 }
 
-pub async fn stream_into(
-  abort: &Arc<Abort>,
+pub fn stream_into(
   path: PathBuf,
-  writer: &mut BufWriter<impl AsyncWrite + Send + Unpin>,
-  mut stream: Receiver<OsString>,
-) {
-  loop {
-    let f1 = abort.notified();
-    let f2 = stream.recv();
-    pin_mut!(f1);
-    pin_mut!(f2);
-    match select(f1, f2).await {
-      Either::Right((Some(print), _)) => {
+  writer: impl AsyncWrite + Send + Unpin,
+  stream: impl Stream<Item = Result<OsString, Fail>> + Unpin,
+) -> impl Stream<Item = Result<(), Fail>>
+where
+{
+  let buf = BufWriter::new(writer);
+  try_unfold((buf, stream, path), |mut s| async {
+    match s.1.next().await {
+      None => Ok(None),
+      Some(Err(e)) => Err(e),
+      Some(Ok(print)) => {
         #[cfg(target_family = "unix")]
         let bytes = {
           use std::os::unix::ffi::OsStrExt;
           print.as_bytes()
         };
         #[cfg(target_family = "windows")]
-        let tmp = print.to_string_lossy();
-        #[cfg(target_family = "windows")]
-        let bytes = tmp.as_bytes();
-        if let Err(err) = writer.write_all(bytes).await {
-          abort.send(Fail::IO(path, err.kind())).await;
-          break;
-        }
-      }
-      _ => break,
-    }
-  }
-}
-
-pub fn stream_subproc(
-  abort: &Arc<Abort>,
-  cmd: SubprocCommand,
-  stream: Receiver<OsString>,
-) -> JoinHandle<()> {
-  let abort = abort.clone();
-
-  spawn(async move {
-    let subprocess = Command::new(&cmd.prog)
-      .kill_on_drop(true)
-      .args(&cmd.args)
-      .envs(&cmd.env)
-      .stdin(Stdio::piped())
-      .spawn();
-
-    match subprocess {
-      Err(err) => abort.send(Fail::IO(cmd.prog, err.kind())).await,
-      Ok(mut child) => {
-        let mut stdin = child.stdin.take().map(BufWriter::new).expect("nil stdin");
-
-        let abort_1 = abort.clone();
-        let p1 = cmd.prog.clone();
-        let handle_in = spawn(async move {
-          stream_into(&abort_1, p1.clone(), &mut stdin, stream).await;
-          if let Err(err) = stdin.shutdown().await {
-            abort_1.send(Fail::IO(p1, err.kind())).await;
-          }
-        });
-
-        let abort_2 = abort.clone();
-        let p2 = cmd.prog.clone();
-        let handle_child = spawn(async move {
-          if let Err(err) = child.wait().await {
-            abort_2.send(Fail::IO(p2, err.kind())).await;
-          }
-        });
-
-        if let Err(err) = try_join(handle_child, handle_in).await {
-          abort.send(err.into()).await;
-        }
+        let bytes = {
+          let tmp = print.to_string_lossy();
+          tmp.as_bytes()
+        };
+        s.0
+          .write_all(bytes)
+          .await
+          .map_err(|e| Fail::IO(s.2.clone(), e.kind()))?;
+        Ok(Some(((), s)))
       }
     }
   })
+}
+
+pub fn stream_subproc(
+  cmd: SubprocCommand,
+  stream: impl Stream<Item = Result<OsString, Fail>>,
+) -> Box<dyn Stream<Item = Result<(), Fail>>> {
+  let subprocess = Command::new(&cmd.prog)
+    .kill_on_drop(true)
+    .args(&cmd.args)
+    .envs(&cmd.env)
+    .stdin(Stdio::piped())
+    .spawn();
+
+  match subprocess {
+    Err(e) => {
+      let err = Fail::IO(cmd.prog, e.kind());
+      Box::new(once(ready(Err(err))))
+    }
+    Ok(mut child) => {
+      todo!()
+      //let mut stdin = child
+      //  .stdin
+      //  .take()
+      //  .map(BufWriter::new)
+      //  .expect("child process stdin");
+
+      //stream_into( p1.clone(),  stdin);
+
+      //let p1 = cmd.prog.clone();
+      //let handle_in = spawn(async move {
+      //  .await;
+      //  if let Err(err) = stdin.shutdown().await {
+      //    abort_1.send(Fail::IO(p1, err.kind())).await;
+      //  }
+      //});
+
+      //let handle_child = spawn(async move {
+      //  if let Err(err) = child.wait().await {
+      //    abort_2.send(Fail::IO(p2, err.kind())).await;
+      //  }
+      //});
+
+      //if let Err(err) = try_join(handle_child, handle_in).await {
+      //  abort.send(err.into()).await;
+      //}
+    }
+  }
 }

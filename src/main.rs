@@ -49,7 +49,7 @@ async fn run(threads: usize) -> Result<(), Fail> {
       async move { displace(&opts, input).await }
     })
     .try_buffer_unordered(threads);
-  let sink = stream_sink(&opts);
+  let sink = stream_sink(&opts, trans_stream);
 
   Ok(())
 }

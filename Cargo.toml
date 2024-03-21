@@ -9,7 +9,6 @@ version     = "0.4.24"
 [dependencies]
 aho-corasick  = { version = "*" }
 ansi_term     = { version = "*" }
-async-channel = { version = "*" }
 clap          = { version = "*", features = ["derive", "wrap_help"] }
 difflib       = { version = "*" }
 futures       = { version = "*" }
