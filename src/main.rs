@@ -25,7 +25,7 @@ use {
     future::{select, try_join3, try_join_all, Either},
     pin_mut,
   },
-  input::{stream_in, Payload},
+  input::{stream_in, LineIn},
   output::stream_out,
   std::{
     convert::Into,
@@ -46,7 +46,7 @@ fn stream_trans(
   abort: &Arc<Abort>,
   threads: usize,
   opts: &Options,
-  stream: &MPMCR<Payload>,
+  stream: &MPMCR<LineIn>,
 ) -> (JoinHandle<()>, Receiver<OsString>) {
   let a_opts = Arc::new(opts.clone());
   let (tx, rx) = mpsc::channel::<OsString>(1);

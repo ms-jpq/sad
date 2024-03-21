@@ -1,34 +1,28 @@
 use {
   super::{
     argparse::{Arguments, Mode},
-    types::{Abort, Fail},
+    types::Fail,
     udiff::DiffRange,
   },
-  async_channel::{bounded, Receiver},
   futures::{
-    future::{ready, select, Either},
-    pin_mut,
-    stream::{empty, once, try_unfold, Stream, StreamExt, TryStream, TryStreamExt},
+    future::ready,
+    stream::{once, try_unfold, Stream, TryStreamExt},
   },
   regex::Regex,
   std::{
-    collections::{HashMap, HashSet},
+    collections::HashSet,
     ffi::OsString,
     io::{self, ErrorKind, IsTerminal},
-    marker::Unpin,
     path::{Path, PathBuf},
-    pin::{pin, Pin},
-    task::{Context, Poll},
   },
   tokio::{
     fs::{canonicalize, File},
     io::{stdin, AsyncBufReadExt, BufReader},
-    task::{spawn, JoinHandle},
   },
 };
 
 #[derive(Debug)]
-pub enum Payload {
+pub enum LineIn {
   Entire(PathBuf),
   Piecewise(PathBuf, HashSet<DiffRange>),
 }
@@ -74,7 +68,7 @@ fn p_line(line: &str) -> Result<DiffLine, Fail> {
   Ok(DiffLine(path, range))
 }
 
-async fn stream_patch(patch: &Path) -> Box<dyn Stream<Item = Result<Payload, Fail>>> {
+async fn stream_patch(patch: &Path) -> Box<dyn Stream<Item = Result<LineIn, Fail>>> {
   let patch = patch.to_owned();
 
   let fd = match File::open(&patch).await {
@@ -85,34 +79,36 @@ async fn stream_patch(patch: &Path) -> Box<dyn Stream<Item = Result<Payload, Fai
     Ok(fd) => fd,
   };
   let reader = BufReader::new(fd);
-  let acc = HashMap::<PathBuf, HashSet<DiffRange>>::new();
+  let acc = HashSet::new();
 
-  let stream = try_unfold((reader, acc, patch), move |mut s| async move {
-    let mut buf = Vec::default();
-    match s.0.read_until(b'\0', &mut buf).await {
-      Err(err) => Err(Fail::IO(s.2.to_owned(), err.kind())),
-      Ok(0) => Ok(None),
-      Ok(_) => {
-        buf.pop();
-        let line =
-          String::from_utf8(buf).map_err(|_| Fail::IO(s.2.to_owned(), ErrorKind::InvalidData))?;
-        let parsed = p_line(&line)?;
-
-        if let Some(ranges) = s.1.get_mut(&parsed.0) {
-          ranges.insert(parsed.1);
-          Ok(None)
-        } else {
-          let mut ranges = HashSet::new();
-          ranges.insert(parsed.1);
-          s.1.insert(parsed.0, ranges);
-          //Ok(Some((Payload::Piecewise(parsed.0, ranges), s)))
-          Ok(None)
+  let stream = try_unfold(
+    (reader, patch, PathBuf::new(), acc),
+    move |mut s| async move {
+      let mut buf = Vec::default();
+      match s.0.read_until(b'\0', &mut buf).await {
+        Err(err) => Err(Fail::IO(s.1.to_owned(), err.kind())),
+        Ok(0) => Ok(None),
+        Ok(_) => {
+          buf.pop();
+          let line =
+            String::from_utf8(buf).map_err(|_| Fail::IO(s.1.to_owned(), ErrorKind::InvalidData))?;
+          let parsed = p_line(&line)?;
+          if parsed.0 == s.2 {
+            s.3.insert(parsed.1);
+            Ok(Some((None, s)))
+          } else {
+            let path = s.2;
+            let ranges = s.3;
+            s.2 = parsed.0;
+            s.3 = HashSet::new();
+            Ok(Some((Some(LineIn::Piecewise(path, ranges)), s)))
+          }
         }
       }
-    }
-  });
+    },
+  );
 
-  return Box::new(stream);
+  return Box::new(stream.try_filter_map(|x| ready(Ok(x))));
 }
 
 fn u8_pathbuf(v8: Vec<u8>) -> PathBuf {
@@ -134,7 +130,7 @@ fn u8_pathbuf(v8: Vec<u8>) -> PathBuf {
   }
 }
 
-fn stream_stdin(use_nul: bool) -> impl Stream<Item = Result<Payload, Fail>> {
+fn stream_stdin(use_nul: bool) -> impl Stream<Item = Result<LineIn, Fail>> {
   let delim = if use_nul { b'\0' } else { b'\n' };
   let reader = BufReader::new(stdin());
   let seen = HashSet::new();
@@ -152,7 +148,7 @@ fn stream_stdin(use_nul: bool) -> impl Stream<Item = Result<Payload, Fail>> {
           Err(e) => Err(Fail::IO(path, e.kind())),
           Ok(canonical) => Ok(Some({
             if s.1.insert(canonical.clone()) {
-              (Some(Payload::Entire(canonical)), s)
+              (Some(LineIn::Entire(canonical)), s)
             } else {
               (None, s)
             }
@@ -162,13 +158,13 @@ fn stream_stdin(use_nul: bool) -> impl Stream<Item = Result<Payload, Fail>> {
     }
   });
 
-  return stream.try_filter_map(|x| async { Ok(x) });
+  return stream.try_filter_map(|x| ready(Ok(x)));
 }
 
 pub async fn stream_in(
   mode: &Mode,
   args: &Arguments,
-) -> Box<dyn Stream<Item = Result<Payload, Fail>>> {
+) -> Box<dyn Stream<Item = Result<LineIn, Fail>>> {
   match mode {
     Mode::Initial if io::stdin().is_terminal() => {
       let err = Fail::ArgumentError("/dev/stdin connected to tty".to_owned());

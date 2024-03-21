@@ -2,7 +2,7 @@ use {
   super::{
     argparse::{Action, Engine, Options},
     fs_pipe::{slurp, spit},
-    input::Payload,
+    input::LineIn,
     types::Fail,
     udiff::{apply_patches, patches, pure_diffs, udiff},
   },
@@ -20,7 +20,7 @@ impl Engine {
   }
 }
 
-impl Payload {
+impl LineIn {
   const fn path(&self) -> &PathBuf {
     match self {
       Self::Entire(path) | Self::Piecewise(path, _) => path,
@@ -28,7 +28,7 @@ impl Payload {
   }
 }
 
-pub async fn displace(opts: &Arc<Options>, payload: Payload) -> Result<OsString, Fail> {
+pub async fn displace(opts: &Arc<Options>, payload: LineIn) -> Result<OsString, Fail> {
   let path = payload.path().clone();
   let name = opts
     .cwd
@@ -50,19 +50,19 @@ pub async fn displace(opts: &Arc<Options>, payload: Payload) -> Result<OsString,
     Ok(OsString::default())
   } else {
     let print = match (&opts.action, payload) {
-      (Action::Preview, Payload::Entire(_)) => {
+      (Action::Preview, LineIn::Entire(_)) => {
         spawn_blocking(move || udiff(None, o2.unified, &name, &before, &after)).await?
       }
-      (Action::Preview, Payload::Piecewise(_, ranges)) => {
+      (Action::Preview, LineIn::Piecewise(_, ranges)) => {
         spawn_blocking(move || udiff(Some(&ranges), o2.unified, &name, &before, &after)).await?
       }
-      (Action::Commit, Payload::Entire(_)) => {
+      (Action::Commit, LineIn::Entire(_)) => {
         spit(&path, &slurped.meta, &after).await?;
         let mut out = name;
         out.push("\n");
         out
       }
-      (Action::Commit, Payload::Piecewise(_, ranges)) => {
+      (Action::Commit, LineIn::Piecewise(_, ranges)) => {
         let after = spawn_blocking(move || {
           let patches = patches(o2.unified, &before, &after);
           apply_patches(patches, &ranges, &before)
