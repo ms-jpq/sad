@@ -8,7 +8,7 @@ use {
   futures::{
     future::{ready, select, Either},
     pin_mut,
-    stream::{once, try_unfold, Stream, StreamExt, TryStream, TryStreamExt, chain, empty},
+    stream::{empty, once, try_unfold, Stream, StreamExt, TryStream, TryStreamExt},
   },
   regex::Regex,
   std::{
@@ -74,12 +74,16 @@ fn p_line(line: &str) -> Result<DiffLine, Fail> {
   Ok(DiffLine(path, range))
 }
 
-fn stream_patch(patch: &Path) -> impl Stream<Item = Result<Payload, Fail>> {
-  //let patch = patch.to_owned();
+async fn stream_patch(patch: &Path) -> Box<dyn Stream<Item = Result<Payload, Fail>>> {
+  let patch = patch.to_owned();
 
-  //let fd = File::open(path_file)
-  //  .await
-  //  .map_err(|e| Fail::IO(path_file.to_owned(), e.kind()))?;
+  let fd = match File::open(&patch).await {
+    Err(e) => {
+      let err = Fail::IO(patch.to_owned(), e.kind());
+      return Box::new(once(ready(Err(err))));
+    }
+    Ok(fd) => fd,
+  };
   //let mut reader = BufReader::new(fd);
   //let mut acc = HashMap::<_, HashSet<_>>::new();
 
@@ -107,8 +111,8 @@ fn stream_patch(patch: &Path) -> impl Stream<Item = Result<Payload, Fail>> {
   //  }
   //}
 
-  //Ok(acc)
-  try_unfold(0, |_| async { Ok(None) })
+  let stream = try_unfold(0, |_| async { Ok(None) });
+  return Box::new(stream);
 }
 
 fn u8_pathbuf(v8: Vec<u8>) -> PathBuf {
@@ -161,13 +165,16 @@ fn stream_stdin(use_nul: bool) -> impl Stream<Item = Result<Payload, Fail>> {
   return stream.try_filter_map(|x| async { Ok(x) });
 }
 
-pub fn stream_in(mode: &Mode, args: &Arguments) -> Box<dyn Stream<Item = Result<Payload, Fail>>> {
+pub async fn stream_in(
+  mode: &Mode,
+  args: &Arguments,
+) -> Box<dyn Stream<Item = Result<Payload, Fail>>> {
   match mode {
     Mode::Initial if io::stdin().is_terminal() => {
       let err = Fail::ArgumentError("/dev/stdin connected to tty".to_owned());
       Box::new(once(ready(Err(err))))
     }
     Mode::Initial => Box::new(stream_stdin(args.read0)),
-    Mode::Preview(path) | Mode::Patch(path) => Box::new(stream_patch(path)),
+    Mode::Preview(path) | Mode::Patch(path) => stream_patch(path).await,
   }
 }
