@@ -84,34 +84,34 @@ async fn stream_patch(patch: &Path) -> Box<dyn Stream<Item = Result<Payload, Fai
     }
     Ok(fd) => fd,
   };
-  //let mut reader = BufReader::new(fd);
-  //let mut acc = HashMap::<_, HashSet<_>>::new();
+  let reader = BufReader::new(fd);
+  let acc = HashMap::<PathBuf, HashSet<DiffRange>>::new();
 
-  //loop {
-  //  let mut buf = Vec::default();
-  //  let n = reader
-  //    .read_until(b'\0', &mut buf)
-  //    .await
-  //    .map_err(|e| Fail::IO(path_file.to_owned(), e.kind()))?;
+  let stream = try_unfold((reader, acc, patch), move |mut s| async move {
+    let mut buf = Vec::default();
+    match s.0.read_until(b'\0', &mut buf).await {
+      Err(err) => Err(Fail::IO(s.2.to_owned(), err.kind())),
+      Ok(0) => Ok(None),
+      Ok(_) => {
+        buf.pop();
+        let line =
+          String::from_utf8(buf).map_err(|_| Fail::IO(s.2.to_owned(), ErrorKind::InvalidData))?;
+        let parsed = p_line(&line)?;
 
-  //  if n == 0 {
-  //    break;
-  //  }
+        if let Some(ranges) = s.1.get_mut(&parsed.0) {
+          ranges.insert(parsed.1);
+          Ok(None)
+        } else {
+          let mut ranges = HashSet::new();
+          ranges.insert(parsed.1);
+          s.1.insert(parsed.0, ranges);
+          //Ok(Some((Payload::Piecewise(parsed.0, ranges), s)))
+          Ok(None)
+        }
+      }
+    }
+  });
 
-  //  buf.pop();
-  //  let line =
-  //    String::from_utf8(buf).map_err(|_| Fail::IO(path_file.to_owned(), ErrorKind::InvalidData))?;
-  //  let patch = p_line(&line)?;
-  //  if let Some(ranges) = acc.get_mut(&patch.0) {
-  //    ranges.insert(patch.1);
-  //  } else {
-  //    let mut ranges = HashSet::new();
-  //    ranges.insert(patch.1);
-  //    acc.insert(patch.0, ranges);
-  //  }
-  //}
-
-  let stream = try_unfold(0, |_| async { Ok(None) });
   return Box::new(stream);
 }
 
@@ -142,14 +142,14 @@ fn stream_stdin(use_nul: bool) -> impl Stream<Item = Result<Payload, Fail>> {
   let stream = try_unfold((reader, seen), move |mut s| async move {
     let mut buf = Vec::default();
     match s.0.read_until(delim, &mut buf).await {
-      Err(err) => Err(Fail::IO(PathBuf::from("/dev/stdin"), err.kind())),
+      Err(e) => Err(Fail::IO(PathBuf::from("/dev/stdin"), e.kind())),
       Ok(0) => Ok(Some((None, s))),
       Ok(_) => {
         buf.pop();
         let path = u8_pathbuf(buf);
         match canonicalize(&path).await {
-          Err(err) if err.kind() == ErrorKind::NotFound => Ok(Some((None, s))),
-          Err(err) => Err(Fail::IO(path, err.kind())),
+          Err(e) if e.kind() == ErrorKind::NotFound => Ok(Some((None, s))),
+          Err(e) => Err(Fail::IO(path, e.kind())),
           Ok(canonical) => Ok(Some({
             if s.1.insert(canonical.clone()) {
               (Some(Payload::Entire(canonical)), s)
