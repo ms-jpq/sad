@@ -146,7 +146,7 @@ fn stream_stdin(use_nul: bool) -> impl Stream<Item = Result<LineIn, Fail>> {
     let mut buf = Vec::default();
     match s.0.read_until(delim, &mut buf).await {
       Err(e) => Err(Fail::IO(PathBuf::from("/dev/stdin"), e.kind())),
-      Ok(0) => Ok(Some((None, s))),
+      Ok(0) => Ok(None),
       Ok(_) => {
         buf.pop();
         let path = u8_pathbuf(buf);

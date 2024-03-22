@@ -57,7 +57,7 @@ fn stream_sink<'a>(
 async fn consume(stream: impl Stream<Item = Result<(), Fail>> + Send + Unpin) -> Result<(), Fail> {
   let int = once(async {
     match ctrl_c().await {
-      Err(e) => Fail::IO(PathBuf::new(), e.kind()),
+      Err(e) => Fail::IO(PathBuf::from("sigint"), e.kind()),
       Ok(()) => Fail::Interrupt,
     }
   });
@@ -99,7 +99,6 @@ fn main() -> impl Termination {
   let threads = available_parallelism().map(Into::into).unwrap_or(6);
   let rt = Builder::new_multi_thread()
     .enable_io()
-    .max_blocking_threads(threads)
     .build()
     .expect("runtime failure");
 
