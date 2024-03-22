@@ -74,7 +74,6 @@ async fn consume(stream: impl Stream<Item = Result<(), Die>> + Send) -> Result<(
   let mut out = pin!(out);
   match out.next().await {
     None | Some(Die::Eof) => Ok(()),
-    Some(Die::Interrupt) => Err(Die::Interrupt),
     Some(e) => Err(e),
   }
 }
