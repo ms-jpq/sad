@@ -6,7 +6,7 @@ SHELL := bash
 .ONESHELL:
 .SHELLFLAGS := --norc --noprofile -Eeuo pipefail -O dotglob -O nullglob -O failglob -O globstar -c
 
-.DEFAULT_GOAL := help
+.DEFAULT_GOAL := dev
 
 .PHONY: clean clobber lint mypy clippy deps build release ci test
 
@@ -33,6 +33,9 @@ clobber: clean
 
 mypy: .venv/$(VENV)/mypy
 	'$<' -- .
+
+dev:
+	cargo build
 
 clippy:
 	cargo clippy --all-targets --all-features

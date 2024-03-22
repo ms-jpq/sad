@@ -74,7 +74,10 @@ async fn consume(stream: impl Stream<Item = Result<(), Die>> + Send + Unpin) -> 
     match out.next().await {
       None | Some(Die::Eof) => break,
       Some(Die::Interrupt) => return Err(Die::Interrupt),
-      Some(e) => eprintln!("{}", Colour::Red.paint(format!("{e}"))),
+      Some(e) => {
+        eprintln!("{}", Colour::Red.paint(format!("{e}")));
+        return Err(e);
+      }
     }
   }
   Ok(())
