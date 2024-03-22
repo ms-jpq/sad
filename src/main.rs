@@ -20,8 +20,8 @@ use {
   argparse::{parse_args, parse_opts, Action, Options, Printer},
   displace::displace,
   futures::{
-    future::ready,
-    stream::{once, select, BoxStream, Stream, StreamExt, TryStreamExt},
+    future::{ready, Either},
+    stream::{once, select, Stream, StreamExt, TryStreamExt},
   },
   fzf::stream_fzf_proc,
   input::stream_in,
@@ -43,20 +43,22 @@ use {
 fn stream_sink<'a>(
   opts: &Options,
   stream: impl Stream<Item = Result<OsString, Die>> + Unpin + Send + 'a,
-) -> Box<dyn Stream<Item = Result<(), Die>> + Send + 'a> {
+) -> impl Stream<Item = Result<(), Die>> + Send + 'a {
   match (&opts.action, &opts.printer) {
-    (Action::FzfPreview(fzf_p, fzf_a), _) => {
-      Box::new(stream_fzf_proc(fzf_p.clone(), fzf_a.clone(), stream))
-    }
-    (_, Printer::Pager(cmd)) => Box::new(stream_subproc(cmd.clone(), stream)),
+    (Action::FzfPreview(fzf_p, fzf_a), _) => Either::Left(Either::Left(stream_fzf_proc(
+      fzf_p.clone(),
+      fzf_a.clone(),
+      stream,
+    ))),
+    (_, Printer::Pager(cmd)) => Either::Left(Either::Right(stream_subproc(cmd.clone(), stream))),
     (_, Printer::Stdout) => {
       let stdout = io::stdout();
-      Box::new(stream_into(PathBuf::from("/dev/stdout"), stdout, stream))
+      Either::Right(stream_into(PathBuf::from("/dev/stdout"), stdout, stream))
     }
   }
 }
 
-async fn consume(stream: impl Stream<Item = Result<(), Die>> + Send + Unpin) -> Result<(), Die> {
+async fn consume(stream: impl Stream<Item = Result<(), Die>> + Send) -> Result<(), Die> {
   let int = once(async {
     match ctrl_c().await {
       Err(e) => Die::IO(PathBuf::from("sigint"), e.kind()),
@@ -96,7 +98,7 @@ async fn run(threads: usize) -> Result<(), Die> {
     })
     .try_buffer_unordered(threads);
 
-  let out_stream = BoxStream::from(stream_sink(&opts, trans_stream));
+  let out_stream = stream_sink(&opts, trans_stream);
   consume(out_stream).await
 }
 
