@@ -4,7 +4,7 @@ use {
     subprocess::{stream_subproc, SubprocCommand},
     types::Die,
   },
-  futures::stream::{BoxStream, Stream, StreamExt},
+  futures::stream::{Stream, StreamExt},
   std::{
     collections::HashMap,
     env::{self, current_exe},
@@ -48,7 +48,7 @@ pub fn stream_fzf_proc<'a>(
   bin: PathBuf,
   args: Vec<String>,
   stream: impl Stream<Item = Result<OsString, Die>> + Unpin + Send + 'a,
-) -> Box<dyn Stream<Item = Result<(), Die>> + Send + 'a> {
+) -> impl Stream<Item = Result<(), Die>> + Send + 'a {
   let execute = format!("abort+execute:{}\x04{{+f}}", Mode::PATCH);
   let mut arguments = vec![
     "--read0".to_owned(),
@@ -83,7 +83,7 @@ pub fn stream_fzf_proc<'a>(
     args: arguments,
     env: fzf_env,
   };
-  let stream = BoxStream::from(stream_subproc(cmd, stream)).then(|line| async {
+  stream_subproc(cmd, stream).then(|line| async {
     match line {
       Ok(o) => Ok(o),
       Err(Die::BadExit(_, 130)) => Err(Die::Interrupt),
@@ -92,6 +92,5 @@ pub fn stream_fzf_proc<'a>(
         e
       }
     }
-  });
-  Box::new(stream)
+  })
 }

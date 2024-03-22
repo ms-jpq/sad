@@ -1,7 +1,7 @@
 use {
   super::types::Die,
   futures::{
-    future::ready,
+    future::{ready, Either},
     stream::{once, select, try_unfold, Stream, StreamExt},
   },
   std::{collections::HashMap, ffi::OsString, marker::Unpin, path::PathBuf, process::Stdio},
@@ -62,7 +62,7 @@ where
 pub fn stream_subproc<'a>(
   cmd: SubprocCommand,
   stream: impl Stream<Item = Result<OsString, Die>> + Unpin + Send + 'a,
-) -> Box<dyn Stream<Item = Result<(), Die>> + Send + 'a> {
+) -> impl Stream<Item = Result<(), Die>> + Send + 'a {
   let subprocess = Command::new(&cmd.prog)
     .kill_on_drop(true)
     .args(&cmd.args)
@@ -73,7 +73,7 @@ pub fn stream_subproc<'a>(
   match subprocess {
     Err(e) => {
       let err = Die::IO(cmd.prog, e.kind());
-      Box::new(once(ready(Err(err))))
+      Either::Left(once(ready(Err(err))))
     }
     Ok(mut child) => {
       let stdin = child.stdin.take().expect("child process stdin");
@@ -88,7 +88,7 @@ pub fn stream_subproc<'a>(
           }
         }
       });
-      Box::new(select(out, die))
+      Either::Right(select(out, die))
     }
   }
 }

@@ -5,7 +5,7 @@ use {
     udiff::DiffRange,
   },
   futures::{
-    future::ready,
+    future::{ready, Either},
     stream::{once, try_unfold, Stream, TryStreamExt},
   },
   regex::Regex,
@@ -69,13 +69,13 @@ fn p_line(line: &str) -> Result<DiffLine, Die> {
   Ok(DiffLine(path, range))
 }
 
-async fn stream_patch(patches: &Path) -> Box<dyn Stream<Item = Result<LineIn, Die>> + Send> {
+async fn stream_patch(patches: &Path) -> impl Stream<Item = Result<LineIn, Die>> + Send {
   let patches = patches.to_owned();
 
   let fd = match File::open(&patches).await {
     Err(e) => {
       let err = Die::IO(patches.clone(), e.kind());
-      return Box::new(once(ready(Err(err))));
+      return Either::Left(once(ready(Err(err))));
     }
     Ok(fd) => fd,
   };
@@ -121,7 +121,7 @@ async fn stream_patch(patches: &Path) -> Box<dyn Stream<Item = Result<LineIn, Di
     },
   );
 
-  Box::new(stream.try_filter_map(|x| ready(Ok(x))))
+  Either::Right(stream.try_filter_map(|x| ready(Ok(x))))
 }
 
 fn u8_pathbuf(v8: Vec<u8>) -> PathBuf {
@@ -144,6 +144,10 @@ fn u8_pathbuf(v8: Vec<u8>) -> PathBuf {
 }
 
 fn stream_stdin(use_nul: bool) -> impl Stream<Item = Result<LineIn, Die>> {
+  if io::stdin().is_terminal() {
+    let err = Die::ArgumentError("/dev/stdin connected to tty".to_owned());
+    return Either::Left(once(ready(Err(err))));
+  }
   let delim = if use_nul { b'\0' } else { b'\n' };
   let reader = BufReader::new(stdin());
   let seen = HashSet::new();
@@ -171,19 +175,15 @@ fn stream_stdin(use_nul: bool) -> impl Stream<Item = Result<LineIn, Die>> {
     }
   });
 
-  stream.try_filter_map(|x| ready(Ok(x)))
+  Either::Right(stream.try_filter_map(|x| ready(Ok(x))))
 }
 
 pub async fn stream_in(
   mode: &Mode,
   args: &Arguments,
-) -> Box<dyn Stream<Item = Result<LineIn, Die>> + Send> {
+) -> impl Stream<Item = Result<LineIn, Die>> + Send {
   match mode {
-    Mode::Initial if io::stdin().is_terminal() => {
-      let err = Die::ArgumentError("/dev/stdin connected to tty".to_owned());
-      Box::new(once(ready(Err(err))))
-    }
-    Mode::Initial => Box::new(stream_stdin(args.read0)),
-    Mode::Preview(path) | Mode::Patch(path) => stream_patch(path).await,
+    Mode::Initial => Either::Left(stream_stdin(args.read0)),
+    Mode::Preview(path) | Mode::Patch(path) => Either::Right(stream_patch(path).await),
   }
 }

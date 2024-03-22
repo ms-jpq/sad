@@ -45,8 +45,10 @@ fn stream_sink<'a>(
   stream: impl Stream<Item = Result<OsString, Die>> + Unpin + Send + 'a,
 ) -> Box<dyn Stream<Item = Result<(), Die>> + Send + 'a> {
   match (&opts.action, &opts.printer) {
-    (Action::FzfPreview(fzf_p, fzf_a), _) => stream_fzf_proc(fzf_p.clone(), fzf_a.clone(), stream),
-    (_, Printer::Pager(cmd)) => stream_subproc(cmd.clone(), stream),
+    (Action::FzfPreview(fzf_p, fzf_a), _) => {
+      Box::new(stream_fzf_proc(fzf_p.clone(), fzf_a.clone(), stream))
+    }
+    (_, Printer::Pager(cmd)) => Box::new(stream_subproc(cmd.clone(), stream)),
     (_, Printer::Stdout) => {
       let stdout = io::stdout();
       Box::new(stream_into(PathBuf::from("/dev/stdout"), stdout, stream))
@@ -84,7 +86,7 @@ async fn run(threads: usize) -> Result<(), Die> {
   let opts = parse_opts(mode, args)?;
   let options = Arc::new(opts);
   let opts = options.clone();
-  let trans_stream = BoxStream::from(input_stream)
+  let trans_stream = Box::pin(input_stream)
     .map_ok(move |input| {
       let opts = options.clone();
       async move { displace(&opts, input).await }
