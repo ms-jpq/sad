@@ -58,7 +58,7 @@ pub fn stream_fzf_proc<'a>(
     "--preview-window=70%:wrap".to_owned(),
     format!("--bind=enter:{execute}"),
     format!("--bind=double-click:{execute}"),
-    format!("--preview={}\x04{{f}}", Mode::PREVIEW),
+    format!("--preview={}\x04{{+f}}", Mode::PREVIEW),
   ];
   arguments.extend(args);
 
@@ -86,6 +86,7 @@ pub fn stream_fzf_proc<'a>(
   let stream = BoxStream::from(stream_subproc(cmd, stream)).then(|line| async {
     match line {
       Ok(o) => Ok(o),
+      Err(Fail::BadExit(_, 130)) => Err(Fail::Interrupt),
       e => {
         let _ = reset_term().await;
         e

@@ -27,6 +27,7 @@ pub enum LineIn {
   Piecewise(PathBuf, HashSet<DiffRange>),
 }
 
+#[derive(Debug)]
 struct DiffLine(PathBuf, DiffRange);
 
 fn p_line(line: &str) -> Result<DiffLine, Fail> {
@@ -108,7 +109,12 @@ async fn stream_patch(patches: &Path) -> Box<dyn Stream<Item = Result<LineIn, Fa
             let ranges = s.3;
             s.2 = parsed.0;
             s.3 = HashSet::new();
-            Ok(Some((Some(LineIn::Piecewise(path, ranges)), s)))
+            s.3.insert(parsed.1);
+            if ranges.is_empty() {
+              Ok(Some((None, s)))
+            } else {
+              Ok(Some((Some(LineIn::Piecewise(path, ranges)), s)))
+            }
           }
         }
       }

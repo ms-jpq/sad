@@ -1,9 +1,9 @@
 ## Good news
 
-v0.4.16
+v0.4.24
 
-- Added windows
+- Fewer dependencies
 
-- Added aarch64
+- More robust signal handling
 
 **Released by CI**
