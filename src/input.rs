@@ -132,7 +132,7 @@ fn u8_pathbuf(v8: Vec<u8>) -> PathBuf {
   }
   #[cfg(target_family = "windows")]
   {
-    use std::{convert::TryInto, os::windows::ffi::OsStringExt};
+    use std::os::windows::ffi::OsStringExt;
     let mut buf = Vec::new();
     for chunk in v8.chunks_exact(2) {
       let c: [u8; 2] = chunk.try_into().expect("exact chunks");
