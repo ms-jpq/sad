@@ -44,11 +44,11 @@ async fn reset_term() -> Result<(), Die> {
   Err(Die::IO(PathBuf::from("reset"), ErrorKind::NotFound))
 }
 
-pub fn stream_fzf_proc<'a>(
+pub fn stream_fzf_proc(
   bin: PathBuf,
   args: Vec<String>,
-  stream: impl Stream<Item = Result<OsString, Die>> + Unpin +  'a,
-) -> impl Stream<Item = Result<(), Die>> + 'a {
+  stream: impl Stream<Item = Result<OsString, Die>> + Unpin,
+) -> impl Stream<Item = Result<(), Die>> {
   let execute = format!("abort+execute:{}\x04{{+f}}", Mode::PATCH);
   let mut arguments = vec![
     "--read0".to_owned(),

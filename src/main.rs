@@ -40,10 +40,10 @@ use {
   types::Die,
 };
 
-fn stream_sink<'a>(
+fn stream_sink(
   opts: &Options,
-  stream: impl Stream<Item = Result<OsString, Die>> + Unpin + 'a,
-) -> impl Stream<Item = Result<(), Die>> + 'a {
+  stream: impl Stream<Item = Result<OsString, Die>> + Unpin,
+) -> impl Stream<Item = Result<(), Die>> {
   match (&opts.action, &opts.printer) {
     (Action::FzfPreview(fzf_p, fzf_a), _) => Either::Left(Either::Left(stream_fzf_proc(
       fzf_p.clone(),
@@ -58,7 +58,7 @@ fn stream_sink<'a>(
   }
 }
 
-async fn consume(stream: impl Stream<Item = Result<(), Die>>) -> Result<(), Die> {
+async fn consume(stream: impl Stream<Item = Result<(), Die>> + Send) -> Result<(), Die> {
   let int = once(async {
     match ctrl_c().await {
       Err(e) => Die::IO(PathBuf::from("sigint"), e.kind()),
@@ -84,14 +84,14 @@ async fn run(threads: usize) -> Result<(), Die> {
   let opts = parse_opts(mode, args)?;
   let options = Arc::new(opts);
   let opts = options.clone();
-  let trans_stream = Box::pin(input_stream)
+  let trans_stream = input_stream
     .map_ok(move |input| {
       let opts = options.clone();
       async move { displace(&opts, input).await }
     })
     .try_buffer_unordered(threads);
 
-  let out_stream = stream_sink(&opts, trans_stream);
+  let out_stream = stream_sink(&opts, Box::pin(trans_stream));
   consume(out_stream).await
 }
 

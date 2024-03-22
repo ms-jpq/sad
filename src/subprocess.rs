@@ -59,10 +59,10 @@ where
   })
 }
 
-pub fn stream_subproc<'a>(
+pub fn stream_subproc(
   cmd: SubprocCommand,
-  stream: impl Stream<Item = Result<OsString, Die>> + Unpin + 'a,
-) -> impl Stream<Item = Result<(), Die>> + 'a {
+  stream: impl Stream<Item = Result<OsString, Die>> + Unpin,
+) -> impl Stream<Item = Result<(), Die>> {
   let subprocess = Command::new(&cmd.prog)
     .kill_on_drop(true)
     .args(&cmd.args)
