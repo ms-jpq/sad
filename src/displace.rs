@@ -3,7 +3,7 @@ use {
     argparse::{Action, Engine, Options},
     fs_pipe::{slurp, spit},
     input::LineIn,
-    types::Fail,
+    types::Die,
     udiff::{apply_patches, patches, pure_diffs, udiff},
   },
   ansi_term::Colour,
@@ -27,7 +27,7 @@ impl LineIn {
   }
 }
 
-pub async fn displace(opts: &Arc<Options>, input: LineIn) -> Result<OsString, Fail> {
+pub async fn displace(opts: &Arc<Options>, input: LineIn) -> Result<OsString, Die> {
   let path = input.path().clone();
   let name = opts
     .cwd

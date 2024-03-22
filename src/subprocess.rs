@@ -1,5 +1,5 @@
 use {
-  super::types::Fail,
+  super::types::Die,
   futures::{
     future::ready,
     stream::{once, select, try_unfold, Stream, StreamExt},
@@ -21,8 +21,8 @@ pub struct SubprocCommand {
 pub fn stream_into(
   path: PathBuf,
   writer: impl AsyncWrite + Send + Unpin,
-  stream: impl Stream<Item = Result<OsString, Fail>> + Send + Unpin,
-) -> impl Stream<Item = Result<(), Fail>> + Send
+  stream: impl Stream<Item = Result<OsString, Die>> + Send + Unpin,
+) -> impl Stream<Item = Result<(), Die>> + Send
 where
 {
   let buf = BufWriter::new(writer);
@@ -32,7 +32,7 @@ where
         s.1
           .shutdown()
           .await
-          .map_err(|e| Fail::IO(s.2.clone(), e.kind()))?;
+          .map_err(|e| Die::IO(s.2.clone(), e.kind()))?;
         Ok(None)
       }
       Some(Err(e)) => {
@@ -53,7 +53,7 @@ where
         s.1
           .write_all(bytes)
           .await
-          .map_err(|e| Fail::IO(s.2.clone(), e.kind()))?;
+          .map_err(|e| Die::IO(s.2.clone(), e.kind()))?;
         Ok(Some(((), s)))
       }
     }
@@ -62,8 +62,8 @@ where
 
 pub fn stream_subproc<'a>(
   cmd: SubprocCommand,
-  stream: impl Stream<Item = Result<OsString, Fail>> + Unpin + Send + 'a,
-) -> Box<dyn Stream<Item = Result<(), Fail>> + Send + 'a> {
+  stream: impl Stream<Item = Result<OsString, Die>> + Unpin + Send + 'a,
+) -> Box<dyn Stream<Item = Result<(), Die>> + Send + 'a> {
   let subprocess = Command::new(&cmd.prog)
     .kill_on_drop(true)
     .args(&cmd.args)
@@ -73,7 +73,7 @@ pub fn stream_subproc<'a>(
 
   match subprocess {
     Err(e) => {
-      let err = Fail::IO(cmd.prog, e.kind());
+      let err = Die::IO(cmd.prog, e.kind());
       Box::new(once(ready(Err(err))))
     }
     Ok(mut child) => {
@@ -81,11 +81,11 @@ pub fn stream_subproc<'a>(
       let out = stream_into(cmd.prog.clone(), stdin, stream);
       let die = once(async move {
         match child.wait().await {
-          Err(e) => Err(Fail::IO(cmd.prog, e.kind())),
+          Err(e) => Err(Die::IO(cmd.prog, e.kind())),
           Ok(status) if status.success() => Ok(()),
           Ok(status) => {
             let code = status.code().unwrap_or(1);
-            Err(Fail::BadExit(cmd.prog, code))
+            Err(Die::BadExit(cmd.prog, code))
           }
         }
       });

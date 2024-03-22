@@ -14,8 +14,8 @@ use {
 };
 
 #[derive(Clone, Debug)]
-pub enum Fail {
-  EOF,
+pub enum Die {
+  Eof,
   Interrupt,
   RegexError(RegexError),
   BuildError(BuildError),
@@ -24,21 +24,21 @@ pub enum Fail {
   BadExit(PathBuf, i32),
 }
 
-impl Error for Fail {}
+impl Error for Die {}
 
-impl Display for Fail {
+impl Display for Die {
   fn fmt(&self, f: &mut Formatter) -> fmt::Result {
     write!(f, "Error: {self:?}")
   }
 }
 
-impl From<RegexError> for Fail {
+impl From<RegexError> for Die {
   fn from(e: RegexError) -> Self {
     Self::RegexError(e)
   }
 }
 
-impl From<BuildError> for Fail {
+impl From<BuildError> for Die {
   fn from(e: BuildError) -> Self {
     Self::BuildError(e)
   }

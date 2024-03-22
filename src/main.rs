@@ -37,13 +37,13 @@ use {
   },
   subprocess::{stream_into, stream_subproc},
   tokio::{io, runtime::Builder, signal::ctrl_c},
-  types::Fail,
+  types::Die,
 };
 
 fn stream_sink<'a>(
   opts: &Options,
-  stream: impl Stream<Item = Result<OsString, Fail>> + Unpin + Send + 'a,
-) -> Box<dyn Stream<Item = Result<(), Fail>> + Send + 'a> {
+  stream: impl Stream<Item = Result<OsString, Die>> + Unpin + Send + 'a,
+) -> Box<dyn Stream<Item = Result<(), Die>> + Send + 'a> {
   match (&opts.action, &opts.printer) {
     (Action::FzfPreview(fzf_p, fzf_a), _) => stream_fzf_proc(fzf_p.clone(), fzf_a.clone(), stream),
     (_, Printer::Pager(cmd)) => stream_subproc(cmd.clone(), stream),
@@ -54,31 +54,31 @@ fn stream_sink<'a>(
   }
 }
 
-async fn consume(stream: impl Stream<Item = Result<(), Fail>> + Send + Unpin) -> Result<(), Fail> {
+async fn consume(stream: impl Stream<Item = Result<(), Die>> + Send + Unpin) -> Result<(), Die> {
   let int = once(async {
     match ctrl_c().await {
-      Err(e) => Fail::IO(PathBuf::from("sigint"), e.kind()),
-      Ok(()) => Fail::Interrupt,
+      Err(e) => Die::IO(PathBuf::from("sigint"), e.kind()),
+      Ok(()) => Die::Interrupt,
     }
   });
   let out = select(
     stream
       .filter_map(|row| async { row.err() })
-      .chain(once(ready(Fail::EOF))),
+      .chain(once(ready(Die::Eof))),
     int,
   );
   let mut out = pin!(out);
   loop {
     match out.next().await {
-      None | Some(Fail::EOF) => break,
-      Some(Fail::Interrupt) => return Err(Fail::Interrupt),
+      None | Some(Die::Eof) => break,
+      Some(Die::Interrupt) => return Err(Die::Interrupt),
       Some(e) => eprintln!("{}", Colour::Red.paint(format!("{e}"))),
     }
   }
   Ok(())
 }
 
-async fn run(threads: usize) -> Result<(), Fail> {
+async fn run(threads: usize) -> Result<(), Die> {
   let (mode, args) = parse_args();
   let input_stream = stream_in(&mode, &args).await;
   let opts = parse_opts(mode, args)?;
@@ -104,7 +104,7 @@ fn main() -> impl Termination {
 
   match rt.block_on(run(threads)).err() {
     None => ExitCode::SUCCESS,
-    Some(Fail::Interrupt) => ExitCode::from(130),
+    Some(Die::Interrupt) => ExitCode::from(130),
     Some(e) => {
       eprintln!("{}", Colour::Red.paint(format!("{e}")));
       ExitCode::FAILURE

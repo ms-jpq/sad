@@ -2,7 +2,7 @@ use {
   super::{
     argparse::Mode,
     subprocess::{stream_subproc, SubprocCommand},
-    types::Fail,
+    types::Die,
   },
   futures::stream::{BoxStream, Stream, StreamExt},
   std::{
@@ -16,7 +16,7 @@ use {
   which::which,
 };
 
-async fn reset_term() -> Result<(), Fail> {
+async fn reset_term() -> Result<(), Die> {
   if let Ok(path) = which("tput") {
     let status = Command::new(&path)
       .kill_on_drop(true)
@@ -24,7 +24,7 @@ async fn reset_term() -> Result<(), Fail> {
       .arg("reset")
       .status()
       .await
-      .map_err(|e| Fail::IO(path, e.kind()))?;
+      .map_err(|e| Die::IO(path, e.kind()))?;
 
     if status.success() {
       return Ok(());
@@ -36,19 +36,19 @@ async fn reset_term() -> Result<(), Fail> {
       .stdin(Stdio::null())
       .status()
       .await
-      .map_err(|e| Fail::IO(path, e.kind()))?;
+      .map_err(|e| Die::IO(path, e.kind()))?;
     if status.success() {
       return Ok(());
     }
   }
-  Err(Fail::IO(PathBuf::from("reset"), ErrorKind::NotFound))
+  Err(Die::IO(PathBuf::from("reset"), ErrorKind::NotFound))
 }
 
 pub fn stream_fzf_proc<'a>(
   bin: PathBuf,
   args: Vec<String>,
-  stream: impl Stream<Item = Result<OsString, Fail>> + Unpin + Send + 'a,
-) -> Box<dyn Stream<Item = Result<(), Fail>> + Send + 'a> {
+  stream: impl Stream<Item = Result<OsString, Die>> + Unpin + Send + 'a,
+) -> Box<dyn Stream<Item = Result<(), Die>> + Send + 'a> {
   let execute = format!("abort+execute:{}\x04{{+f}}", Mode::PATCH);
   let mut arguments = vec![
     "--read0".to_owned(),
@@ -76,7 +76,7 @@ pub fn stream_fzf_proc<'a>(
         |path| format!("{}", path.display()),
       ),
   );
-  fzf_env.insert("LC_ALL".to_owned(), "C".to_owned());
+  fzf_env.insert("LC_ALL".to_owned(), "C-UTF8".to_owned());
 
   let cmd = SubprocCommand {
     prog: bin,
@@ -86,7 +86,7 @@ pub fn stream_fzf_proc<'a>(
   let stream = BoxStream::from(stream_subproc(cmd, stream)).then(|line| async {
     match line {
       Ok(o) => Ok(o),
-      Err(Fail::BadExit(_, 130)) => Err(Fail::Interrupt),
+      Err(Die::BadExit(_, 130)) => Err(Die::Interrupt),
       e => {
         let _ = reset_term().await;
         e

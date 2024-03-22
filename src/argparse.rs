@@ -1,5 +1,5 @@
 use {
-  super::{subprocess::SubprocCommand, types::Fail},
+  super::{subprocess::SubprocCommand, types::Die},
   aho_corasick::{AhoCorasick, AhoCorasickBuilder},
   clap::Parser,
   regex::{Regex, RegexBuilder},
@@ -155,14 +155,14 @@ fn p_auto_flags(exact: bool, pattern: &str) -> Vec<String> {
   flags
 }
 
-fn p_aho_corasick(pattern: &str, flags: Vec<String>) -> Result<AhoCorasick, Fail> {
+fn p_aho_corasick(pattern: &str, flags: Vec<String>) -> Result<AhoCorasick, Die> {
   let mut ac = AhoCorasickBuilder::new();
   for flag in flags {
     match flag.as_str() {
       "i" => ac.ascii_case_insensitive(true),
       "I" => ac.ascii_case_insensitive(false),
       _ => {
-        return Err(Fail::ArgumentError(format!(
+        return Err(Die::ArgumentError(format!(
           "Invalid regex flag, see `--help` :: {flag}"
         )))
       }
@@ -171,7 +171,7 @@ fn p_aho_corasick(pattern: &str, flags: Vec<String>) -> Result<AhoCorasick, Fail
   Ok(ac.build([pattern])?)
 }
 
-fn p_regex(pattern: &str, flags: Vec<String>) -> Result<Regex, Fail> {
+fn p_regex(pattern: &str, flags: Vec<String>) -> Result<Regex, Die> {
   let mut re = RegexBuilder::new(pattern);
   for flag in flags {
     match flag.as_str() {
@@ -186,7 +186,7 @@ fn p_regex(pattern: &str, flags: Vec<String>) -> Result<Regex, Fail> {
       "x" => re.ignore_whitespace(true),
       "X" => re.ignore_whitespace(false),
       _ => {
-        return Err(Fail::ArgumentError(format!(
+        return Err(Die::ArgumentError(format!(
           "Invalid regex flag, see `--help` :: {flag}"
         )))
       }
@@ -243,7 +243,7 @@ fn p_pager(pager: &Option<String>) -> Option<SubprocCommand> {
   })
 }
 
-pub fn parse_opts(mode: Mode, args: Arguments) -> Result<Options, Fail> {
+pub fn parse_opts(mode: Mode, args: Arguments) -> Result<Options, Die> {
   let mut flagset = p_auto_flags(args.exact, &args.pattern);
   flagset.extend(
     args
