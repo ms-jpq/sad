@@ -72,11 +72,11 @@ def _release(project: _Project) -> None:
             "gh",
             "release",
             "create",
-            "--message",
+            "--notes",
             message,
-            *attachments,
             "--",
             project.tag,
+            *attachments,
         )
     )
 
