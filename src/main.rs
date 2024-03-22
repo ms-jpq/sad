@@ -10,7 +10,6 @@ mod displace;
 mod fs_pipe;
 mod fzf;
 mod input;
-mod output;
 mod subprocess;
 mod types;
 mod udiff;
@@ -18,117 +17,96 @@ mod udiff_spec;
 
 use {
   ansi_term::Colour,
-  argparse::{parse_args, parse_opts, Options},
-  async_channel::Receiver as MPMCR,
+  argparse::{parse_args, parse_opts, Action, Options, Printer},
   displace::displace,
   futures::{
-    future::{select, try_join3, try_join_all, Either},
-    pin_mut,
+    future::ready,
+    stream::{once, select, BoxStream, Stream, StreamExt, TryStreamExt},
   },
-  input::{stream_in, Payload},
-  output::stream_out,
+  fzf::stream_fzf_proc,
+  input::stream_in,
   std::{
     convert::Into,
     ffi::OsString,
+    marker::Unpin,
+    path::PathBuf,
+    pin::pin,
     process::{ExitCode, Termination},
     sync::Arc,
     thread::available_parallelism,
   },
-  tokio::{
-    runtime::Builder,
-    sync::mpsc::{self, Receiver},
-    task::{spawn, JoinHandle},
-  },
-  types::{Abort, Fail},
+  subprocess::{stream_into, stream_subproc},
+  tokio::{io, runtime::Builder, signal::ctrl_c},
+  types::Die,
 };
 
-fn stream_trans(
-  abort: &Arc<Abort>,
-  threads: usize,
+fn stream_sink<'a>(
   opts: &Options,
-  stream: &MPMCR<Payload>,
-) -> (JoinHandle<()>, Receiver<OsString>) {
-  let a_opts = Arc::new(opts.clone());
-  let (tx, rx) = mpsc::channel::<OsString>(1);
-
-  let handles = (1..=threads * 2)
-    .map(|_| {
-      let abort = abort.clone();
-      let stream = stream.clone();
-      let opts = a_opts.clone();
-      let tx = tx.clone();
-
-      spawn(async move {
-        loop {
-          let f1 = abort.notified();
-          let f2 = stream.recv();
-          pin_mut!(f1);
-          pin_mut!(f2);
-
-          match select(f1, f2).await {
-            Either::Left(_) | Either::Right((Err(_), _)) => break,
-            Either::Right((Ok(payload), _)) => match displace(&opts, payload).await {
-              Ok(displaced) => {
-                if tx.send(displaced).await.is_err() {
-                  break;
-                }
-              }
-              Err(err) => {
-                abort.send(err).await;
-                break;
-              }
-            },
-          }
-        }
-      })
-    })
-    .collect::<Vec<_>>();
-
-  let abort = abort.clone();
-  let handle = spawn(async move {
-    if let Err(err) = try_join_all(handles).await {
-      abort.send(err.into()).await;
+  stream: impl Stream<Item = Result<OsString, Die>> + Unpin + Send + 'a,
+) -> Box<dyn Stream<Item = Result<(), Die>> + Send + 'a> {
+  match (&opts.action, &opts.printer) {
+    (Action::FzfPreview(fzf_p, fzf_a), _) => stream_fzf_proc(fzf_p.clone(), fzf_a.clone(), stream),
+    (_, Printer::Pager(cmd)) => stream_subproc(cmd.clone(), stream),
+    (_, Printer::Stdout) => {
+      let stdout = io::stdout();
+      Box::new(stream_into(PathBuf::from("/dev/stdout"), stdout, stream))
     }
-  });
-  (handle, rx)
+  }
 }
 
-async fn run(abort: &Arc<Abort>, threads: usize) -> Result<(), Fail> {
-  let (mode, args) = parse_args();
-  let (h_1, input_stream) = stream_in(abort, &mode, &args);
-  let opts = parse_opts(mode, args)?;
-  let (h_2, trans_stream) = stream_trans(abort, threads, &opts, &input_stream);
-  let h_3 = stream_out(abort, &opts, trans_stream);
-  try_join3(h_1, h_2, h_3).await?;
+async fn consume(stream: impl Stream<Item = Result<(), Die>> + Send + Unpin) -> Result<(), Die> {
+  let int = once(async {
+    match ctrl_c().await {
+      Err(e) => Die::IO(PathBuf::from("sigint"), e.kind()),
+      Ok(()) => Die::Interrupt,
+    }
+  });
+  let out = select(
+    stream
+      .filter_map(|row| async { row.err() })
+      .chain(once(ready(Die::Eof))),
+    int,
+  );
+  let mut out = pin!(out);
+  loop {
+    match out.next().await {
+      None | Some(Die::Eof) => break,
+      Some(Die::Interrupt) => return Err(Die::Interrupt),
+      Some(e) => eprintln!("{}", Colour::Red.paint(format!("{e}"))),
+    }
+  }
   Ok(())
 }
 
+async fn run(threads: usize) -> Result<(), Die> {
+  let (mode, args) = parse_args();
+  let input_stream = stream_in(&mode, &args).await;
+  let opts = parse_opts(mode, args)?;
+  let options = Arc::new(opts);
+  let opts = options.clone();
+  let trans_stream = BoxStream::from(input_stream)
+    .map_ok(move |input| {
+      let opts = options.clone();
+      async move { displace(&opts, input).await }
+    })
+    .try_buffer_unordered(threads);
+
+  let out_stream = BoxStream::from(stream_sink(&opts, trans_stream));
+  consume(out_stream).await
+}
+
 fn main() -> impl Termination {
-  let threads = available_parallelism().map(Into::into).unwrap_or(4);
+  let threads = available_parallelism().map(Into::into).unwrap_or(6);
   let rt = Builder::new_multi_thread()
     .enable_io()
-    .max_blocking_threads(threads)
     .build()
     .expect("runtime failure");
 
-  let errors = rt.block_on(async {
-    let abort = Abort::new();
-    if let Err(err) = run(&abort, threads).await {
-      let mut errs = abort.fin().await;
-      errs.push(err);
-      errs
-    } else {
-      abort.fin().await
-    }
-  });
-
-  match errors[..] {
-    [] => ExitCode::SUCCESS,
-    [Fail::Interrupt] => ExitCode::from(130),
-    _ => {
-      for err in errors {
-        eprintln!("{}", Colour::Red.paint(format!("{err}")));
-      }
+  match rt.block_on(run(threads)).err() {
+    None => ExitCode::SUCCESS,
+    Some(Die::Interrupt) => ExitCode::from(130),
+    Some(e) => {
+      eprintln!("{}", Colour::Red.paint(format!("{e}")));
       ExitCode::FAILURE
     }
   }

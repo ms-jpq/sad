@@ -7,14 +7,21 @@ version     = "0.4.24"
 
 
 [dependencies]
-aho-corasick  = { version = "*" }
-ansi_term     = { version = "*" }
-async-channel = { version = "*" }
-clap          = { version = "*", features = ["derive", "wrap_help"] }
-difflib       = { version = "*" }
-futures       = { version = "*" }
-regex         = { version = "*" }
-shlex         = { version = "*" }
-tokio         = { version = "*", features = ["full"] }
-uuid          = { version = "*", features = ["v4"] }
-which         = { version = "*" }
+aho-corasick = { version = "*" }
+ansi_term = { version = "*" }
+clap = { version = "*", features = ["derive", "wrap_help"] }
+difflib = { version = "*" }
+futures = { version = "*" }
+regex = { version = "*" }
+shlex = { version = "*" }
+tokio = { version = "*", features = [
+  "fs",
+  "io-std",
+  "io-util",
+  "net",
+  "process",
+  "rt-multi-thread",
+  "signal",
+] }
+uuid = { version = "*", features = ["v4"] }
+which = { version = "*" }

@@ -2,13 +2,12 @@ use {
   super::{
     argparse::{Action, Engine, Options},
     fs_pipe::{slurp, spit},
-    input::Payload,
-    types::Fail,
+    input::LineIn,
+    types::Die,
     udiff::{apply_patches, patches, pure_diffs, udiff},
   },
   ansi_term::Colour,
   std::{ffi::OsString, path::PathBuf, sync::Arc},
-  tokio::task::spawn_blocking,
 };
 
 impl Engine {
@@ -20,7 +19,7 @@ impl Engine {
   }
 }
 
-impl Payload {
+impl LineIn {
   const fn path(&self) -> &PathBuf {
     match self {
       Self::Entire(path) | Self::Piecewise(path, _) => path,
@@ -28,8 +27,8 @@ impl Payload {
   }
 }
 
-pub async fn displace(opts: &Arc<Options>, payload: Payload) -> Result<OsString, Fail> {
-  let path = payload.path().clone();
+pub async fn displace(opts: &Arc<Options>, input: LineIn) -> Result<OsString, Die> {
+  let path = input.path().clone();
   let name = opts
     .cwd
     .as_ref()
@@ -39,54 +38,41 @@ pub async fn displace(opts: &Arc<Options>, payload: Payload) -> Result<OsString,
     .to_owned();
 
   let slurped = slurp(&path).await?;
-  let before = Arc::new(slurped.content);
-
-  let o = opts.clone();
-  let o2 = opts.clone();
-  let b = before.clone();
-  let after = spawn_blocking(move || o.engine.replace(&b)).await?;
+  let before = slurped.content;
+  let after = opts.engine.replace(&before);
 
   if *before == after {
     Ok(OsString::default())
   } else {
-    let print = match (&opts.action, payload) {
-      (Action::Preview, Payload::Entire(_)) => {
-        spawn_blocking(move || udiff(None, o2.unified, &name, &before, &after)).await?
+    let print = match (&opts.action, input) {
+      (Action::Preview, LineIn::Entire(_)) => udiff(None, opts.unified, &name, &before, &after),
+      (Action::Preview, LineIn::Piecewise(_, ranges)) => {
+        udiff(Some(&ranges), opts.unified, &name, &before, &after)
       }
-      (Action::Preview, Payload::Piecewise(_, ranges)) => {
-        spawn_blocking(move || udiff(Some(&ranges), o2.unified, &name, &before, &after)).await?
-      }
-      (Action::Commit, Payload::Entire(_)) => {
+      (Action::Commit, LineIn::Entire(_)) => {
         spit(&path, &slurped.meta, &after).await?;
         let mut out = name;
         out.push("\n");
         out
       }
-      (Action::Commit, Payload::Piecewise(_, ranges)) => {
-        let after = spawn_blocking(move || {
-          let patches = patches(o2.unified, &before, &after);
-          apply_patches(patches, &ranges, &before)
-        })
-        .await?;
-
+      (Action::Commit, LineIn::Piecewise(_, ranges)) => {
+        let patches = patches(opts.unified, &before, &after);
+        let after = apply_patches(patches, &ranges, &before);
         spit(&path, &slurped.meta, &after).await?;
         let mut out = name;
         out.push("\n");
         out
       }
       (Action::FzfPreview(_, _), _) => {
-        spawn_blocking(move || {
-          let ranges = pure_diffs(o2.unified, &before, &after);
-          let mut fzf_lines = OsString::new();
-          for range in ranges {
-            let repr = Colour::Red.paint(format!("{range}"));
-            fzf_lines.push(&name);
-            let line = format!("\n\n\n\n{repr}\0");
-            fzf_lines.push(&line);
-          }
-          fzf_lines
-        })
-        .await?
+        let ranges = pure_diffs(opts.unified, &before, &after);
+        let mut fzf_lines = OsString::new();
+        for range in ranges {
+          let repr = Colour::Red.paint(format!("{range}"));
+          fzf_lines.push(&name);
+          let line = format!("\n\n\n\n{repr}\0");
+          fzf_lines.push(&line);
+        }
+        fzf_lines
       }
     };
     Ok(print)

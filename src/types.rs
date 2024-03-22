@@ -1,6 +1,6 @@
 use {
   aho_corasick::BuildError,
-  futures::lock::Mutex,
+  //futures::stream::Stream,
   regex::Error as RegexError,
   std::{
     clone::Clone,
@@ -8,14 +8,14 @@ use {
     fmt::{self, Display, Formatter},
     io::ErrorKind,
     path::PathBuf,
-    sync::Arc,
+    //pin::{pin, Pin},
+    //task::{Context, Poll},
   },
-  tokio::{sync::Notify, task::JoinError},
 };
 
 #[derive(Clone, Debug)]
-pub enum Fail {
-  Join,
+pub enum Die {
+  Eof,
   Interrupt,
   RegexError(RegexError),
   BuildError(BuildError),
@@ -24,64 +24,54 @@ pub enum Fail {
   BadExit(PathBuf, i32),
 }
 
-impl Error for Fail {}
+impl Error for Die {}
 
-impl Display for Fail {
+impl Display for Die {
   fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-    write!(f, "Error:\n{self:#?}")
+    write!(f, "Error: {self:?}")
   }
 }
 
-impl From<JoinError> for Fail {
-  fn from(e: JoinError) -> Self {
-    if e.is_cancelled() {
-      Self::Interrupt
-    } else {
-      Self::Join
-    }
-  }
-}
-
-impl From<RegexError> for Fail {
+impl From<RegexError> for Die {
   fn from(e: RegexError) -> Self {
     Self::RegexError(e)
   }
 }
 
-impl From<BuildError> for Fail {
+impl From<BuildError> for Die {
   fn from(e: BuildError) -> Self {
     Self::BuildError(e)
   }
 }
 
-pub struct Abort {
-  errors: Mutex<Vec<Fail>>,
-  rx: Notify,
-}
+//pub enum E3<A, B, C> {
+//  A(A),
+//  B(B),
+//  C(C),
+//}
 
-impl Abort {
-  pub fn new() -> Arc<Self> {
-    Arc::new(Self {
-      errors: Mutex::new(Vec::default()),
-      rx: Notify::new(),
-    })
-  }
+//impl<A, B, C> Stream for E3<A, B, C>
+//where
+//  A: Stream + Unpin,
+//  B: Stream<Item = A::Item> + Unpin,
+//  C: Stream<Item = A::Item> + Unpin,
+//{
+//  type Item = A::Item;
 
-  pub async fn fin(&self) -> Vec<Fail> {
-    self.errors.lock().await.to_vec()
-  }
-
-  pub async fn send(&self, fail: Fail) {
-    let mut errors = self.errors.lock().await;
-    errors.push(fail);
-    self.rx.notify_waiters();
-  }
-
-  pub async fn notified(&self) {
-    let errors = self.errors.lock().await;
-    if errors.len() > 0 {
-    } else {
-      self.rx.notified().await;
-    }
-  }
-}
+//  fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+//    match *self {
+//      E3::A(ref mut a) => {
+//        let a = pin!(a);
+//        a.poll_next(cx)
+//      }
+//      E3::B(ref mut b) => {
+//        let b = pin!(b);
+//        b.poll_next(cx)
+//      }
+//      E3::C(ref mut c) => {
+//        let c = pin!(c);
+//        c.poll_next(cx)
+//      }
+//    }
+//  }
+//}

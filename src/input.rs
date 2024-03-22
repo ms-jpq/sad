@@ -1,41 +1,39 @@
 use {
   super::{
     argparse::{Arguments, Mode},
-    types::{Abort, Fail},
+    types::Die,
     udiff::DiffRange,
   },
-  async_channel::{bounded, Receiver},
   futures::{
-    future::{select, Either},
-    pin_mut,
+    future::ready,
+    stream::{once, try_unfold, Stream, TryStreamExt},
   },
   regex::Regex,
   std::{
-    collections::{HashMap, HashSet},
+    collections::HashSet,
     ffi::OsString,
     io::{self, ErrorKind, IsTerminal},
     path::{Path, PathBuf},
-    sync::Arc,
   },
   tokio::{
     fs::{canonicalize, File},
     io::{stdin, AsyncBufReadExt, BufReader},
-    task::{spawn, JoinHandle},
   },
 };
 
 #[derive(Debug)]
-pub enum Payload {
+pub enum LineIn {
   Entire(PathBuf),
   Piecewise(PathBuf, HashSet<DiffRange>),
 }
 
+#[derive(Debug)]
 struct DiffLine(PathBuf, DiffRange);
 
-fn p_line(line: &str) -> Result<DiffLine, Fail> {
-  let f = Fail::ArgumentError(String::default());
+fn p_line(line: &str) -> Result<DiffLine, Die> {
+  let f = Die::ArgumentError(String::default());
   let preg = "\n\n\n\n@@ -(\\d+),(\\d+) \\+(\\d+),(\\d+) @@$";
-  let re = Regex::new(preg).map_err(Fail::RegexError)?;
+  let re = Regex::new(preg).map_err(Die::RegexError)?;
   let captures = re.captures(line).ok_or_else(|| f.clone())?;
 
   let before_start = captures
@@ -71,60 +69,59 @@ fn p_line(line: &str) -> Result<DiffLine, Fail> {
   Ok(DiffLine(path, range))
 }
 
-async fn read_patches(path_file: &Path) -> Result<HashMap<PathBuf, HashSet<DiffRange>>, Fail> {
-  let fd = File::open(path_file)
-    .await
-    .map_err(|e| Fail::IO(path_file.to_owned(), e.kind()))?;
-  let mut reader = BufReader::new(fd);
-  let mut acc = HashMap::<_, HashSet<_>>::new();
+async fn stream_patch(patches: &Path) -> Box<dyn Stream<Item = Result<LineIn, Die>> + Send> {
+  let patches = patches.to_owned();
 
-  loop {
-    let mut buf = Vec::default();
-    let n = reader
-      .read_until(b'\0', &mut buf)
-      .await
-      .map_err(|e| Fail::IO(path_file.to_owned(), e.kind()))?;
-
-    if n == 0 {
-      break;
+  let fd = match File::open(&patches).await {
+    Err(e) => {
+      let err = Die::IO(patches.clone(), e.kind());
+      return Box::new(once(ready(Err(err))));
     }
+    Ok(fd) => fd,
+  };
+  let reader = BufReader::new(fd);
+  let acc = HashSet::new();
 
-    buf.pop();
-    let line =
-      String::from_utf8(buf).map_err(|_| Fail::IO(path_file.to_owned(), ErrorKind::InvalidData))?;
-    let patch = p_line(&line)?;
-    if let Some(ranges) = acc.get_mut(&patch.0) {
-      ranges.insert(patch.1);
-    } else {
-      let mut ranges = HashSet::new();
-      ranges.insert(patch.1);
-      acc.insert(patch.0, ranges);
-    }
-  }
-
-  Ok(acc)
-}
-
-fn stream_patch(abort: &Arc<Abort>, patch: &Path) -> (JoinHandle<()>, Receiver<Payload>) {
-  let abort = abort.clone();
-  let patch = patch.to_owned();
-  let (tx, rx) = bounded::<Payload>(1);
-
-  let handle = spawn(async move {
-    match read_patches(&patch).await {
-      Ok(patches) => {
-        for patch in patches {
-          if tx.send(Payload::Piecewise(patch.0, patch.1)).await.is_err() {
-            break;
+  let stream = try_unfold(
+    (reader, patches, PathBuf::new(), acc),
+    move |mut s| async move {
+      let mut buf = Vec::default();
+      match s.0.read_until(b'\0', &mut buf).await {
+        Err(err) => Err(Die::IO(s.1.clone(), err.kind())),
+        Ok(0) if s.3.is_empty() => Ok(None),
+        Ok(0) => {
+          let path = s.2;
+          let ranges = s.3;
+          s.2 = PathBuf::new();
+          s.3 = HashSet::new();
+          Ok(Some((Some(LineIn::Piecewise(path, ranges)), s)))
+        }
+        Ok(_) => {
+          buf.pop();
+          let line =
+            String::from_utf8(buf).map_err(|_| Die::IO(s.1.clone(), ErrorKind::InvalidData))?;
+          let parsed = p_line(&line)?;
+          if parsed.0 == s.2 {
+            s.3.insert(parsed.1);
+            Ok(Some((None, s)))
+          } else {
+            let path = s.2;
+            let ranges = s.3;
+            s.2 = parsed.0;
+            s.3 = HashSet::new();
+            s.3.insert(parsed.1);
+            if ranges.is_empty() {
+              Ok(Some((None, s)))
+            } else {
+              Ok(Some((Some(LineIn::Piecewise(path, ranges)), s)))
+            }
           }
         }
       }
-      Err(err) => {
-        abort.send(err).await;
-      }
-    }
-  });
-  (handle, rx)
+    },
+  );
+
+  Box::new(stream.try_filter_map(|x| ready(Ok(x))))
 }
 
 fn u8_pathbuf(v8: Vec<u8>) -> PathBuf {
@@ -135,7 +132,7 @@ fn u8_pathbuf(v8: Vec<u8>) -> PathBuf {
   }
   #[cfg(target_family = "windows")]
   {
-    use std::{convert::TryInto, os::windows::ffi::OsStringExt};
+    use std::os::windows::ffi::OsStringExt;
     let mut buf = Vec::new();
     for chunk in v8.chunks_exact(2) {
       let c: [u8; 2] = chunk.try_into().expect("exact chunks");
@@ -146,69 +143,47 @@ fn u8_pathbuf(v8: Vec<u8>) -> PathBuf {
   }
 }
 
-fn stream_stdin(abort: &Arc<Abort>, use_nul: bool) -> (JoinHandle<()>, Receiver<Payload>) {
-  let (tx, rx) = bounded::<Payload>(1);
+fn stream_stdin(use_nul: bool) -> impl Stream<Item = Result<LineIn, Die>> {
+  let delim = if use_nul { b'\0' } else { b'\n' };
+  let reader = BufReader::new(stdin());
+  let seen = HashSet::new();
 
-  let abort = abort.clone();
-  let handle = spawn(async move {
-    if io::stdin().is_terminal() {
-      abort
-        .send(Fail::ArgumentError(
-          "/dev/stdin connected to tty".to_owned(),
-        ))
-        .await;
-    } else {
-      let delim = if use_nul { b'\0' } else { b'\n' };
-      let mut reader = BufReader::new(stdin());
-      let mut seen = HashSet::new();
-
-      loop {
-        let mut buf = Vec::default();
-        let f1 = abort.notified();
-        let f2 = reader.read_until(delim, &mut buf);
-
-        pin_mut!(f1);
-        pin_mut!(f2);
-        match select(f1, f2).await {
-          Either::Left(_) | Either::Right((Ok(0), _)) => break,
-          Either::Right((Err(err), _)) => {
-            abort
-              .send(Fail::IO(PathBuf::from("/dev/stdin"), err.kind()))
-              .await;
-            break;
-          }
-          Either::Right((Ok(_), _)) => {
-            buf.pop();
-            let path = u8_pathbuf(buf);
-            match canonicalize(&path).await {
-              Ok(canonical) => {
-                if seen.insert(canonical.clone())
-                  && tx.send(Payload::Entire(canonical)).await.is_err()
-                {
-                  break;
-                }
-              }
-              Err(err) if err.kind() == ErrorKind::NotFound => (),
-              Err(err) => {
-                abort.send(Fail::IO(path, err.kind())).await;
-                break;
-              }
+  let stream = try_unfold((reader, seen), move |mut s| async move {
+    let mut buf = Vec::default();
+    match s.0.read_until(delim, &mut buf).await {
+      Err(e) => Err(Die::IO(PathBuf::from("/dev/stdin"), e.kind())),
+      Ok(0) => Ok(None),
+      Ok(_) => {
+        buf.pop();
+        let path = u8_pathbuf(buf);
+        match canonicalize(&path).await {
+          Err(e) if e.kind() == ErrorKind::NotFound => Ok(Some((None, s))),
+          Err(e) => Err(Die::IO(path, e.kind())),
+          Ok(canonical) => Ok(Some({
+            if s.1.insert(canonical.clone()) {
+              (Some(LineIn::Entire(canonical)), s)
+            } else {
+              (None, s)
             }
-          }
+          })),
         }
       }
     }
   });
-  (handle, rx)
+
+  stream.try_filter_map(|x| ready(Ok(x)))
 }
 
-pub fn stream_in(
-  abort: &Arc<Abort>,
+pub async fn stream_in(
   mode: &Mode,
   args: &Arguments,
-) -> (JoinHandle<()>, Receiver<Payload>) {
+) -> Box<dyn Stream<Item = Result<LineIn, Die>> + Send> {
   match mode {
-    Mode::Initial => stream_stdin(abort, args.read0),
-    Mode::Preview(path) | Mode::Patch(path) => stream_patch(abort, path),
+    Mode::Initial if io::stdin().is_terminal() => {
+      let err = Die::ArgumentError("/dev/stdin connected to tty".to_owned());
+      Box::new(once(ready(Err(err))))
+    }
+    Mode::Initial => Box::new(stream_stdin(args.read0)),
+    Mode::Preview(path) | Mode::Patch(path) => stream_patch(path).await,
   }
 }
