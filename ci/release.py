@@ -64,8 +64,7 @@ def _release(project: _Project) -> None:
     body = (_TOP_LEVEL / "RELEASE_NOTES.md").read_text()
     message = f"{title}{linesep}{linesep}{body}"
 
-    arts = (normcase(p) for p in _walk(_TOP_LEVEL / "arts"))
-    attachments = chain.from_iterable(zip(repeat("--attach"), arts))
+    attachments = (normcase(p) for p in _walk(_TOP_LEVEL / "arts"))
 
     check_call(
         (

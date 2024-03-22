@@ -72,17 +72,11 @@ async fn consume(stream: impl Stream<Item = Result<(), Die>> + Send) -> Result<(
     int,
   );
   let mut out = pin!(out);
-  loop {
-    match out.next().await {
-      None | Some(Die::Eof) => break,
-      Some(Die::Interrupt) => return Err(Die::Interrupt),
-      Some(e) => {
-        eprintln!("{}", Colour::Red.paint(format!("{e}")));
-        return Err(e);
-      }
-    }
+  match out.next().await {
+    None | Some(Die::Eof) => Ok(()),
+    Some(Die::Interrupt) => Err(Die::Interrupt),
+    Some(e) => Err(e),
   }
-  Ok(())
 }
 
 async fn run(threads: usize) -> Result<(), Die> {
