@@ -69,7 +69,7 @@ def _release(project: _Project) -> None:
 
     check_call(
         (
-            "hub",
+            "gh",
             "release",
             "create",
             "--message",
@@ -103,8 +103,8 @@ def _git_ops() -> Iterator[Path]:
     msg = f"CI - {time}"
 
     check_call(("git", "clone", "--depth=1", uri, pkgs), cwd=_TOP_LEVEL)
-    check_call(("git", "config", "user.email", email), cwd=pkgs)
-    check_call(("git", "config", "user.name", username), cwd=pkgs)
+    check_call(("git", "config", "--", "user.email", email), cwd=pkgs)
+    check_call(("git", "config", "--", "user.name", username), cwd=pkgs)
     yield pkgs
     check_call(("git", "add", "-A"), cwd=pkgs)
     check_call(("git", "commit", "-m", msg), cwd=pkgs)
