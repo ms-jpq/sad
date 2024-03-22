@@ -18,6 +18,7 @@ tokio = { version = "*", features = [
   "fs",
   "io-std",
   "io-util",
+  "net",
   "process",
   "rt-multi-thread",
   "signal",
