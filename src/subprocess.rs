@@ -46,10 +46,9 @@ where
           print.as_bytes()
         };
         #[cfg(target_family = "windows")]
-        let bytes = {
-          let tmp = print.to_string_lossy();
-          tmp.as_bytes()
-        };
+        let tmp = print.to_string_lossy();
+        #[cfg(target_family = "windows")]
+        let bytes = tmp.as_bytes();
         s.1
           .write_all(bytes)
           .await
