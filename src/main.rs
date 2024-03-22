@@ -19,7 +19,10 @@ use {
   ansi_term::Colour,
   argparse::{parse_args, parse_opts, Action, Options, Printer},
   displace::displace,
-  futures::stream::{once, select, BoxStream, Stream, StreamExt, TryStreamExt},
+  futures::{
+    future::ready,
+    stream::{once, select, BoxStream, Stream, StreamExt, TryStreamExt},
+  },
   fzf::stream_fzf_proc,
   input::stream_in,
   std::{
@@ -58,11 +61,16 @@ async fn consume(stream: impl Stream<Item = Result<(), Fail>> + Send + Unpin) ->
       Ok(()) => Fail::Interrupt,
     }
   });
-  let out = select(stream.filter_map(|row| async { row.err() }), int);
+  let out = select(
+    stream
+      .filter_map(|row| async { row.err() })
+      .chain(once(ready(Fail::EOF))),
+    int,
+  );
   let mut out = pin!(out);
   loop {
     match out.next().await {
-      None => break,
+      None | Some(Fail::EOF) => break,
       Some(Fail::Interrupt) => return Err(Fail::Interrupt),
       Some(e) => eprintln!("{}", Colour::Red.paint(format!("{e}"))),
     }

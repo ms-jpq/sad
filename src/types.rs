@@ -11,12 +11,11 @@ use {
     //pin::{pin, Pin},
     //task::{Context, Poll},
   },
-  tokio::task::JoinError,
 };
 
 #[derive(Clone, Debug)]
 pub enum Fail {
-  Join,
+  EOF,
   Interrupt,
   RegexError(RegexError),
   BuildError(BuildError),
@@ -29,17 +28,7 @@ impl Error for Fail {}
 
 impl Display for Fail {
   fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-    write!(f, "Error:\n{self:#?}")
-  }
-}
-
-impl From<JoinError> for Fail {
-  fn from(e: JoinError) -> Self {
-    if e.is_cancelled() {
-      Self::Interrupt
-    } else {
-      Self::Join
-    }
+    write!(f, "Error: {self:?}")
   }
 }
 

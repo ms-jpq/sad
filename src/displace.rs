@@ -8,7 +8,6 @@ use {
   },
   ansi_term::Colour,
   std::{ffi::OsString, path::PathBuf, sync::Arc},
-  tokio::task::spawn_blocking,
 };
 
 impl Engine {
@@ -39,22 +38,16 @@ pub async fn displace(opts: &Arc<Options>, input: LineIn) -> Result<OsString, Fa
     .to_owned();
 
   let slurped = slurp(&path).await?;
-  let before = Arc::new(slurped.content);
-
-  let o = opts.clone();
-  let o2 = opts.clone();
-  let b = before.clone();
-  let after = spawn_blocking(move || o.engine.replace(&b)).await?;
+  let before = slurped.content;
+  let after = opts.engine.replace(&before);
 
   if *before == after {
     Ok(OsString::default())
   } else {
     let print = match (&opts.action, input) {
-      (Action::Preview, LineIn::Entire(_)) => {
-        spawn_blocking(move || udiff(None, o2.unified, &name, &before, &after)).await?
-      }
+      (Action::Preview, LineIn::Entire(_)) => udiff(None, opts.unified, &name, &before, &after),
       (Action::Preview, LineIn::Piecewise(_, ranges)) => {
-        spawn_blocking(move || udiff(Some(&ranges), o2.unified, &name, &before, &after)).await?
+        udiff(Some(&ranges), opts.unified, &name, &before, &after)
       }
       (Action::Commit, LineIn::Entire(_)) => {
         spit(&path, &slurped.meta, &after).await?;
@@ -63,30 +56,23 @@ pub async fn displace(opts: &Arc<Options>, input: LineIn) -> Result<OsString, Fa
         out
       }
       (Action::Commit, LineIn::Piecewise(_, ranges)) => {
-        let after = spawn_blocking(move || {
-          let patches = patches(o2.unified, &before, &after);
-          apply_patches(patches, &ranges, &before)
-        })
-        .await?;
-
+        let patches = patches(opts.unified, &before, &after);
+        let after = apply_patches(patches, &ranges, &before);
         spit(&path, &slurped.meta, &after).await?;
         let mut out = name;
         out.push("\n");
         out
       }
       (Action::FzfPreview(_, _), _) => {
-        spawn_blocking(move || {
-          let ranges = pure_diffs(o2.unified, &before, &after);
-          let mut fzf_lines = OsString::new();
-          for range in ranges {
-            let repr = Colour::Red.paint(format!("{range}"));
-            fzf_lines.push(&name);
-            let line = format!("\n\n\n\n{repr}\0");
-            fzf_lines.push(&line);
-          }
-          fzf_lines
-        })
-        .await?
+        let ranges = pure_diffs(opts.unified, &before, &after);
+        let mut fzf_lines = OsString::new();
+        for range in ranges {
+          let repr = Colour::Red.paint(format!("{range}"));
+          fzf_lines.push(&name);
+          let line = format!("\n\n\n\n{repr}\0");
+          fzf_lines.push(&line);
+        }
+        fzf_lines
       }
     };
     Ok(print)
