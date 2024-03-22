@@ -63,20 +63,18 @@ def _release(project: _Project) -> None:
     title = f"ci_{project.version}_{time}"
     body = (_TOP_LEVEL / "RELEASE_NOTES.md").read_text()
     message = f"{title}{linesep}{linesep}{body}"
-
-    arts = (normcase(p) for p in _walk(_TOP_LEVEL / "arts"))
-    attachments = chain.from_iterable(zip(repeat("--attach"), arts))
+    attachments = _walk(_TOP_LEVEL / "arts")
 
     check_call(
         (
             "gh",
             "release",
             "create",
-            "--message",
+            "--notes",
             message,
-            *attachments,
             "--",
             project.tag,
+            *attachments,
         )
     )
 
