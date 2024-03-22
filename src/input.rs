@@ -69,7 +69,7 @@ fn p_line(line: &str) -> Result<DiffLine, Die> {
   Ok(DiffLine(path, range))
 }
 
-async fn stream_patch(patches: &Path) -> impl Stream<Item = Result<LineIn, Die>> + Send {
+async fn stream_patch(patches: &Path) -> impl Stream<Item = Result<LineIn, Die>> {
   let patches = patches.to_owned();
 
   let fd = match File::open(&patches).await {
@@ -178,10 +178,7 @@ fn stream_stdin(use_nul: bool) -> impl Stream<Item = Result<LineIn, Die>> {
   Either::Right(stream.try_filter_map(|x| ready(Ok(x))))
 }
 
-pub async fn stream_in(
-  mode: &Mode,
-  args: &Arguments,
-) -> impl Stream<Item = Result<LineIn, Die>> + Send {
+pub async fn stream_in(mode: &Mode, args: &Arguments) -> impl Stream<Item = Result<LineIn, Die>> {
   match mode {
     Mode::Initial => Either::Left(stream_stdin(args.read0)),
     Mode::Preview(path) | Mode::Patch(path) => Either::Right(stream_patch(path).await),

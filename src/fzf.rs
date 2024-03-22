@@ -47,8 +47,8 @@ async fn reset_term() -> Result<(), Die> {
 pub fn stream_fzf_proc<'a>(
   bin: PathBuf,
   args: Vec<String>,
-  stream: impl Stream<Item = Result<OsString, Die>> + Unpin + Send + 'a,
-) -> impl Stream<Item = Result<(), Die>> + Send + 'a {
+  stream: impl Stream<Item = Result<OsString, Die>> + Unpin +  'a,
+) -> impl Stream<Item = Result<(), Die>> + 'a {
   let execute = format!("abort+execute:{}\x04{{+f}}", Mode::PATCH);
   let mut arguments = vec![
     "--read0".to_owned(),

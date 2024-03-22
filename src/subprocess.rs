@@ -20,9 +20,9 @@ pub struct SubprocCommand {
 
 pub fn stream_into(
   path: PathBuf,
-  writer: impl AsyncWrite + Send + Unpin,
-  stream: impl Stream<Item = Result<OsString, Die>> + Send + Unpin,
-) -> impl Stream<Item = Result<(), Die>> + Send
+  writer: impl AsyncWrite + Unpin,
+  stream: impl Stream<Item = Result<OsString, Die>> + Unpin,
+) -> impl Stream<Item = Result<(), Die>>
 where
 {
   let buf = BufWriter::new(writer);
@@ -61,8 +61,8 @@ where
 
 pub fn stream_subproc<'a>(
   cmd: SubprocCommand,
-  stream: impl Stream<Item = Result<OsString, Die>> + Unpin + Send + 'a,
-) -> impl Stream<Item = Result<(), Die>> + Send + 'a {
+  stream: impl Stream<Item = Result<OsString, Die>> + Unpin + 'a,
+) -> impl Stream<Item = Result<(), Die>> + 'a {
   let subprocess = Command::new(&cmd.prog)
     .kill_on_drop(true)
     .args(&cmd.args)

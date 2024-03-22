@@ -42,8 +42,8 @@ use {
 
 fn stream_sink<'a>(
   opts: &Options,
-  stream: impl Stream<Item = Result<OsString, Die>> + Unpin + Send + 'a,
-) -> impl Stream<Item = Result<(), Die>> + Send + 'a {
+  stream: impl Stream<Item = Result<OsString, Die>> + Unpin + 'a,
+) -> impl Stream<Item = Result<(), Die>> + 'a {
   match (&opts.action, &opts.printer) {
     (Action::FzfPreview(fzf_p, fzf_a), _) => Either::Left(Either::Left(stream_fzf_proc(
       fzf_p.clone(),
@@ -58,7 +58,7 @@ fn stream_sink<'a>(
   }
 }
 
-async fn consume(stream: impl Stream<Item = Result<(), Die>> + Send) -> Result<(), Die> {
+async fn consume(stream: impl Stream<Item = Result<(), Die>>) -> Result<(), Die> {
   let int = once(async {
     match ctrl_c().await {
       Err(e) => Die::IO(PathBuf::from("sigint"), e.kind()),
