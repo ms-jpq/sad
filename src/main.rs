@@ -91,7 +91,7 @@ async fn run(threads: usize) -> Result<(), Die> {
     })
     .try_buffer_unordered(threads);
 
-  let out_stream = stream_sink(&opts, Box::pin(trans_stream));
+  let out_stream = stream_sink(&opts, trans_stream.boxed());
   consume(out_stream).await
 }
 
