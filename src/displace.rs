@@ -7,7 +7,7 @@ use {
     udiff::{apply_patches, patches, pure_diffs, udiff},
   },
   ansi_term::Colour,
-  std::{ffi::OsString, path::PathBuf, sync::Arc},
+  std::{borrow::ToOwned, ffi::OsString, path::PathBuf},
 };
 
 impl Engine {
@@ -27,9 +27,9 @@ impl LineIn {
   }
 }
 
-pub async fn displace(opts: &Arc<Options>, input: LineIn) -> Result<OsString, Die> {
+pub async fn displace(opts: &Options, input: LineIn) -> Result<OsString, Die> {
   let path = input.path().clone();
-  let name = opts
+  let mut name = opts
     .cwd
     .as_ref()
     .and_then(|cwd| path.strip_prefix(cwd).ok())
@@ -39,7 +39,14 @@ pub async fn displace(opts: &Arc<Options>, input: LineIn) -> Result<OsString, Di
 
   let slurped = slurp(&path).await?;
   let before = slurped.content;
-  let after = opts.engine.replace(&before);
+  let replaced = {
+    let b = before.clone().into_iter().collect::<String>();
+    opts.engine.replace(&b)
+  };
+  let after = replaced
+    .split_inclusive('\n')
+    .map(ToOwned::to_owned)
+    .collect::<Vec<_>>();
 
   if *before == after {
     Ok(OsString::new())
@@ -50,18 +57,16 @@ pub async fn displace(opts: &Arc<Options>, input: LineIn) -> Result<OsString, Di
         udiff(Some(&ranges), opts.unified, &name, &before, &after)
       }
       (Action::Commit, LineIn::Entire(_)) => {
-        spit(&path, &slurped.meta, &after).await?;
-        let mut out = name;
-        out.push("\n");
-        out
+        spit(&path, &slurped.meta, after).await?;
+        name.push("\n");
+        name
       }
       (Action::Commit, LineIn::Piecewise(_, ranges)) => {
         let patches = patches(opts.unified, &before, &after);
         let after = apply_patches(patches, &ranges, &before);
-        spit(&path, &slurped.meta, &after).await?;
-        let mut out = name;
-        out.push("\n");
-        out
+        spit(&path, &slurped.meta, after).await?;
+        name.push("\n");
+        name
       }
       (Action::FzfPreview(_, _), _) => {
         let ranges = pure_diffs(opts.unified, &before, &after);

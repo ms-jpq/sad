@@ -1,5 +1,5 @@
 use {
-  difflib::{sequencematcher::Opcode, sequencematcher::SequenceMatcher},
+  difflib::sequencematcher::{Opcode, SequenceMatcher},
   std::{
     collections::HashSet,
     ffi::{OsStr, OsString},
@@ -34,9 +34,12 @@ impl Display for DiffRange {
   }
 }
 
-pub fn pure_diffs(unified: usize, before: &str, after: &str) -> Vec<DiffRange> {
-  let before = before.split_inclusive('\n').collect::<Vec<_>>();
-  let after = after.split_inclusive('\n').collect::<Vec<_>>();
+pub struct Patch<S> {
+  range: DiffRange,
+  new_lines: Vec<S>,
+}
+
+pub fn pure_diffs(unified: usize, before: &[String], after: &[String]) -> Vec<DiffRange> {
   let mut ret = Vec::new();
   let mut matcher = SequenceMatcher::new(&before, &after);
   for group in &matcher.get_grouped_opcodes(unified) {
@@ -46,30 +49,26 @@ pub fn pure_diffs(unified: usize, before: &str, after: &str) -> Vec<DiffRange> {
   ret
 }
 
-pub struct Patch {
-  range: DiffRange,
-  new_lines: Vec<String>,
-}
-
-pub fn patches(unified: usize, before: &str, after: &str) -> Vec<Patch> {
-  let before = before.split_inclusive('\n').collect::<Vec<_>>();
-  let after = after.split_inclusive('\n').collect::<Vec<_>>();
-
+pub fn patches<'a>(
+  unified: usize,
+  before: &'a [String],
+  after: &'a [String],
+) -> Vec<Patch<&'a str>> {
   let mut ret = Vec::new();
   let mut matcher = SequenceMatcher::new(&before, &after);
 
   for group in &matcher.get_grouped_opcodes(unified) {
-    let mut new_lines = Vec::new();
+    let mut new_lines = Vec::<&str>::new();
     for code in group {
       if code.tag == "equal" {
         for line in before.iter().take(code.first_end).skip(code.first_start) {
-          new_lines.push((*line).to_owned());
+          new_lines.push(line);
         }
         continue;
       }
       if code.tag == "replace" || code.tag == "insert" {
         for line in after.iter().take(code.second_end).skip(code.second_start) {
-          new_lines.push((*line).to_owned());
+          new_lines.push(line);
         }
       }
     }
@@ -82,39 +81,33 @@ pub fn patches(unified: usize, before: &str, after: &str) -> Vec<Patch> {
   ret
 }
 
-pub fn apply_patches(patches: Vec<Patch>, ranges: &HashSet<DiffRange>, before: &str) -> String {
-  let before = before.split_inclusive('\n').collect::<Vec<_>>();
-  let mut ret = String::new();
+pub fn apply_patches<'a>(
+  patches: Vec<Patch<&'a str>>,
+  ranges: &HashSet<DiffRange>,
+  before: &'a [String],
+) -> Vec<&'a str> {
+  let mut ret = Vec::<&str>::new();
   let mut prev = 0;
 
   for diff in patches {
     let (before_start, before_inc) = diff.range.before;
     let before_end = before_start + before_inc;
     for i in prev..before_start {
-      before
-        .get(i)
-        .map(|b| ret.push_str(b))
-        .expect("algo failure");
+      before.get(i).map(|b| ret.push(b)).expect("algo failure");
     }
     if ranges.contains(&diff.range) {
       for line in &diff.new_lines {
-        ret.push_str(line);
+        ret.push(line);
       }
     } else {
       for i in before_start..before_end {
-        before
-          .get(i)
-          .map(|b| ret.push_str(b))
-          .expect("algo failure");
+        before.get(i).map(|b| ret.push(b)).expect("algo failure");
       }
     }
     prev = before_end;
   }
   for i in prev..before.len() {
-    before
-      .get(i)
-      .map(|b| ret.push_str(b))
-      .expect("algo failure");
+    before.get(i).map(|b| ret.push(b)).expect("algo failure");
   }
   ret
 }
@@ -123,12 +116,9 @@ pub fn udiff(
   ranges: Option<&HashSet<DiffRange>>,
   unified: usize,
   name: &OsStr,
-  before: &str,
-  after: &str,
+  before: &[String],
+  after: &[String],
 ) -> OsString {
-  let before = before.split_inclusive('\n').collect::<Vec<_>>();
-  let after = after.split_inclusive('\n').collect::<Vec<_>>();
-
   let mut ret = OsString::new();
 
   ret.push("diff --git ");
@@ -160,20 +150,20 @@ pub fn udiff(
       if code.tag == "equal" {
         for line in before.iter().take(code.first_end).skip(code.first_start) {
           ret.push(" ");
-          ret.push(*line);
+          ret.push(line);
         }
         continue;
       }
       if code.tag == "replace" || code.tag == "delete" {
         for line in before.iter().take(code.first_end).skip(code.first_start) {
           ret.push("-");
-          ret.push(*line);
+          ret.push(line);
         }
       }
       if code.tag == "replace" || code.tag == "insert" {
         for line in after.iter().take(code.second_end).skip(code.second_start) {
           ret.push("+");
-          ret.push(*line);
+          ret.push(line);
         }
       }
     }
