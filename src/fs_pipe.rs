@@ -47,14 +47,11 @@ pub async fn slurp(path: &Path) -> Result<Slurpee, Die> {
   Ok(Slurpee { meta, content })
 }
 
-pub async fn spit<T>(
+pub async fn spit(
   canonical: &Path,
   meta: &Metadata,
-  text: impl IntoIterator<Item = T>,
-) -> Result<(), Die>
-where
-  T: AsRef<[u8]>,
-{
+  text: Vec<impl AsRef<[u8]> + Send>,
+) -> Result<(), Die> {
   let uuid = Uuid::new_v4().as_simple().to_string();
   let mut file_name = canonical
     .file_name()

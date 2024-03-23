@@ -67,7 +67,7 @@ async fn consume(stream: impl Stream<Item = Result<(), Die>> + Send) -> Result<(
   });
   let out = select(
     stream
-      .filter_map(|row| async { row.err() })
+      .filter_map(|row| ready(row.err()))
       .chain(once(ready(Die::Eof))),
     int,
   );

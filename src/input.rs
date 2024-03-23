@@ -22,20 +22,20 @@ use {
 };
 
 #[derive(Debug)]
-pub enum LineIn {
+pub enum RowIn {
   Entire(PathBuf),
   Piecewise(PathBuf, HashSet<DiffRange>),
 }
 
 #[derive(Debug)]
-struct DiffLine(PathBuf, DiffRange);
+struct DiffRow(PathBuf, DiffRange);
 
-fn p_line(line: &str) -> Result<DiffLine, Die> {
+fn p_row(row: &str) -> Result<DiffRow, Die> {
   let f = || Die::ArgumentError(String::new());
   let ff = |_| f();
   let preg = "\n\n\n\n@@ -(\\d+),(\\d+) \\+(\\d+),(\\d+) @@$";
   let re = Regex::new(preg).map_err(Die::RegexError)?;
-  let captures = re.captures(line).ok_or_else(f)?;
+  let captures = re.captures(row).ok_or_else(f)?;
 
   let before_start = captures
     .get(1)
@@ -66,11 +66,11 @@ fn p_line(line: &str) -> Result<DiffLine, Die> {
     before: (before_start - 1, before_inc),
     after: (after_start - 1, after_inc),
   };
-  let path = PathBuf::from(String::from(re.replace(line, "")));
-  Ok(DiffLine(path, range))
+  let path = PathBuf::from(String::from(re.replace(row, "")));
+  Ok(DiffRow(path, range))
 }
 
-async fn stream_patch(patches: &Path) -> impl Stream<Item = Result<LineIn, Die>> {
+async fn stream_patch(patches: &Path) -> impl Stream<Item = Result<RowIn, Die>> {
   let patches = patches.to_owned();
 
   let fd = match File::open(&patches).await {
@@ -99,12 +99,12 @@ async fn stream_patch(patches: &Path) -> impl Stream<Item = Result<LineIn, Die>>
           let ranges = s.3;
           s.2 = PathBuf::new();
           s.3 = HashSet::new();
-          Ok(Some((Some(LineIn::Piecewise(path, ranges)), s)))
+          Ok(Some((Some(RowIn::Piecewise(path, ranges)), s)))
         }
         Some(buf) => {
-          let line =
+          let row =
             String::from_utf8(buf).map_err(|_| Die::IO(s.1.clone(), ErrorKind::InvalidData))?;
-          let parsed = p_line(&line)?;
+          let parsed = p_row(&row)?;
           if parsed.0 == s.2 {
             s.3.insert(parsed.1);
             Ok(Some((None, s)))
@@ -117,7 +117,7 @@ async fn stream_patch(patches: &Path) -> impl Stream<Item = Result<LineIn, Die>>
             if ranges.is_empty() {
               Ok(Some((None, s)))
             } else {
-              Ok(Some((Some(LineIn::Piecewise(path, ranges)), s)))
+              Ok(Some((Some(RowIn::Piecewise(path, ranges)), s)))
             }
           }
         }
@@ -147,7 +147,7 @@ fn u8_pathbuf(v8: Vec<u8>) -> PathBuf {
   }
 }
 
-fn stream_stdin(use_nul: bool) -> impl Stream<Item = Result<LineIn, Die>> {
+fn stream_stdin(use_nul: bool) -> impl Stream<Item = Result<RowIn, Die>> {
   if io::stdin().is_terminal() {
     let err = Die::ArgumentError("/dev/stdin connected to tty".to_owned());
     return Either::Left(once(ready(Err(err))));
@@ -171,7 +171,7 @@ fn stream_stdin(use_nul: bool) -> impl Stream<Item = Result<LineIn, Die>> {
           Err(e) => Err(Die::IO(path, e.kind())),
           Ok(canonical) => Ok(Some({
             if s.1.insert(canonical.clone()) {
-              (Some(LineIn::Entire(canonical)), s)
+              (Some(RowIn::Entire(canonical)), s)
             } else {
               (None, s)
             }
@@ -184,7 +184,7 @@ fn stream_stdin(use_nul: bool) -> impl Stream<Item = Result<LineIn, Die>> {
   Either::Right(stream.try_filter_map(|x| ready(Ok(x))))
 }
 
-pub async fn stream_in(mode: &Mode, args: &Arguments) -> impl Stream<Item = Result<LineIn, Die>> {
+pub async fn stream_in(mode: &Mode, args: &Arguments) -> impl Stream<Item = Result<RowIn, Die>> {
   match mode {
     Mode::Initial => Either::Left(stream_stdin(args.read0)),
     Mode::Preview(path) | Mode::Patch(path) => Either::Right(stream_patch(path).await),

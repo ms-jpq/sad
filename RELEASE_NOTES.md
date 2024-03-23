@@ -1,6 +1,10 @@
 ## Good news
 
-v0.4.24
+v0.4.26
+
+- Reduce allocations
+
+- Preview multi-selects
 
 - Fewer dependencies
 
