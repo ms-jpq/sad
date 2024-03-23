@@ -3,7 +3,7 @@ authors     = ["git@bigly.dog"]
 description = "Space Age seD | https://github.com/ms-jpq/sad"
 edition     = "2021"
 name        = "sad"
-version     = "0.4.26"
+version     = "0.4.27"
 
 
 [dependencies]

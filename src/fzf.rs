@@ -76,7 +76,7 @@ pub fn stream_fzf_proc(
         |path| format!("{}", path.display()),
       ),
   );
-  fzf_env.insert("LC_ALL".to_owned(), "C-UTF8".to_owned());
+  fzf_env.insert("LC_ALL".to_owned(), "C.UTF-8".to_owned());
 
   let cmd = SubprocCommand {
     prog: bin,
