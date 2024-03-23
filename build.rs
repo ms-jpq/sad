@@ -1,3 +1,5 @@
+#!/usr/bin/env -S -- bash -Eeuo pipefail
+// || rustc --edition=2021 -o "${T:="$(mktemp)"}" -- "$0" && exec -a "$0" -- "$T" "$0" "$@"
 #![deny(clippy::all, clippy::cargo, clippy::nursery, clippy::pedantic)]
 #![allow(clippy::cargo_common_metadata, clippy::wildcard_dependencies)]
 
