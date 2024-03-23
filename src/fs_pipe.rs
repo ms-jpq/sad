@@ -24,14 +24,14 @@ pub async fn slurp(path: &Path) -> Result<Slurpee, Die> {
     .map_err(|e| Die::IO(path.to_owned(), e.kind()))?;
 
   let content = if meta.is_file() {
-    let mut s = String::default();
+    let mut s = String::new();
     match fd.read_to_string(&mut s).await {
       Ok(_) => s,
       Err(err) if err.kind() == ErrorKind::InvalidData => s,
       Err(err) => return Err(Die::IO(path.to_owned(), err.kind())),
     }
   } else {
-    String::default()
+    String::new()
   };
 
   Ok(Slurpee { meta, content })

@@ -31,35 +31,36 @@ pub enum LineIn {
 struct DiffLine(PathBuf, DiffRange);
 
 fn p_line(line: &str) -> Result<DiffLine, Die> {
-  let f = Die::ArgumentError(String::default());
+  let f = || Die::ArgumentError(String::new());
+  let ff = |_| f();
   let preg = "\n\n\n\n@@ -(\\d+),(\\d+) \\+(\\d+),(\\d+) @@$";
   let re = Regex::new(preg).map_err(Die::RegexError)?;
-  let captures = re.captures(line).ok_or_else(|| f.clone())?;
+  let captures = re.captures(line).ok_or_else(f)?;
 
   let before_start = captures
     .get(1)
-    .ok_or_else(|| f.clone())?
+    .ok_or_else(f)?
     .as_str()
     .parse::<usize>()
-    .map_err(|_| f.clone())?;
+    .map_err(ff)?;
   let before_inc = captures
     .get(2)
-    .ok_or_else(|| f.clone())?
+    .ok_or_else(f)?
     .as_str()
     .parse::<usize>()
-    .map_err(|_| f.clone())?;
+    .map_err(ff)?;
   let after_start = captures
     .get(3)
-    .ok_or_else(|| f.clone())?
+    .ok_or_else(f)?
     .as_str()
     .parse::<usize>()
-    .map_err(|_| f.clone())?;
+    .map_err(ff)?;
   let after_inc = captures
     .get(4)
-    .ok_or_else(|| f.clone())?
+    .ok_or_else(f)?
     .as_str()
     .parse::<usize>()
-    .map_err(|_| f.clone())?;
+    .map_err(ff)?;
 
   let range = DiffRange {
     before: (before_start - 1, before_inc),
@@ -85,7 +86,7 @@ async fn stream_patch(patches: &Path) -> impl Stream<Item = Result<LineIn, Die>>
   let stream = try_unfold(
     (reader, patches, PathBuf::new(), acc),
     move |mut s| async move {
-      let mut buf = Vec::default();
+      let mut buf = Vec::new();
       match s.0.read_until(b'\0', &mut buf).await {
         Err(err) => Err(Die::IO(s.1.clone(), err.kind())),
         Ok(0) if s.3.is_empty() => Ok(None),
@@ -153,7 +154,7 @@ fn stream_stdin(use_nul: bool) -> impl Stream<Item = Result<LineIn, Die>> {
   let seen = HashSet::new();
 
   let stream = try_unfold((reader, seen), move |mut s| async move {
-    let mut buf = Vec::default();
+    let mut buf = Vec::new();
     match s.0.read_until(delim, &mut buf).await {
       Err(e) => Err(Die::IO(PathBuf::from("/dev/stdin"), e.kind())),
       Ok(0) => Ok(None),

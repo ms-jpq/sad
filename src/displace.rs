@@ -42,7 +42,7 @@ pub async fn displace(opts: &Arc<Options>, input: LineIn) -> Result<OsString, Di
   let after = opts.engine.replace(&before);
 
   if *before == after {
-    Ok(OsString::default())
+    Ok(OsString::new())
   } else {
     let print = match (&opts.action, input) {
       (Action::Preview, LineIn::Entire(_)) => udiff(None, opts.unified, &name, &before, &after),
