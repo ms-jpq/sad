@@ -58,11 +58,11 @@ pub fn patches<'a>(
   let mut matcher = SequenceMatcher::new(&before, &after);
 
   for group in &matcher.get_grouped_opcodes(unified) {
-    let mut new_lines = Vec::<&str>::new();
+    let mut new_lines = Vec::new();
     for code in group {
       if code.tag == "equal" {
         for line in before.iter().take(code.first_end).skip(code.first_start) {
-          new_lines.push(line);
+          new_lines.push(line.as_str());
         }
         continue;
       }
@@ -86,14 +86,17 @@ pub fn apply_patches<'a>(
   ranges: &HashSet<DiffRange>,
   before: &'a [String],
 ) -> Vec<&'a str> {
-  let mut ret = Vec::<&str>::new();
+  let mut ret = Vec::new();
   let mut prev = 0;
 
   for diff in patches {
     let (before_start, before_inc) = diff.range.before;
     let before_end = before_start + before_inc;
     for i in prev..before_start {
-      before.get(i).map(|b| ret.push(b)).expect("algo failure");
+      before
+        .get(i)
+        .map(|b| ret.push(b.as_str()))
+        .expect("algo failure");
     }
     if ranges.contains(&diff.range) {
       for line in &diff.new_lines {
@@ -138,7 +141,7 @@ pub fn udiff(
   let mut matcher = SequenceMatcher::new(&before, &after);
   for group in &matcher.get_grouped_opcodes(unified) {
     let range = DiffRange::new(group).expect("algo failure");
-    if let Some(ranges) = &ranges {
+    if let Some(ranges) = ranges {
       if !ranges.contains(&range) {
         continue;
       }
