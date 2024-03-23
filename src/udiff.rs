@@ -41,7 +41,7 @@ pub struct Patch<S> {
 
 pub fn pure_diffs(unified: usize, before: &[String], after: &[String]) -> Vec<DiffRange> {
   let mut ret = Vec::new();
-  let mut matcher = SequenceMatcher::new(&before, &after);
+  let mut matcher = SequenceMatcher::new(before, after);
   for group in &matcher.get_grouped_opcodes(unified) {
     let range = DiffRange::new(group).expect("algo failure");
     ret.push(range);
@@ -55,7 +55,7 @@ pub fn patches<'a>(
   after: &'a [String],
 ) -> Vec<Patch<&'a str>> {
   let mut ret = Vec::new();
-  let mut matcher = SequenceMatcher::new(&before, &after);
+  let mut matcher = SequenceMatcher::new(before, after);
 
   for group in &matcher.get_grouped_opcodes(unified) {
     let mut new_lines = Vec::new();
@@ -138,7 +138,7 @@ pub fn udiff(
   ret.push(name);
   ret.push("\n");
 
-  let mut matcher = SequenceMatcher::new(&before, &after);
+  let mut matcher = SequenceMatcher::new(before, after);
   for group in &matcher.get_grouped_opcodes(unified) {
     let range = DiffRange::new(group).expect("algo failure");
     if let Some(ranges) = ranges {
