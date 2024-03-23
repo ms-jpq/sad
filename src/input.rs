@@ -80,25 +80,28 @@ async fn stream_patch(patches: &Path) -> impl Stream<Item = Result<LineIn, Die>>
     }
     Ok(fd) => fd,
   };
-  let reader = BufReader::new(fd);
+  let reader = BufReader::new(fd).split(b'\0');
   let acc = HashSet::new();
 
   let stream = try_unfold(
     (reader, patches, PathBuf::new(), acc),
     move |mut s| async move {
-      let mut buf = Vec::new();
-      match s.0.read_until(b'\0', &mut buf).await {
-        Err(err) => Err(Die::IO(s.1.clone(), err.kind())),
-        Ok(0) if s.3.is_empty() => Ok(None),
-        Ok(0) => {
+      let next = s
+        .0
+        .next_segment()
+        .await
+        .map_err(|e| Die::IO(s.1.clone(), e.kind()))?;
+
+      match next {
+        None if s.3.is_empty() => Ok(None),
+        None => {
           let path = s.2;
           let ranges = s.3;
           s.2 = PathBuf::new();
           s.3 = HashSet::new();
           Ok(Some((Some(LineIn::Piecewise(path, ranges)), s)))
         }
-        Ok(_) => {
-          buf.pop();
+        Some(buf) => {
           let line =
             String::from_utf8(buf).map_err(|_| Die::IO(s.1.clone(), ErrorKind::InvalidData))?;
           let parsed = p_line(&line)?;
@@ -150,16 +153,18 @@ fn stream_stdin(use_nul: bool) -> impl Stream<Item = Result<LineIn, Die>> {
     return Either::Left(once(ready(Err(err))));
   }
   let delim = if use_nul { b'\0' } else { b'\n' };
-  let reader = BufReader::new(stdin());
+  let reader = BufReader::new(stdin()).split(delim);
   let seen = HashSet::new();
 
-  let stream = try_unfold((reader, seen), move |mut s| async move {
-    let mut buf = Vec::new();
-    match s.0.read_until(delim, &mut buf).await {
-      Err(e) => Err(Die::IO(PathBuf::from("/dev/stdin"), e.kind())),
-      Ok(0) => Ok(None),
-      Ok(_) => {
-        buf.pop();
+  let stream = try_unfold((reader, seen), |mut s| async {
+    let next = s
+      .0
+      .next_segment()
+      .await
+      .map_err(|e| Die::IO(PathBuf::from("/dev/stdin"), e.kind()))?;
+    match next {
+      None => Ok(None),
+      Some(buf) => {
         let path = u8_pathbuf(buf);
         match canonicalize(&path).await {
           Err(e) if e.kind() == ErrorKind::NotFound => Ok(Some((None, s))),
