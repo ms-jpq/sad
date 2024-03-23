@@ -23,28 +23,30 @@ pub async fn slurp(path: &Path) -> Result<Slurpee, Die> {
     .await
     .map_err(|e| Die::IO(path.to_owned(), e.kind()))?;
 
-  let mut content = Vec::new();
-  if meta.is_file() {
+  let mut slurm = Slurpee {
+    meta,
+    content: Vec::new(),
+  };
+  if slurm.meta.is_file() {
     let mut reader = BufReader::new(fd);
     loop {
       let mut buf = Vec::new();
       match reader.read_until(b'\n', &mut buf).await {
         Err(err) => return Err(Die::IO(path.to_owned(), err.kind())),
         Ok(0) => break,
-        Ok(_) => match String::from_utf8(buf) {
-          Ok(s) => content.push(s),
-          Err(_) => {
-            return Ok(Slurpee {
-              meta,
-              content: Vec::new(),
-            })
+        Ok(_) => {
+          if let Ok(s) = String::from_utf8(buf) {
+            slurm.content.push(s);
+          } else {
+            slurm.content.clear();
+            return Ok(slurm);
           }
-        },
+        }
       }
     }
   };
 
-  Ok(Slurpee { meta, content })
+  Ok(slurm)
 }
 
 pub async fn spit(
