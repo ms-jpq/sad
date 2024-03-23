@@ -1,20 +1,20 @@
 use {
   super::types::Die,
-  std::{borrow::ToOwned, fs::Metadata, io::ErrorKind, path::Path},
+  std::{borrow::ToOwned, fs::Metadata, path::Path},
   tokio::{
     fs::{rename, File, OpenOptions},
-    io::{AsyncReadExt, AsyncWriteExt, BufWriter},
+    io::{AsyncBufReadExt, AsyncWriteExt, BufReader, BufWriter},
   },
   uuid::Uuid,
 };
 
 pub struct Slurpee {
   pub meta: Metadata,
-  pub content: String,
+  pub content: Vec<String>,
 }
 
 pub async fn slurp(path: &Path) -> Result<Slurpee, Die> {
-  let mut fd = File::open(path)
+  let fd = File::open(path)
     .await
     .map_err(|e| Die::IO(path.to_owned(), e.kind()))?;
 
@@ -23,21 +23,37 @@ pub async fn slurp(path: &Path) -> Result<Slurpee, Die> {
     .await
     .map_err(|e| Die::IO(path.to_owned(), e.kind()))?;
 
-  let content = if meta.is_file() {
-    let mut s = String::new();
-    match fd.read_to_string(&mut s).await {
-      Ok(_) => s,
-      Err(err) if err.kind() == ErrorKind::InvalidData => s,
-      Err(err) => return Err(Die::IO(path.to_owned(), err.kind())),
+  let mut slurm = Slurpee {
+    meta,
+    content: Vec::new(),
+  };
+  if slurm.meta.is_file() {
+    let mut reader = BufReader::new(fd);
+    loop {
+      let mut buf = Vec::new();
+      match reader.read_until(b'\n', &mut buf).await {
+        Err(err) => return Err(Die::IO(path.to_owned(), err.kind())),
+        Ok(0) => break,
+        Ok(_) => {
+          if let Ok(s) = String::from_utf8(buf) {
+            slurm.content.push(s);
+          } else {
+            slurm.content.clear();
+            return Ok(slurm);
+          }
+        }
+      }
     }
-  } else {
-    String::new()
   };
 
-  Ok(Slurpee { meta, content })
+  Ok(slurm)
 }
 
-pub async fn spit(canonical: &Path, meta: &Metadata, text: &str) -> Result<(), Die> {
+pub async fn spit(
+  canonical: &Path,
+  meta: &Metadata,
+  text: Vec<impl AsRef<[u8]> + Send>,
+) -> Result<(), Die> {
   let uuid = Uuid::new_v4().as_simple().to_string();
   let mut file_name = canonical
     .file_name()
@@ -58,10 +74,12 @@ pub async fn spit(canonical: &Path, meta: &Metadata, text: &str) -> Result<(), D
     .map_err(|e| Die::IO(tmp.clone(), e.kind()))?;
 
   let mut writer = BufWriter::new(fd);
-  writer
-    .write_all(text.as_bytes())
-    .await
-    .map_err(|e| Die::IO(tmp.clone(), e.kind()))?;
+  for t in text {
+    writer
+      .write_all(t.as_ref())
+      .await
+      .map_err(|e| Die::IO(tmp.clone(), e.kind()))?;
+  }
 
   writer
     .flush()

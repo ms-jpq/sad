@@ -2,12 +2,12 @@ use {
   super::{
     argparse::{Action, Engine, Options},
     fs_pipe::{slurp, spit},
-    input::LineIn,
+    input::RowIn,
     types::Die,
     udiff::{apply_patches, patches, pure_diffs, udiff},
   },
   ansi_term::Colour,
-  std::{ffi::OsString, path::PathBuf, sync::Arc},
+  std::{borrow::ToOwned, ffi::OsString, path::PathBuf},
 };
 
 impl Engine {
@@ -19,7 +19,7 @@ impl Engine {
   }
 }
 
-impl LineIn {
+impl RowIn {
   const fn path(&self) -> &PathBuf {
     match self {
       Self::Entire(path) | Self::Piecewise(path, _) => path,
@@ -27,9 +27,9 @@ impl LineIn {
   }
 }
 
-pub async fn displace(opts: &Arc<Options>, input: LineIn) -> Result<OsString, Die> {
+pub async fn displace(opts: &Options, input: RowIn) -> Result<OsString, Die> {
   let path = input.path().clone();
-  let name = opts
+  let mut name = opts
     .cwd
     .as_ref()
     .and_then(|cwd| path.strip_prefix(cwd).ok())
@@ -39,29 +39,34 @@ pub async fn displace(opts: &Arc<Options>, input: LineIn) -> Result<OsString, Di
 
   let slurped = slurp(&path).await?;
   let before = slurped.content;
-  let after = opts.engine.replace(&before);
+  let replaced = {
+    let b = before.clone().into_iter().collect::<String>();
+    opts.engine.replace(&b)
+  };
+  let after = replaced
+    .split_inclusive('\n')
+    .map(ToOwned::to_owned)
+    .collect::<Vec<_>>();
 
   if *before == after {
     Ok(OsString::new())
   } else {
     let print = match (&opts.action, input) {
-      (Action::Preview, LineIn::Entire(_)) => udiff(None, opts.unified, &name, &before, &after),
-      (Action::Preview, LineIn::Piecewise(_, ranges)) => {
+      (Action::Preview, RowIn::Entire(_)) => udiff(None, opts.unified, &name, &before, &after),
+      (Action::Preview, RowIn::Piecewise(_, ranges)) => {
         udiff(Some(&ranges), opts.unified, &name, &before, &after)
       }
-      (Action::Commit, LineIn::Entire(_)) => {
-        spit(&path, &slurped.meta, &after).await?;
-        let mut out = name;
-        out.push("\n");
-        out
+      (Action::Commit, RowIn::Entire(_)) => {
+        spit(&path, &slurped.meta, after).await?;
+        name.push("\n");
+        name
       }
-      (Action::Commit, LineIn::Piecewise(_, ranges)) => {
+      (Action::Commit, RowIn::Piecewise(_, ranges)) => {
         let patches = patches(opts.unified, &before, &after);
         let after = apply_patches(patches, &ranges, &before);
-        spit(&path, &slurped.meta, &after).await?;
-        let mut out = name;
-        out.push("\n");
-        out
+        spit(&path, &slurped.meta, after).await?;
+        name.push("\n");
+        name
       }
       (Action::FzfPreview(_, _), _) => {
         let ranges = pure_diffs(opts.unified, &before, &after);

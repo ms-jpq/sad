@@ -43,15 +43,25 @@ mod spec {
     .collect::<_>()
   }
 
-  fn diffs() -> Vec<(String, String)> {
+  fn diffs() -> Vec<(Vec<String>, Vec<String>)> {
     let texts = read_files();
     let regexes = regexes();
     let mut acc = Vec::new();
     for text in texts {
       for re in &regexes {
-        let before = text.clone();
-        let after = re.0.replace_all(text.as_str(), re.1.as_str());
-        acc.push((before, after.to_string()));
+        let before = text
+          .clone()
+          .split_inclusive('\n')
+          .map(String::from)
+          .collect::<Vec<_>>();
+        let after = re
+          .0
+          .replace_all(text.as_str(), re.1.as_str())
+          .to_string()
+          .split_inclusive('\n')
+          .map(String::from)
+          .collect::<Vec<_>>();
+        acc.push((before, after));
       }
     }
     acc
@@ -66,17 +76,8 @@ mod spec {
 
       let ps = patches(unified, &before, &after);
       let patched = apply_patches(ps, &rangeset, &before);
-
-      let canon = after
-        .split_inclusive('\n')
-        .map(String::from)
-        .collect::<Vec<_>>();
-      let imp = patched
-        .split_inclusive('\n')
-        .map(String::from)
-        .collect::<Vec<_>>();
-      assert_eq!(imp, canon);
-      assert_eq!(patched, after);
+      let imp = patched.into_iter().map(String::from).collect::<Vec<_>>();
+      assert_eq!(imp, after);
     }
   }
 
@@ -84,9 +85,7 @@ mod spec {
   fn unified() {
     let diffs = diffs();
     for (unified, (before, after)) in diffs.into_iter().enumerate() {
-      let bb = before.split_inclusive('\n').collect::<Vec<_>>();
-      let aa = after.split_inclusive('\n').collect::<Vec<_>>();
-      let canon = unified_diff(&bb, &aa, "", "", "", "", unified)
+      let canon = unified_diff(&before, &after, "", "", "", "", unified)
         .iter()
         .skip(2)
         .map(|s| {

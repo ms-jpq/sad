@@ -83,8 +83,8 @@ pub fn stream_fzf_proc(
     args: arguments,
     env: fzf_env,
   };
-  stream_subproc(cmd, stream).then(|line| async {
-    match line {
+  stream_subproc(cmd, stream).then(|row| async {
+    match row {
       Ok(o) => Ok(o),
       Err(Die::BadExit(_, 130)) => Err(Die::Interrupt),
       e => {
