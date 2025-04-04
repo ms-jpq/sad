@@ -145,7 +145,7 @@ pub fn udiff(
       if !ranges.contains(&range) {
         continue;
       }
-    };
+    }
 
     ret.push(format!("{range}\n"));
 

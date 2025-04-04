@@ -44,7 +44,7 @@ pub async fn slurp(path: &Path) -> Result<Slurpee, Die> {
         }
       }
     }
-  };
+  }
 
   Ok(slurm)
 }
