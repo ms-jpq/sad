@@ -24,6 +24,9 @@ jobs:
           override: true
 
       - run: |-
+          rustup component add clippy
+
+      - run: |-
           make lint
 
   build:
