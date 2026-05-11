@@ -92,7 +92,7 @@ async fn run(threads: usize) -> Result<(), Die> {
 }
 
 fn main() -> impl Termination {
-  let threads = available_parallelism().map(Into::into).unwrap_or(6);
+  let threads = available_parallelism().map_or(6, Into::into);
   let rt = Builder::new_multi_thread()
     .enable_io()
     .build()
