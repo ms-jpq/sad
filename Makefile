@@ -8,7 +8,7 @@ SHELL := bash
 
 .DEFAULT_GOAL := dev
 
-.PHONY: clean clobber lint mypy clippy deps build release ci test
+.PHONY: clean clobber lint mypy clippy deps build release ci test spec
 
 OS ?=
 
@@ -20,7 +20,7 @@ endif
 
 clean:
 	shopt -u failglob
-	rm -v -rf -- artifacts/*.{zip,deb} .mypy_cache/ target/ temp/
+	rm -v -rf -- artifacts/*.{zip,deb,spec} .mypy_cache/ target/ temp/
 
 clobber: clean
 	rm -v -rf -- .venv/
@@ -53,6 +53,9 @@ release: .venv/$(VENV)/mypy
 
 ci: .venv/$(VENV)/mypy
 	.venv/$(VENV)/python ./ci/release.py
+
+spec: .venv/$(VENV)/mypy
+	.venv/$(VENV)/python ./build.py spec
 
 test:
 	cargo test --locked

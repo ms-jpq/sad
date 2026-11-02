@@ -21,7 +21,7 @@ use {
   displace::displace,
   futures::{
     future::{ready, Either},
-    stream::{once, select, Stream, StreamExt, TryStreamExt},
+    stream::{Stream, StreamExt, TryStreamExt},
   },
   fzf::stream_fzf_proc,
   input::stream_in,
@@ -30,13 +30,12 @@ use {
     ffi::OsString,
     marker::Unpin,
     path::PathBuf,
-    pin::pin,
-    process::{ExitCode, Termination},
+    process::{exit, ExitCode, Termination},
     sync::Arc,
     thread::available_parallelism,
   },
   subprocess::{stream_into, stream_subproc},
-  tokio::{io, runtime::Builder, signal::ctrl_c},
+  tokio::{io, runtime::Builder},
   types::Die,
 };
 
@@ -58,26 +57,6 @@ fn stream_sink(
   }
 }
 
-async fn consume(stream: impl Stream<Item = Result<(), Die>> + Send) -> Result<(), Die> {
-  let int = once(async {
-    match ctrl_c().await {
-      Err(e) => Die::IO(PathBuf::from("sigint"), e.kind()),
-      Ok(()) => Die::Interrupt,
-    }
-  });
-  let out = select(
-    stream
-      .filter_map(|row| ready(row.err()))
-      .chain(once(ready(Die::Eof))),
-    int,
-  );
-  let mut out = pin!(out);
-  match out.next().await {
-    None | Some(Die::Eof) => Ok(()),
-    Some(e) => Err(e),
-  }
-}
-
 async fn run(threads: usize) -> Result<(), Die> {
   let (mode, args) = parse_args();
   let input_stream = stream_in(&mode, &args).await;
@@ -88,7 +67,7 @@ async fn run(threads: usize) -> Result<(), Die> {
     .try_buffer_unordered(threads);
   let out_stream = stream_sink(&opts, trans_stream.boxed());
 
-  consume(out_stream).await
+  out_stream.try_for_each(|()| ready(Ok(()))).await
 }
 
 fn main() -> impl Termination {
@@ -100,8 +79,7 @@ fn main() -> impl Termination {
 
   match rt.block_on(run(threads)).err() {
     None => ExitCode::SUCCESS,
-    // TODO: 0xC000013Au32 for windows
-    Some(Die::Interrupt) => ExitCode::from(130),
+    Some(Die::Interrupt) => exit(130),
     Some(e) => {
       eprintln!("{}", Colour::Red.paint(format!("{e}")));
       ExitCode::FAILURE

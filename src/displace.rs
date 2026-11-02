@@ -6,7 +6,7 @@ use {
     types::Die,
     udiff::{apply_patches, patches, pure_diffs, udiff},
   },
-  ansi_term::Colour,
+  ansi_term::Style,
   std::{borrow::ToOwned, ffi::OsString, path::PathBuf, sync::Arc},
   tokio::task::spawn_blocking,
 };
@@ -86,7 +86,7 @@ pub async fn displace(opts: Arc<Options>, input: RowIn) -> Result<OsString, Die>
         } else {
           let mut fzf_lines = OsString::new();
           for range in ranges {
-            let repr = Colour::Red.paint(format!("{range}"));
+            let repr = Style::new().dimmed().paint(format!("{range}"));
             fzf_lines.push(&name);
             let line = format!("\x04 {repr}\0");
             fzf_lines.push(&line);

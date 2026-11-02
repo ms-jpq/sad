@@ -56,6 +56,8 @@ pub fn stream_fzf_proc(
     "--print0".to_owned(),
     "-m".to_owned(),
     "--ansi".to_owned(),
+    "--delimiter=\x04".to_owned(),
+    "--nth=..-2".to_owned(),
     "--preview-window=70%:wrap".to_owned(),
     format!("--bind=enter:{execute}"),
     format!("--bind=double-click:{execute}"),

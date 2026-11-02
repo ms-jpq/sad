@@ -1,5 +1,17 @@
 ## Good news
 
+v0.4.33
+
+- Match filenames in fzf without matching trailing hunk metadata.
+
+- Dim the hunk metadata in fzf.
+
+- Restore default Ctrl-C handling so blocking work terminates immediately.
+
+- Exit immediately with status 130 when fzf aborts, including while stdin remains open.
+
+---
+
 v0.4.32
 
 - It looks like in the newer versions of `fzf` the command that was used to "execute and exit" no longer works.

@@ -15,7 +15,6 @@ pub enum Die {
   ArgumentError(String),
   BadExit(PathBuf, i32),
   BuildError(BuildError),
-  Eof,
   IO(PathBuf, ErrorKind),
   Interrupt,
   Join(JoinError),

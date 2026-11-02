@@ -115,4 +115,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           # GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |-
+          make spec
+          cp artifacts/sad.spec arts/sad.spec
           make ci

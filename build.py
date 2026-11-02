@@ -131,6 +131,18 @@ def _build(triple: str) -> None:
         _deb(triple)
 
 
+def _spec() -> None:
+    j2 = Environment(
+        undefined=StrictUndefined,
+        keep_trailing_newline=True,
+        loader=FileSystemLoader(_TOP_LEVEL / "ci" / "templates"),
+    )
+    package = loads((_TOP_LEVEL / "Cargo.toml").read_text())["package"]
+    rendered = j2.get_template("sad.spec").render(package)
+    _ARTS.mkdir(parents=True, exist_ok=True)
+    (_ARTS / "sad.spec").write_text(rendered)
+
+
 def _parse_args() -> Namespace:
     arch_choices = {"x86_64", "aarch64"}
     sys_choices = {vendor_sys for (vendor_sys, _) in _DEFAULTS.values()}
@@ -139,6 +151,8 @@ def _parse_args() -> Namespace:
 
     parser = ArgumentParser()
     sub_parser = parser.add_subparsers(dest="action", required=True)
+
+    sub_parser.add_parser("spec")
 
     with nullcontext(sub_parser.add_parser("deps")) as p:
         pass
@@ -178,6 +192,9 @@ def main() -> None:
     args = _parse_args()
     if args.action == "deps":
         _deps()
+
+    elif args.action == "spec":
+        _spec()
 
     elif args.action == "build":
         triple = "-".join((args.arch, args.os, args.compiler))

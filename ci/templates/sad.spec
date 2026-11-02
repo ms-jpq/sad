@@ -1,6 +1,6 @@
 Name:           sad
-Version:        0.4.31
-Release:        3%{?dist}
+Version:        {{ version }}
+Release:        1%{?dist}
 Summary:        Space Age seD
 URL:            https://github.com/ms-jpq/sad
 License:        MIT
