@@ -7,7 +7,7 @@ from hashlib import sha256
 from os import environ, linesep, scandir
 from os.path import normcase
 from pathlib import Path
-from subprocess import check_call
+from subprocess import check_call, run
 from sys import stderr
 from time import sleep
 from tomllib import loads
@@ -58,6 +58,30 @@ def _load_values() -> _Project:
 
 
 def _release(project: _Project) -> None:
+    existing = run(
+        (
+            "gh",
+            "release",
+            "view",
+            project.tag,
+            "--json",
+            "assets",
+            "--jq",
+            ".assets[].name",
+        ),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if existing.returncode == 0:
+        uploaded = set(existing.stdout.splitlines())
+        missing = tuple(
+            normcase(p) for p in _walk(_TOP_LEVEL / "arts") if p.name not in uploaded
+        )
+        if missing:
+            check_call(("gh", "release", "upload", "--", project.tag, *missing))
+        return
+
     time = datetime.now().strftime("%Y-%m-%d_%H-%M")
     title = f"ci_{project.version}_{time}"
     body = (_TOP_LEVEL / "RELEASE_NOTES.md").read_text()
@@ -105,8 +129,12 @@ def _git_ops() -> Iterator[Path]:
     check_call(("git", "config", "--", "user.name", username), cwd=pkgs)
     yield pkgs
     check_call(("git", "add", "-A"), cwd=pkgs)
-    check_call(("git", "commit", "-m", msg), cwd=pkgs)
-    check_call(("git", "push", "--force"), cwd=pkgs)
+    changes = run(("git", "diff", "--cached", "--quiet"), cwd=pkgs, check=False)
+    if changes.returncode == 1:
+        check_call(("git", "commit", "-m", msg), cwd=pkgs)
+        check_call(("git", "push"), cwd=pkgs)
+    else:
+        changes.check_returncode()
 
 
 def _sha(uri: str) -> str:
