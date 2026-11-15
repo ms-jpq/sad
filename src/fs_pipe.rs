@@ -55,10 +55,7 @@ pub async fn spit(
   text: Vec<impl AsRef<[u8]> + Send>,
 ) -> Result<(), Die> {
   let uuid = Uuid::new_v4().as_simple().to_string();
-  let mut file_name = canonical
-    .file_name()
-    .map(ToOwned::to_owned)
-    .unwrap_or_default();
+  let mut file_name = canonical.file_name().map_or_default(ToOwned::to_owned);
   file_name.push("___");
   file_name.push(uuid);
   let tmp = canonical.with_file_name(file_name);
